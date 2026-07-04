@@ -623,7 +623,7 @@ let isOnline=navigator.onLine,isSyncing=false;
 function setSyncStatus(state,label,n){const dot=document.getElementById('syncDot');dot.className='sync-dot'+(state==='offline'?' offline':state==='syncing'?' syncing':'');document.getElementById('syncLabel').textContent=label;const p=document.getElementById('syncPending');if(n>0){p.textContent=n+' pending';p.classList.remove('hidden');}else p.classList.add('hidden');}
 
 async function apiPost(body){
-  const r=await fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),redirect:'follow'});
+  const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify(body),redirect:'follow'});
   return r.json();
 }
 async function apiGet(params){
