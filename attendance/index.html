@@ -273,6 +273,10 @@ tr:last-child td{border-bottom:none;}
 </nav>
 <!-- DAILY ENTRY -->
 <section class="view active" id="view-entry">
+  <div class="card hidden" id="leaveAlertCard" style="background:#F3E8CC;border-color:#E8D399;">
+    <p class="section-title" style="color:#8A6A00;">🟡 On Leave Today</p>
+    <div id="leaveAlertList" style="font-size:13px;line-height:1.8;"></div>
+  </div>
   <div class="snapshot">
     <div class="snapshot-item s-present"><div class="snapshot-num" id="snPresent">0</div><span class="snapshot-label">Present</span></div>
     <div class="snapshot-item s-pending"><div class="snapshot-num" id="snPending">0</div><span class="snapshot-label">Pending</span></div>
@@ -454,6 +458,7 @@ tr:last-child td{border-bottom:none;}
     <div class="field hidden" id="fieldFilter"><label>Filter</label><select id="reportFilter"></select></div>
     <div class="field hidden" id="fieldLeaveMonth"><label>Month</label><input type="month" id="reportLeaveMonth"></div>
     <div class="field hidden" id="fieldLeaveEmp"><label>Employee</label><select id="reportLeaveEmp"></select></div>
+    <button class="btn btn-wa btn-sm hidden" id="btnLeaveWaSummary" style="margin-top:2px;">📱 Share Monthly Leave Summary</button>
     <button class="btn btn-primary" id="btnGenerateReport">Generate Report</button>
   </div>
   <div class="card">
@@ -728,7 +733,7 @@ function doMarkEntry(emp,t,date){
   else log.push({date,employeeId:emp.id,employeeName:emp.name,department:emp.department||'',managedBy:emp.managedBy||'',status:'Present',entryTime:t,exitTime:'',actualHours:'',paidHours:'',regularHours:'',overtimeHours:'',remarks:''});
   saveLog(log);
   const payload={date,employeeId:emp.id,employeeName:emp.name,department:emp.department||'',managedBy:emp.managedBy||'',entryTime:t};
-  if(isOnline)apiPost({action:'markEntry',...payload}).catch(()=>queueWrite('markEntry',payload));else queueWrite('markEntry',payload);
+  if(isOnline){apiPost({action:'markEntry',...payload}).then(r=>{if(!r.ok){console.error('markEntry backend error:',r.error);queueWrite('markEntry',payload);}}).catch(e=>{console.error('markEntry network error:',e);queueWrite('markEntry',payload);});}else queueWrite('markEntry',payload);
   return{ok:true,text:`${emp.name}: ENTRY ${t} on ${date}.`};
 }
 
@@ -738,7 +743,7 @@ function doMarkExit(emp,t,date){
   if(row.exitTime)return{ok:false,text:`${emp.name}: exit already at ${row.exitTime}.`};
   const h=calcHours(row.entryTime,t);row.exitTime=t;row.actualHours=h.actual;row.paidHours=h.paid;row.regularHours=h.regular;row.overtimeHours=h.ot;saveLog(log);
   const payload={date,employeeId:emp.id,employeeName:emp.name,managedBy:emp.managedBy||'',exitTime:t};
-  if(isOnline)apiPost({action:'markExit',...payload}).catch(()=>queueWrite('markExit',payload));else queueWrite('markExit',payload);
+  if(isOnline){apiPost({action:'markExit',...payload}).then(r=>{if(!r.ok){console.error('markExit backend error:',r.error);queueWrite('markExit',payload);}}).catch(e=>{console.error('markExit network error:',e);queueWrite('markExit',payload);});}else queueWrite('markExit',payload);
   return{ok:true,text:`${emp.name}: EXIT ${t}. Paid ${h.paid}hr(s).`};
 }
 
@@ -748,7 +753,11 @@ function doMarkLeave(emp,date,status,remarks){
   else log.push({date,employeeId:emp.id,employeeName:emp.name,department:emp.department||'',managedBy:emp.managedBy||'',status,entryTime:'',exitTime:'',actualHours:0,paidHours:0,regularHours:0,overtimeHours:0,remarks:remarks||''});
   saveLog(log);
   const payload={date,employeeId:emp.id,employeeName:emp.name,department:emp.department||'',managedBy:emp.managedBy||'',status,remarks:remarks||''};
-  if(isOnline)apiPost({action:'markLeave',...payload}).catch(()=>queueWrite('markLeave',payload));else queueWrite('markLeave',payload);
+  if(isOnline){
+    apiPost({action:'markLeave',...payload}).then(r=>{
+      if(!r.ok){console.error('markLeave backend error:',r.error);queueWrite('markLeave',payload);}
+    }).catch(e=>{console.error('markLeave network error:',e);queueWrite('markLeave',payload);});
+  } else queueWrite('markLeave',payload);
   return{ok:true,text:`${emp.name}: ${status} on ${date}.`};
 }
 
@@ -774,7 +783,17 @@ document.getElementById('btnConfirmLeave').addEventListener('click',()=>{const s
 
 /* TODAY TABLE + SNAPSHOT */
 function renderTodayTable(){const today=todayStr();document.getElementById('todayLabel').textContent=new Date(today+'T00:00:00').toLocaleDateString(undefined,{weekday:'short',year:'numeric',month:'short',day:'numeric'});const rows=loadLog().filter(r=>r.date===today).sort((a,b)=>a.employeeName.localeCompare(b.employeeName));const tbody=document.querySelector('#todayTable tbody'),empty=document.getElementById('todayEmptyNote');if(!rows.length){tbody.innerHTML='';empty.classList.remove('hidden');return;}empty.classList.add('hidden');tbody.innerHTML=rows.map(r=>`<tr><td>${esc(r.employeeName)}</td><td>${esc(r.managedBy||'')}</td><td><span class="pill pill-${r.status}">${r.status}</span></td><td>${r.entryTime||'—'}</td><td>${r.exitTime||'—'}</td><td>${r.paidHours===''||r.paidHours===undefined?'—':r.paidHours}</td><td>${r.overtimeHours===''||r.overtimeHours===undefined?'—':r.overtimeHours}</td></tr>`).join('');}
-function renderSnapshot(){const rows=loadLog().filter(r=>r.date===todayStr());let p=0,pend=0,l=0,a=0;rows.forEach(r=>{if(r.status==='Present'){p++;if(!r.exitTime)pend++;}else if(r.status==='Leave')l++;else if(r.status==='Absent')a++;});document.getElementById('snPresent').textContent=p;document.getElementById('snPending').textContent=pend;document.getElementById('snLeave').textContent=l;document.getElementById('snAbsent').textContent=a;}
+function renderSnapshot(){const rows=loadLog().filter(r=>r.date===todayStr());let p=0,pend=0,l=0,a=0;rows.forEach(r=>{if(r.status==='Present'){p++;if(!r.exitTime)pend++;}else if(r.status==='Leave')l++;else if(r.status==='Absent')a++;});document.getElementById('snPresent').textContent=p;document.getElementById('snPending').textContent=pend;document.getElementById('snLeave').textContent=l;document.getElementById('snAbsent').textContent=a;renderLeaveAlert();}
+
+function renderLeaveAlert(){
+  const today=todayStr();
+  const onLeave=loadLog().filter(r=>r.date===today&&r.status==='Leave');
+  const card=document.getElementById('leaveAlertCard');
+  const list=document.getElementById('leaveAlertList');
+  if(!onLeave.length){card.classList.add('hidden');list.innerHTML='';return;}
+  card.classList.remove('hidden');
+  list.innerHTML=onLeave.map(r=>`• ${esc(r.employeeName)}${r.managedBy?' <span style="color:#8A6A00;opacity:.7;">('+esc(r.managedBy)+')</span>':''}${r.remarks?' — '+esc(r.remarks):''}`).join('<br>');
+}
 
 /* BACKDATE TAB */
 const bdActiveCompanies=new Set();
@@ -840,7 +859,7 @@ document.getElementById('waDate').value=(()=>{const d=new Date();return d.getFul
 /* REPORTS */
 const reportTypeEl=document.getElementById('reportType');
 function populateReportDropdowns(){const emps=loadEmployees();const cos=loadCompanies();const depts=[...new Set(emps.map(e=>e.department).filter(d=>d))];document.getElementById('reportEmployee').innerHTML=emps.map(e=>`<option value="${esc(e.id)}">${esc(e.name)}</option>`).join('');document.getElementById('reportFilter').innerHTML=['All',...cos,...depts.filter(d=>!cos.includes(d))].map(d=>`<option value="${esc(d)}">${esc(d)}</option>`).join('');document.getElementById('reportLeaveEmp').innerHTML=`<option value="all">All Employees</option>`+emps.map(e=>`<option value="${esc(e.id)}">${esc(e.name)}</option>`).join('');if(!document.getElementById('reportDate').value)document.getElementById('reportDate').value=todayStr();if(!document.getElementById('reportFrom').value){document.getElementById('reportFrom').value=todayStr();document.getElementById('reportTo').value=todayStr();}if(!document.getElementById('reportLeaveMonth').value)document.getElementById('reportLeaveMonth').value=todayStr().slice(0,7);updateReportFields();}
-function updateReportFields(){const t=reportTypeEl.value;document.getElementById('fieldReportDate').classList.toggle('hidden',t!=='daily');document.getElementById('fieldRangeRow').classList.toggle('hidden',t==='daily'||t==='leaves');document.getElementById('fieldEmployee').classList.toggle('hidden',t!=='history');document.getElementById('fieldFilter').classList.toggle('hidden',t!=='summary');document.getElementById('fieldLeaveMonth').classList.toggle('hidden',t!=='leaves');document.getElementById('fieldLeaveEmp').classList.toggle('hidden',t!=='leaves');}
+function updateReportFields(){const t=reportTypeEl.value;document.getElementById('fieldReportDate').classList.toggle('hidden',t!=='daily');document.getElementById('fieldRangeRow').classList.toggle('hidden',t==='daily'||t==='leaves');document.getElementById('fieldEmployee').classList.toggle('hidden',t!=='history');document.getElementById('fieldFilter').classList.toggle('hidden',t!=='summary');document.getElementById('fieldLeaveMonth').classList.toggle('hidden',t!=='leaves');document.getElementById('fieldLeaveEmp').classList.toggle('hidden',t!=='leaves');document.getElementById('btnLeaveWaSummary').classList.toggle('hidden',t!=='leaves');}
 reportTypeEl.addEventListener('change',updateReportFields);
 let currentReport={rows:[],columns:[],title:''};
 const CD=[{k:'employeeName',l:'Employee'},{k:'managedBy',l:'Co.'},{k:'department',l:'Dept'},{k:'status',l:'Status'},{k:'entryTime',l:'Entry'},{k:'exitTime',l:'Exit'},{k:'actualHours',l:'Actual'},{k:'paidHours',l:'Paid'},{k:'regularHours',l:'Regular'},{k:'overtimeHours',l:'OT'},{k:'remarks',l:'Remarks'}];
@@ -867,6 +886,30 @@ document.getElementById('btnExpExcel').addEventListener('click',()=>dlExcel(curr
 document.getElementById('btnExpPDF').addEventListener('click',()=>dlPDF(currentReport.rows,currentReport.columns,sf(currentReport.title)+'.pdf',currentReport.title));
 document.getElementById('btnShareEmail').addEventListener('click',()=>{const{rows,columns,title}=currentReport;if(!rows.length){alert('Generate a report first.');return;}const body=columns.map(c=>c.l).join('\t')+'\n'+rows.map(r=>columns.map(c=>{let v=r[c.k];return(v===''||v===undefined||v===null)?'—':String(v);}).join('\t')).join('\n');window.location.href=`mailto:?subject=${encodeURIComponent('Attendance — '+title)}&body=${encodeURIComponent(title+'\n\n'+body+'\n\nSent via Innotek Attendance Ledger')}`;});
 document.getElementById('btnShareWa').addEventListener('click',()=>{const{rows,columns,title}=currentReport;if(!rows.length){alert('Generate a report first.');return;}let text=`*${title}*\n\n`;rows.forEach(r=>{text+=columns.map(c=>{let v=r[c.k];return c.l+': '+(v===''||v===undefined?'—':v);}).join(' | ')+'\n';});text+='\n_Innotek Attendance Ledger_';window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');});
+
+document.getElementById('btnLeaveWaSummary').addEventListener('click',()=>{
+  const monthStr=document.getElementById('reportLeaveMonth').value;
+  if(!monthStr){alert('Pick a month first.');return;}
+  const leaves=loadLog().filter(r=>r.date.startsWith(monthStr)&&r.status==='Leave');
+  if(!leaves.length){alert('No leave records for this month.');return;}
+  const monthLabel=new Date(monthStr+'-01').toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+  const byEmp={};
+  leaves.forEach(r=>{
+    const key=r.employeeId;
+    if(!byEmp[key])byEmp[key]={name:r.employeeName,managedBy:r.managedBy||'',dates:[]};
+    byEmp[key].dates.push(r.date.slice(-2));
+  });
+  let card=`🟡 *MONTHLY LEAVE SUMMARY*\n📅 ${monthLabel}\n\n`;
+  const byCompany={};
+  Object.values(byEmp).forEach(e=>{const co=e.managedBy||'Others';if(!byCompany[co])byCompany[co]=[];byCompany[co].push(e);});
+  Object.entries(byCompany).forEach(([co,emps])=>{
+    card+=`*${co}*\n`;
+    emps.forEach(e=>{card+=`• ${e.name} — ${e.dates.length} day(s) (${e.dates.join(', ')})\n`;});
+    card+='\n';
+  });
+  card+=`_Sent via Innotek Attendance Ledger_`;
+  window.open('https://wa.me/?text='+encodeURIComponent(card),'_blank');
+});
 
 /* TAB NAVIGATION */
 document.querySelectorAll('.tab-btn').forEach(btn=>{btn.addEventListener('click',()=>{document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));btn.classList.add('active');document.getElementById('view-'+btn.dataset.view).classList.add('active');if(btn.dataset.view==='reports'){populateReportDropdowns();renderSchedChecklist();renderWaMbGrid();renderWaChecklist();}if(btn.dataset.view==='entry'){renderEntryChecklist();renderTodayTable();renderSnapshot();}if(btn.dataset.view==='master'){renderEmployeeTable();renderMasterMbGrid();rebuildManagedByDropdown();}if(btn.dataset.view==='backdate'){renderBdMbGrid();renderBdChecklist();}if(btn.dataset.view==='face')onFaceTabOpen();else stopFaceCam();});});
