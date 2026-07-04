@@ -1,0 +1,3580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f1923">
+<title>Innotek ERP</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root {
+  --bg:       #0f1923;
+  --surface:  #162230;
+  --card:     #1d2e3f;
+  --border:   #2a3f54;
+  --accent:   #00c2ff;
+  --accent2:  #00e8a2;
+  --warn:     #f59e0b;
+  --danger:   #ef4444;
+  --text:     #e8f4fd;
+  --muted:    #7a9bb5;
+  --font:     'Inter', system-ui, -apple-system, sans-serif;
+  --radius:   10px;
+  --nav-h:    60px;
+  --safe-b:   env(safe-area-inset-bottom, 0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+/* ── TOP BAR ── */
+#topbar{
+  position:fixed;top:0;left:0;right:0;height:var(--nav-h);
+  background:rgba(15,25,35,.92);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 16px;gap:12px;z-index:100;
+}
+#topbar .logo{font-size:1.1rem;font-weight:800;letter-spacing:-.3px;color:var(--text);}
+#topbar .logo span{color:var(--accent);}
+#topbar .company{font-size:.75rem;color:var(--muted);margin-left:2px;}
+#topbar .spacer{flex:1;}
+#topbar .time-chip{
+  font-size:.72rem;color:var(--muted);
+  background:var(--surface);border:1px solid var(--border);
+  padding:3px 10px;border-radius:20px;
+}
+#hamburger{
+  display:none;background:none;border:none;color:var(--text);
+  font-size:1.4rem;cursor:pointer;padding:4px 8px;
+}
+/* ── SIDEBAR ── */
+#sidebar{
+  position:fixed;top:var(--nav-h);left:0;bottom:0;width:220px;
+  background:var(--surface);border-right:1px solid var(--border);
+  overflow-y:auto;z-index:90;transition:transform .25s ease;
+  padding:12px 0 calc(var(--safe-b) + 12px);
+}
+#sidebar .nav-section{
+  font-size:.65rem;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted);padding:16px 18px 6px;
+}
+#sidebar .nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 18px;cursor:pointer;transition:background .15s;
+  font-size:.85rem;color:var(--muted);border:none;background:none;width:100%;text-align:left;
+}
+#sidebar .nav-item:hover{background:var(--card);color:var(--text);}
+#sidebar .nav-item.active{
+  background:rgba(0,194,255,.1);color:var(--accent);
+  border-left:3px solid var(--accent);
+}
+#sidebar .nav-item .ico{width:20px;text-align:center;font-size:1rem;}
+#sidebar .nav-item .badge{
+  margin-left:auto;background:var(--danger);color:#fff;
+  font-size:.6rem;padding:2px 6px;border-radius:10px;
+}
+/* ── MAIN ── */
+#main{
+  margin-left:220px;padding-top:var(--nav-h);
+  min-height:100vh;transition:margin .25s;
+}
+.page{display:none;padding:20px;max-width:1400px;}
+.page.active{display:block;}
+/* ── CARDS ── */
+.card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius);padding:18px;margin-bottom:16px;
+}
+.card-title{
+  font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:8px;
+}
+.card-title span{font-size:1rem;}
+/* ── KPI GRID ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px;}
+.kpi{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius);padding:16px;
+}
+.kpi .label{font-size:.7rem;color:var(--muted);margin-bottom:6px;}
+.kpi .value{font-size:1.6rem;font-weight:800;color:var(--text);}
+.kpi .sub{font-size:.72rem;color:var(--muted);margin-top:4px;}
+.kpi.accent .value{color:var(--accent);}
+.kpi.green .value{color:var(--accent2);}
+.kpi.warn .value{color:var(--warn);}
+.kpi.danger .value{color:var(--danger);}
+/* ── TABLES ── */
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:.83rem;}
+th{
+  text-align:left;padding:10px 12px;
+  font-size:.68rem;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--muted);border-bottom:1px solid var(--border);
+  background:var(--surface);position:sticky;top:0;
+}
+td{padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text);}
+tr:hover td{background:rgba(255,255,255,.03);}
+/* ── FORMS ── */
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;}
+.field{display:flex;flex-direction:column;gap:5px;}
+.field label{font-size:.72rem;color:var(--muted);}
+.field input,.field select,.field textarea{
+  background:var(--surface);border:1px solid var(--border);
+  color:var(--text);border-radius:7px;padding:9px 12px;font-size:.85rem;
+  font-family:var(--font);outline:none;transition:border .15s;width:100%;
+}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);}
+.field textarea{resize:vertical;min-height:80px;}
+/* ── BUTTONS ── */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:9px 18px;border-radius:7px;font-size:.83rem;font-weight:600;
+  cursor:pointer;border:none;transition:opacity .15s,transform .1s;font-family:var(--font);
+}
+.btn:active{transform:scale(.97);}
+.btn-primary{background:var(--accent);color:#001a24;}
+.btn-success{background:var(--accent2);color:#001a24;}
+.btn-warn{background:var(--warn);color:#1a0a00;}
+.btn-danger{background:var(--danger);color:#fff;}
+.btn-ghost{background:var(--surface);border:1px solid var(--border);color:var(--text);}
+.btn-sm{padding:5px 12px;font-size:.75rem;}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;}
+/* ── BADGES ── */
+.badge{
+  display:inline-block;padding:2px 10px;border-radius:20px;
+  font-size:.68rem;font-weight:600;
+}
+.badge-green{background:rgba(0,232,162,.15);color:var(--accent2);}
+.badge-blue{background:rgba(0,194,255,.15);color:var(--accent);}
+.badge-warn{background:rgba(245,158,11,.15);color:var(--warn);}
+.badge-danger{background:rgba(239,68,68,.15);color:var(--danger);}
+.badge-muted{background:rgba(122,155,181,.15);color:var(--muted);}
+/* ── SEARCH BAR ── */
+.search-bar{
+  display:flex;align-items:center;gap:8px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:7px;padding:8px 12px;margin-bottom:14px;
+}
+.search-bar input{
+  flex:1;background:none;border:none;color:var(--text);
+  font-size:.85rem;outline:none;font-family:var(--font);
+}
+/* ── CAMERA ── */
+#cam-view{width:100%;max-width:340px;border-radius:10px;border:2px solid var(--border);}
+#cam-canvas{display:none;}
+.cam-box{position:relative;display:inline-block;}
+.cam-overlay{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:160px;height:160px;border:2px solid var(--accent);
+  border-radius:12px;pointer-events:none;
+}
+/* ── PROGRESS ── */
+.progress-bar{background:var(--surface);border-radius:20px;height:8px;overflow:hidden;margin:8px 0;}
+.progress-fill{height:100%;border-radius:20px;background:var(--accent);transition:width .4s;}
+.progress-fill.green{background:var(--accent2);}
+.progress-fill.warn{background:var(--warn);}
+.progress-fill.danger{background:var(--danger);}
+/* ── TABS ── */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:16px;overflow-x:auto;}
+.tab{
+  padding:10px 16px;font-size:.82rem;color:var(--muted);cursor:pointer;
+  border:none;background:none;font-family:var(--font);white-space:nowrap;
+  border-bottom:2px solid transparent;transition:color .15s;
+}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+/* ── MODAL ── */
+.modal-bg{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);
+  z-index:200;align-items:center;justify-content:center;padding:16px;
+}
+.modal-bg.open{display:flex;}
+.modal{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius);padding:24px;width:100%;max-width:500px;
+  max-height:90vh;overflow-y:auto;
+}
+.modal h3{font-size:1rem;margin-bottom:16px;}
+/* ── TOAST ── */
+#toast{
+  position:fixed;bottom:calc(var(--safe-b) + 24px);left:50%;
+  transform:translateX(-50%) translateY(80px);
+  background:var(--card);border:1px solid var(--border);
+  border-radius:8px;padding:10px 20px;font-size:.83rem;
+  z-index:999;transition:transform .3s ease;pointer-events:none;
+  white-space:nowrap;
+}
+#toast.show{transform:translateX(-50%) translateY(0);}
+/* ── CHART SIMPLE ── */
+.mini-chart{display:flex;align-items:flex-end;gap:4px;height:60px;}
+.mini-bar{
+  flex:1;background:var(--accent);border-radius:3px 3px 0 0;opacity:.7;
+  transition:opacity .2s;min-width:8px;
+}
+.mini-bar:hover{opacity:1;}
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  #hamburger{display:block;}
+  #sidebar{transform:translateX(-100%);}
+  #sidebar.open{transform:translateX(0);}
+  #main{margin-left:0;}
+  .overlay{
+    display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:89;
+  }
+  .overlay.open{display:block;}
+  .kpi-grid{grid-template-columns:1fr 1fr;}
+  .form-grid{grid-template-columns:1fr;}
+}
+@media(min-width:1200px){
+  .page{padding:28px 32px;}
+}
+/* ── PAGE HEADER ── */
+.page-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:20px;flex-wrap:wrap;gap:10px;
+}
+.page-hdr h2{font-size:1.25rem;font-weight:700;}
+.page-hdr .meta{font-size:.75rem;color:var(--muted);}
+/* ── STATUS DOT ── */
+.dot{
+  width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;
+}
+.dot.green{background:var(--accent2);}
+.dot.warn{background:var(--warn);}
+.dot.danger{background:var(--danger);}
+.dot.blue{background:var(--accent);}
+/* ── FACE RING ── */
+.face-ring{
+  width:100px;height:100px;border-radius:50%;
+  border:3px solid var(--border);overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+  font-size:2.5rem;background:var(--surface);
+}
+.face-ring.ok{border-color:var(--accent2);}
+.face-ring.fail{border-color:var(--danger);}
+/* ── TIMELINE ── */
+.timeline{display:flex;flex-direction:column;gap:0;}
+.tl-item{
+  display:flex;gap:12px;padding:10px 0;
+  border-left:2px solid var(--border);padding-left:16px;position:relative;
+}
+.tl-item::before{
+  content:'';position:absolute;left:-5px;top:14px;
+  width:8px;height:8px;border-radius:50%;background:var(--accent);
+}
+.tl-item .tl-time{font-size:.7rem;color:var(--muted);min-width:70px;}
+.tl-item .tl-body{font-size:.82rem;}
+.tl-item .tl-sub{font-size:.72rem;color:var(--muted);}
+/* scrollbar */
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:var(--surface);}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <button id="hamburger" onclick="toggleSidebar()">☰</button>
+  <a href="./index.html" style="text-decoration:none;color:var(--muted);font-size:.75rem;border:1px solid var(--border);padding:4px 10px;border-radius:20px;margin-right:4px" title="Back to Hub">⌂ Hub</a>
+  <div>
+    <div class="logo">Inno<span>tek</span> <span style="color:var(--muted);font-weight:400;font-size:.75rem">ERP</span></div>
+    <div class="company">Manufacturing Operations System</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="time-chip" id="clock">--:--</div>
+</div>
+
+<!-- OVERLAY (mobile) -->
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="nav-section">Overview</div>
+  <button class="nav-item active" onclick="showPage('dashboard')"><span class="ico">📊</span>Dashboard</button>
+
+  <div class="nav-section">Operations</div>
+  <button class="nav-item" onclick="showPage('production')"><span class="ico">🏭</span>Production</button>
+  <button class="nav-item" onclick="showPage('inventory')"><span class="ico">📦</span>Inventory</button>
+  <button class="nav-item" onclick="showPage('dispatch')"><span class="ico">🚚</span>Dispatch</button>
+  <button class="nav-item" onclick="showPage('quality')"><span class="ico">🔬</span>Quality / QC</button>
+
+  <div class="nav-section">People</div>
+  <button class="nav-item" onclick="showPage('attendance')"><span class="ico">🕐</span>Attendance</button>
+  <button class="nav-item" onclick="showPage('employees')"><span class="ico">👤</span>Employees</button>
+
+  <div class="nav-section">Finance</div>
+  <button class="nav-item" onclick="showPage('finance')"><span class="ico">💰</span>Finance</button>
+  <button class="nav-item" onclick="showPage('purchase')"><span class="ico">🛒</span>Purchase</button>
+  <button class="nav-item" onclick="showPage('sales')"><span class="ico">📈</span>Sales & Orders</button>
+
+  <div class="nav-section">Records</div>
+  <button class="nav-item" onclick="showPage('documents')"><span class="ico">📁</span>Documents</button>
+  <button class="nav-item" onclick="showPage('reports')"><span class="ico">📋</span>Reports</button>
+
+  <div class="nav-section">System</div>
+  <button class="nav-item" onclick="showPage('settings')"><span class="ico">⚙️</span>Settings</button>
+</nav>
+
+<!-- MAIN CONTENT -->
+<main id="main">
+
+<!-- ══════════════════════════════════════════════
+     DASHBOARD
+══════════════════════════════════════════════ -->
+<div class="page active" id="page-dashboard">
+  <div class="page-hdr">
+    <div>
+      <h2>Dashboard</h2>
+      <div class="meta" id="dash-date">Today</div>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="exportDashPDF()">⬇ PDF</button>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi accent"><div class="label">Active Orders</div><div class="value" id="kpi-orders">12</div><div class="sub">3 pending dispatch</div></div>
+    <div class="kpi green"><div class="label">Production Batches</div><div class="value" id="kpi-batches">5</div><div class="sub">2 in process</div></div>
+    <div class="kpi warn"><div class="label">Low Stock Items</div><div class="value" id="kpi-lowstock">7</div><div class="sub">Reorder required</div></div>
+    <div class="kpi danger"><div class="label">Pending Invoices</div><div class="value" id="kpi-invoices">₹4.2L</div><div class="sub">Overdue: ₹1.1L</div></div>
+    <div class="kpi accent"><div class="label">Present Today</div><div class="value" id="kpi-present">18</div><div class="sub">of 24 employees</div></div>
+    <div class="kpi green"><div class="label">Dispatches Today</div><div class="value" id="kpi-dispatch">3</div><div class="sub">2 pending</div></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;">
+    <div class="card">
+      <div class="card-title"><span>📈</span>Production This Week (MT)</div>
+      <div class="mini-chart" id="prod-chart"></div>
+      <div style="display:flex;justify-content:space-between;margin-top:6px;">
+        <span style="font-size:.7rem;color:var(--muted)">Mon</span>
+        <span style="font-size:.7rem;color:var(--muted)">Tue</span>
+        <span style="font-size:.7rem;color:var(--muted)">Wed</span>
+        <span style="font-size:.7rem;color:var(--muted)">Thu</span>
+        <span style="font-size:.7rem;color:var(--muted)">Fri</span>
+        <span style="font-size:.7rem;color:var(--muted)">Sat</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>🔔</span>Alerts & Notices</div>
+      <div class="timeline" id="alert-timeline"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>🚚</span>Upcoming Dispatches</div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Order</th><th>Customer</th><th>Date</th><th>Status</th></tr></thead>
+        <tbody id="dash-dispatch-tbl"></tbody>
+      </table></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>💰</span>Cash Flow (₹)</div>
+      <div class="mini-chart" id="cash-chart"></div>
+      <div style="display:flex;gap:16px;margin-top:10px;">
+        <div><div class="label" style="font-size:.7rem;color:var(--muted)">Receivables</div><div style="color:var(--accent2);font-weight:700">₹8.4L</div></div>
+        <div><div class="label" style="font-size:.7rem;color:var(--muted)">Payables</div><div style="color:var(--danger);font-weight:700">₹3.2L</div></div>
+        <div><div class="label" style="font-size:.7rem;color:var(--muted)">Net</div><div style="color:var(--accent);font-weight:700">₹5.2L</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     PRODUCTION
+══════════════════════════════════════════════ -->
+<div class="page" id="page-production">
+  <div class="page-hdr">
+    <div><h2>Production Control</h2><div class="meta">Batch management & progress tracking (QCQA workflow)</div></div>
+    <div class="btn-row" style="margin:0">
+      <button class="btn btn-primary btn-sm" onclick="openModal('modal-newbatch')">+ New Batch</button>
+      <button class="btn btn-ghost btn-sm" onclick="openModal('modal-nfg-grn')">+ NFG GRN</button>
+      <button class="btn btn-ghost btn-sm" onclick="openModal('modal-l1-grn')">+ L1 GRN</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportTblCSV('prod-tbl','Production')">CSV</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportTblPDF('prod-tbl','Production Batches')">PDF</button>
+    </div>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi accent"><div class="label">Planned Today</div><div class="value">4.2 MT</div></div>
+    <div class="kpi green"><div class="label">Completed</div><div class="value">2.8 MT</div></div>
+    <div class="kpi warn"><div class="label">In Process</div><div class="value">1.1 MT</div></div>
+    <div class="kpi danger"><div class="label">Rejected QC</div><div class="value">0.3 MT</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span>🏭</span>Active Batches</div>
+    <div class="search-bar"><span>🔍</span><input placeholder="Search batch / product..." oninput="filterTbl(this,'prod-tbl')"></div>
+    <div class="tbl-wrap"><table id="prod-tbl">
+      <thead><tr><th>Batch #</th><th>Product</th><th>Grade</th><th>NFG Code</th><th>CB</th><th>Start</th><th>Stage</th><th>Progress</th><th>Operator</th><th>Status</th><th>Action</th></tr></thead>
+      <tbody id="prod-tbody"></tbody>
+    </table></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span>📋</span>Stage-wise Process Log</div>
+    <div id="stage-log"></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
+    <div class="card">
+      <div class="card-title"><span>🪨</span>NFG GRN Register</div>
+      <div class="tbl-wrap"><table id="nfg-tbl">
+        <thead><tr><th>NFG GRN</th><th>Grade</th><th>Supplier</th><th>Bags</th><th>Wt (Kg)</th><th>QC</th></tr></thead>
+        <tbody id="nfg-tbody"></tbody>
+      </table></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span>🧪</span>L1 GRN Register</div>
+      <div class="tbl-wrap"><table id="l1-tbl">
+        <thead><tr><th>L1 GRN</th><th>Supplier</th><th>Wt (Kg)</th><th>Conc %</th><th>Density</th></tr></thead>
+        <tbody id="l1-tbody"></tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     INVENTORY
+══════════════════════════════════════════════ -->
+<div class="page" id="page-inventory">
+  <div class="page-hdr">
+    <div><h2>Inventory Control</h2><div class="meta">Stock levels, movements & reorder alerts</div></div>
+    <div class="btn-row" style="margin:0">
+      <button class="btn btn-primary btn-sm" onclick="openModal('modal-addstock')">+ Add Stock</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportTblCSV('inv-tbl','Inventory')">CSV</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportTblPDF('inv-tbl','Inventory Report')">PDF</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="invTab(this,'raw')">Raw Material</button>
+    <button class="tab" onclick="invTab(this,'wip')">WIP</button>
+    <button class="tab" onclick="invTab(this,'fg')">Finished Goods</button>
+    <button class="tab" onclick="invTab(this,'packing')">Packing Material</button>
+    <button class="tab" onclick="invTab(this,'movements')">Movements</button>
+  </div>
+
+  <div class="card">
+    <div class="search-bar"><span>🔍</span><input placeholder="Search item..." oninput="filterTbl(this,'inv-tbl')"></div>
+    <div class="tbl-wrap"><table id="inv-tbl">
+      <thead><tr><th>Item Code</th><th>Description</th><th>Category</th><th>UOM</th><th>Stock</th><th>Reorder Lvl</th><th>Location</th><th>Last Updated</th><th>Status</th><th>Action</th></tr></thead>
+      <tbody id="inv-tbody"></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     DISPATCH
+══════════════════════════════════════════════ -->
+<div class="page" id="page-dispatch">
+  <div class="page-hdr">
+    <div><h2>Dispatch Control</h2><div class="meta">Outward shipments & delivery tracking</div></div>
+    <div class="btn-row" style="margin:0">
+      <button class="btn btn-primary btn-sm" onclick="openModal('modal-newdispatch')">+ New Dispatch</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportTblCSV('disp-tbl','Dispatch')">CSV</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportTblPDF('disp-tbl','Dispatch Register')">PDF</button>
+    </div>
+  </div>
+  <div class="kpi-grid">
+    <div class="kpi accent"><div class="label">This Month</div><div class="value">48 MT</div></div>
+    <div class="kpi green"><div class="label">Delivered</div><div class="value">35 MT</div></div>
+    <div class="kpi warn"><div class="label">In Transit</div><div class="value">8 MT</div></div>
+    <div class="kpi danger"><div class="label">Delayed</div><div class="value">5 MT</div></div>
+  </div>
+  <div class="card">
+    <div class="search-bar"><span>🔍</span><input placeholder="Search order / customer..." oninput="filterTbl(this,'disp-tbl')"></div>
+    <div class="tbl-wrap"><table id="disp-tbl">
+      <thead><tr><th>DO#</th><th>Order#</th><th>Customer</th><th>Product</th><th>Qty</th><th>Vehicle</th><th>Driver</th><th>Dispatch Date</th><th>ETA</th><th>Status</th><th>Action</th></tr></thead>
+      <tbody id="disp-tbody"></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     QUALITY
+══════════════════════════════════════════════ -->
+<div class="page" id="page-quality">
+  <div class="page-hdr">
+    <div><h2>Quality Control / QC Lab</h2><div class="meta">NFG QC · Dispatch Sample Testing · Approvals</div></div>
+    <div class="btn-row" style="margin:0">
+      <button class="btn btn-ghost btn-sm" onclick="exportTblCSV('qc-tbl','QC')">CSV</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportTblPDF('qc-tbl','QC Test Report')">PDF</button>
+    </div>
+  </div>
+  <div class="kpi-grid">
+    <div class="kpi accent"><div class="label">Tests This Month</div><div class="value">63</div></div>
+    <div class="kpi green"><div class="label">Passed</div><div class="value">57</div></div>
+    <div class="kpi danger"><div class="label">Failed</div><div class="value">6</div></div>
+    <div class="kpi warn"><div class="label">Yield Rate</div><div class="value">90.5%</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="qcTab(this,'summary')">Summary</button>
+    <button class="tab" onclick="qcTab(this,'nfgqc')">🪨 NFG QC Entry</button>
+    <button class="tab" onclick="qcTab(this,'dispatchqc')">🚚 Dispatch Sample QC</button>
+  </div>
+
+  <div id="qc-summary" class="qc-tab">
+    <div class="card">
+      <div class="tbl-wrap"><table id="qc-tbl">
+        <thead><tr><th>Test#</th><th>Ref (Batch/GRN/Lot)</th><th>Type</th><th>Parameter</th><th>Value</th><th>Tester</th><th>Date</th><th>Result</th></tr></thead>
+        <tbody id="qc-tbody"></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <div id="qc-nfgqc" class="qc-tab" style="display:none">
+    <div class="card">
+      <div class="card-title"><span>🪨</span>Select NFG GRN for QC Entry</div>
+      <select id="nfgqc-grn-select" class="form-grid" style="background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:9px 12px;color:var(--text);width:100%" onchange="openNfgQC(this.value)">
+        <option value="">Select NFG GRN pending QC...</option>
+      </select>
+    </div>
+    <div id="nfgqc-form-area"></div>
+  </div>
+
+  <div id="qc-dispatchqc" class="qc-tab" style="display:none">
+    <div class="card">
+      <div class="card-title"><span>🚚</span>New Dispatch Sample Set</div>
+      <div class="form-grid">
+        <div class="field"><label>Material Lot No</label><input id="dq-lot" placeholder="Enter material lot number"></div>
+        <div class="field"><label>Product Code</label>
+          <select id="dq-product">
+            <option value="">Select product code</option>
+            <option>85200150</option><option>9080230</option><option>8550280</option>
+            <option>9650280</option><option>9980200</option><option>9950280</option>
+            <option>9980180</option><option>9680200</option><option>9650300</option>
+            <option>9050300</option><option>9450300</option><option>9450120</option><option>9080180</option>
+          </select>
+        </div>
+        <div class="field"><label>Estimated Total Weight (Kg)</label><input id="dq-weight" type="number"></div>
+        <div class="field"><label>No. of Blends Est.</label><input id="dq-blends" type="number" min="1" max="50" value="1"></div>
+      </div>
+      <div class="btn-row"><button class="btn btn-primary" onclick="startDispatchSamples()">Continue →</button></div>
+    </div>
+    <div id="dispatchqc-form-area"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     ATTENDANCE
+══════════════════════════════════════════════ -->
+<div class="page" id="page-attendance">
+  <div class="page-hdr">
+    <div><h2>Attendance Management</h2><div class="meta">Face detection • Entry / Exit • Leave</div></div>
+    <div class="btn-row" style="margin:0">
+      <button class="btn btn-ghost btn-sm" onclick="exportTblCSV('att-tbl','Attendance')">CSV</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportTblPDF('att-tbl','Attendance Register')">PDF</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="attTab(this,'face')">Face Check-In</button>
+    <button class="tab" onclick="attTab(this,'manual')">Manual Entry</button>
+    <button class="tab" onclick="attTab(this,'register')">Register</button>
+    <button class="tab" onclick="attTab(this,'leave')">Leave</button>
+  </div>
+
+  <!-- FACE TAB -->
+  <div id="att-face" class="att-tab">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;">
+      <div class="card" style="text-align:center;">
+        <div class="card-title"><span>📷</span>Live Camera</div>
+        <div class="tabs" style="margin-bottom:10px;justify-content:center">
+          <button class="tab active" id="fTabEntry" onclick="setFaceMode('ENTRY')">↑ Entry</button>
+          <button class="tab" id="fTabExit" onclick="setFaceMode('EXIT')">↓ Exit</button>
+        </div>
+        <div class="cam-box" style="position:relative">
+          <video id="faceVideo" autoplay playsinline muted style="width:100%;max-width:320px;border-radius:10px;border:2px solid var(--border);background:#000"></video>
+          <div class="cam-overlay"></div>
+          <div id="faceBadge" style="position:absolute;top:8px;left:8px;background:rgba(0,0,0,.6);color:var(--accent2);font-size:.7rem;padding:3px 8px;border-radius:10px;"></div>
+          <div id="faceSplash" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(15,25,35,.95);border-radius:10px;padding:16px;">
+            <div style="font-size:2rem">👁️</div>
+            <div style="font-weight:700;margin-top:8px">Loading Face AI…</div>
+            <div style="font-size:.75rem;color:var(--muted);margin:6px 0">First load ~20 sec<br>Camera opens automatically</div>
+            <div class="progress-bar" style="width:80%"><div class="progress-fill" id="faceProgFill" style="width:0%"></div></div>
+            <div style="font-size:.7rem;color:var(--muted);margin-top:4px" id="faceProgLabel">Tap Start Camera</div>
+          </div>
+        </div>
+        <div class="btn-row" style="justify-content:center;margin-top:12px;">
+          <button class="btn btn-primary" onclick="startCamera()" id="btn-cam-start">📷 Start Camera</button>
+          <button class="btn btn-success" onclick="captureAndRecognize()" id="btn-capture" style="display:none" disabled>✓ Capture Faces</button>
+          <button class="btn btn-ghost btn-sm" onclick="flipFaceCam()" title="Flip camera">⟳</button>
+          <button class="btn btn-ghost btn-sm" onclick="openEnrollModal()" title="Enroll new face">👤 Enroll</button>
+        </div>
+        <div id="cam-status" style="margin-top:12px;font-size:.83rem;color:var(--muted)">Camera off</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>✅</span>Recognized Faces — Confirm Below</div>
+        <div id="face-log" style="display:flex;flex-direction:column;gap:10px;max-height:400px;overflow-y:auto;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MANUAL TAB -->
+  <div id="att-manual" class="att-tab" style="display:none">
+    <div class="card">
+      <div class="card-title"><span>✏️</span>Manual Attendance Entry</div>
+      <div class="form-grid">
+        <div class="field"><label>Employee</label>
+          <select id="att-emp">
+            <option value="">Select Employee</option>
+          </select>
+        </div>
+        <div class="field"><label>Date</label><input type="date" id="att-date"></div>
+        <div class="field"><label>Type</label>
+          <select id="att-type">
+            <option value="Entry">Entry</option>
+            <option value="Exit">Exit</option>
+            <option value="Present">Present (Full Day)</option>
+            <option value="Half Day">Half Day</option>
+            <option value="Absent">Absent</option>
+            <option value="Leave">Leave</option>
+          </select>
+        </div>
+        <div class="field"><label>Time</label><input type="time" id="att-time"></div>
+        <div class="field"><label>Remarks</label><input id="att-remarks" placeholder="Optional"></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="saveManualAtt()">Save Entry</button>
+        <button class="btn btn-ghost" onclick="markBulkPresent()">Mark All Present</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- REGISTER TAB -->
+  <div id="att-register" class="att-tab" style="display:none">
+    <div class="card">
+      <div style="margin-bottom:10px">
+        <label style="font-size:.72rem;color:var(--muted)">Managed By <span style="font-weight:400">(tap to filter)</span></label>
+        <div class="tabs" id="att-mb-grid" style="margin-bottom:0"></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        <div class="field" style="flex:1;min-width:130px;margin-bottom:0">
+          <label>Month</label><input type="month" id="att-month" onchange="loadAttRegister()">
+        </div>
+      </div>
+      <div class="tbl-wrap"><table id="att-tbl">
+        <thead><tr id="att-hdr"></tr></thead>
+        <tbody id="att-tbody"></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- LEAVE TAB -->
+  <div id="att-leave" class="att-tab" style="display:none">
+    <div class="card">
+      <div class="card-title"><span>📅</span>Leave Requests</div>
+      <div class="form-grid">
+        <div class="field"><label>Employee</label><select id="leave-emp"><option value="">Select</option></select></div>
+        <div class="field"><label>From Date</label><input type="date" id="leave-from"></div>
+        <div class="field"><label>To Date</label><input type="date" id="leave-to"></div>
+        <div class="field"><label>Leave Type</label>
+          <select id="leave-type">
+            <option>Casual Leave</option><option>Sick Leave</option>
+            <option>Earned Leave</option><option>Unpaid Leave</option>
+          </select>
+        </div>
+        <div class="field" style="grid-column:1/-1"><label>Reason</label><textarea id="leave-reason" rows="2"></textarea></div>
+      </div>
+      <div class="btn-row"><button class="btn btn-primary" onclick="applyLeave()">Apply Leave</button></div>
+      <div style="margin-top:16px">
+        <div class="card-title"><span>📋</span>Leave Records</div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Employee</th><th>Type</th><th>From</th><th>To</th><th>Days</th><th>Reason</th><th>Status</th></tr></thead>
+          <tbody id="leave-tbody"></tbody>
+        </table></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     EMPLOYEES
+══════════════════════════════════════════════ -->
+<div class="page" id="page-employees">
+  <div class="page-hdr">
+    <div><h2>Employee Directory</h2></div>
+    <div class="btn-row" style="margin:0">
+      <button class="btn btn-primary btn-sm" onclick="openModal('modal-newemp')">+ Add Employee</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportTblCSV('emp-tbl','Employees')">CSV</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="search-bar"><span>🔍</span><input placeholder="Search employee..." oninput="filterTbl(this,'emp-tbl')"></div>
+    <div class="tbl-wrap"><table id="emp-tbl">
+      <thead><tr><th>ID</th><th>Name</th><th>Department</th><th>Designation</th><th>Managed By</th><th>Phone</th><th>Join Date</th><th>Salary</th><th>Status</th><th>Action</th></tr></thead>
+      <tbody id="emp-tbody"></tbody>
+    </table></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span>📥</span>Import / Export Employees (from Attendance Sheet)</div>
+    <p style="font-size:.78rem;color:var(--muted);margin-bottom:8px">CSV columns: EmployeeID, EmployeeName, Department, ManagedBy</p>
+    <input type="file" id="emp-import-file" accept=".csv" style="color:var(--text);margin-bottom:10px">
+    <div class="btn-row">
+      <button class="btn btn-primary btn-sm" onclick="importEmployeesCSV()">Import CSV</button>
+      <button class="btn btn-ghost btn-sm" onclick="syncEmployeesFromSheet()">🔄 Sync from Google Sheet</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportTblCSV('emp-tbl','Employees')">Export CSV</button>
+    </div>
+    <div id="emp-sync-status" style="font-size:.78rem;color:var(--muted);margin-top:8px"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     FINANCE
+══════════════════════════════════════════════ -->
+<div class="page" id="page-finance">
+  <div class="page-hdr">
+    <div><h2>Financial Management</h2></div>
+    <div class="btn-row" style="margin:0">
+      <button class="btn btn-primary btn-sm" onclick="openModal('modal-newvoucher')">+ Voucher</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportTblCSV('fin-tbl','Finance')">CSV</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportTblPDF('fin-tbl','Financial Ledger')">PDF</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="finTab(this,'ledger')">Ledger</button>
+    <button class="tab" onclick="finTab(this,'invoices')">Invoices</button>
+    <button class="tab" onclick="finTab(this,'expenses')">Expenses</button>
+    <button class="tab" onclick="finTab(this,'payroll')">Payroll</button>
+    <button class="tab" onclick="finTab(this,'docentry')">📋 Doc Entry</button>
+    <button class="tab" onclick="finTab(this,'docdue')">📅 Payment Due</button>
+    <button class="tab" onclick="finTab(this,'docmaster')">🏢 Supplier Master</button>
+  </div>
+
+  <div id="fin-ledger" class="fin-tab">
+    <div class="kpi-grid">
+      <div class="kpi green"><div class="label">Total Income (MTD)</div><div class="value">₹12.4L</div></div>
+      <div class="kpi danger"><div class="label">Total Expenses (MTD)</div><div class="value">₹7.8L</div></div>
+      <div class="kpi accent"><div class="label">Net Profit</div><div class="value">₹4.6L</div></div>
+      <div class="kpi warn"><div class="label">Outstanding</div><div class="value">₹2.3L</div></div>
+    </div>
+    <div class="card">
+      <div class="tbl-wrap"><table id="fin-tbl">
+        <thead><tr><th>Date</th><th>Voucher#</th><th>Type</th><th>Party</th><th>Narration</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead>
+        <tbody id="fin-tbody"></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <div id="fin-invoices" class="fin-tab" style="display:none">
+    <div class="card">
+      <div class="card-title"><span>🧾</span>Invoice Register</div>
+      <div class="tbl-wrap"><table id="inv2-tbl">
+        <thead><tr><th>Invoice#</th><th>Date</th><th>Customer</th><th>Amount</th><th>Due Date</th><th>Paid</th><th>Balance</th><th>Status</th></tr></thead>
+        <tbody id="inv2-tbody"></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <div id="fin-expenses" class="fin-tab" style="display:none">
+    <div class="card">
+      <div class="card-title"><span>💸</span>Expense Tracker</div>
+      <div class="form-grid">
+        <div class="field"><label>Date</label><input type="date" id="exp-date"></div>
+        <div class="field"><label>Category</label>
+          <select id="exp-cat">
+            <option>Raw Material</option><option>Utilities</option><option>Labour</option>
+            <option>Transport</option><option>Maintenance</option><option>Miscellaneous</option>
+          </select>
+        </div>
+        <div class="field"><label>Amount (₹)</label><input type="number" id="exp-amt"></div>
+        <div class="field"><label>Remarks</label><input id="exp-rem"></div>
+      </div>
+      <div class="btn-row"><button class="btn btn-primary" onclick="addExpense()">Add Expense</button></div>
+      <div style="margin-top:16px">
+        <div class="tbl-wrap"><table id="exp-tbl">
+          <thead><tr><th>Date</th><th>Category</th><th>Amount</th><th>Remarks</th></tr></thead>
+          <tbody id="exp-tbody"></tbody>
+        </table></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="fin-payroll" class="fin-tab" style="display:none">
+    <div class="card">
+      <div class="card-title"><span>💼</span>Monthly Payroll</div>
+      <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        <div class="field" style="flex:1;min-width:150px;margin-bottom:0">
+          <label>Month</label><input type="month" id="payroll-month" onchange="loadPayroll()">
+        </div>
+      </div>
+      <div class="tbl-wrap"><table id="payroll-tbl">
+        <thead><tr><th>Employee</th><th>Days Present</th><th>Basic</th><th>Deductions</th><th>Bonus</th><th>Net Pay</th><th>Status</th></tr></thead>
+        <tbody id="payroll-tbody"></tbody>
+      </table></div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="processPayroll()">Process Payroll</button>
+        <button class="btn btn-ghost" onclick="exportTblCSV('payroll-tbl','Payroll')">CSV</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DOC ENTRY (real Doc Mgmt System: Invoice & Voucher entry) -->
+  <div id="fin-docentry" class="fin-tab" style="display:none">
+    <div class="kpi-grid">
+      <div class="kpi accent"><div class="label">Today's Entries</div><div class="value" id="dms-stat-today">0</div></div>
+      <div class="kpi warn"><div class="label">Pending Sync</div><div class="value" id="dms-stat-pending">0</div></div>
+      <div class="kpi green"><div class="label">Total Entries</div><div class="value" id="dms-stat-total">0</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span>✏️</span>New Document Entry</div>
+      <div class="tabs">
+        <button class="tab active" onclick="docEntryTab(this,'invoice')">🧾 Invoice</button>
+        <button class="tab" onclick="docEntryTab(this,'voucher')">📝 Voucher</button>
+      </div>
+
+      <div id="docentry-invoice" class="docentry-type">
+        <div class="form-grid">
+          <div class="field" style="grid-column:1/-1"><label>Supplier Name *</label>
+            <input list="supplier-list" id="dms-inv-supplier" placeholder="Search or select supplier...">
+            <datalist id="supplier-list"></datalist>
+          </div>
+          <div class="field"><label>Invoice Amount (₹) *</label><input id="dms-inv-amount" type="number" step="0.01"></div>
+          <div class="field"><label>Type *</label>
+            <select id="dms-inv-type"><option>Expense</option><option>Raw Material</option><option>Consumable</option><option>Spares</option><option>Capital</option></select>
+          </div>
+          <div class="field" style="grid-column:1/-1"><label>About / Description</label><input id="dms-inv-about" placeholder="e.g. Steel rods for production line"></div>
+          <div class="field"><label>Payment Due By (optional)</label><input id="dms-inv-due" type="date"></div>
+          <div class="field"><label>Attach File (optional)</label><input type="file" id="dms-inv-file" accept="image/*,application/pdf" style="color:var(--text)"></div>
+        </div>
+        <div class="btn-row"><button class="btn btn-primary" onclick="saveDocEntry('invoice')">Save Invoice</button></div>
+      </div>
+
+      <div id="docentry-voucher" class="docentry-type" style="display:none">
+        <div class="form-grid">
+          <div class="field"><label>Person Name *</label>
+            <select id="dms-vou-person">
+              <option value="">— Select Person —</option>
+              <option>Milind Deodhar</option><option>Aniruddha Dharmadhikari</option>
+              <option>Meherzade Dubash</option><option>Tejas Pathak</option><option>Mahesh Pathak</option>
+            </select>
+          </div>
+          <div class="field"><label>Voucher Amount (₹) *</label><input id="dms-vou-amount" type="number" step="0.01"></div>
+          <div class="field"><label>Type *</label>
+            <select id="dms-vou-type"><option>Expense</option><option>Raw Material</option><option>Consumable</option><option>Spares</option><option>Capital</option></select>
+          </div>
+          <div class="field" style="grid-column:1/-1"><label>About / Description</label><input id="dms-vou-about" placeholder="e.g. Travel to Pune client visit"></div>
+          <div class="field"><label>Payment Due By (optional)</label><input id="dms-vou-due" type="date"></div>
+          <div class="field"><label>Attach File (optional)</label><input type="file" id="dms-vou-file" accept="image/*,application/pdf" style="color:var(--text)"></div>
+        </div>
+        <div class="btn-row"><button class="btn btn-primary" onclick="saveDocEntry('voucher')">Save Voucher</button></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>📋</span>Recent Entries</div>
+      <div class="search-bar"><span>🔍</span><input placeholder="Search entries..." oninput="filterTbl(this,'dms-tbl')"></div>
+      <div class="tbl-wrap"><table id="dms-tbl">
+        <thead><tr><th>Date</th><th>Type</th><th>Supplier/Person</th><th>Amount</th><th>Doc Type</th><th>Due Date</th><th>Sync</th><th>Doc</th></tr></thead>
+        <tbody id="dms-tbody"></tbody>
+      </table></div>
+      <div class="btn-row">
+        <button class="btn btn-ghost btn-sm" onclick="exportTblCSV('dms-tbl','Doc_Entries')">CSV</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportTblPDF('dms-tbl','Document Entries Report')">PDF</button>
+        <button class="btn btn-primary btn-sm" onclick="openModalSendDms()">📤 Send Today's Report</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAYMENT DUE (real Doc Mgmt System) -->
+  <div id="fin-docdue" class="fin-tab" style="display:none">
+    <div class="card">
+      <div class="card-title"><span>📅</span>Payments Due & Overdue</div>
+      <div id="due-overdue-section"></div>
+      <div id="due-upcoming-section"></div>
+      <div id="due-empty" style="display:none;text-align:center;padding:30px;color:var(--muted)">🎉 All clear! No overdue or upcoming payments</div>
+    </div>
+  </div>
+
+  <!-- SUPPLIER MASTER (real Doc Mgmt System) -->
+  <div id="fin-docmaster" class="fin-tab" style="display:none">
+    <div class="card">
+      <div class="card-title"><span>➕</span>Add New Supplier</div>
+      <div style="display:flex;gap:10px">
+        <input id="new-supplier-input" placeholder="Supplier / Company name" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:9px 12px;color:var(--text)">
+        <button class="btn btn-primary btn-sm" onclick="addSupplier()">+ Add</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span>🏢</span>Supplier List (<span id="supplier-count">0</span>)</div>
+      <div id="supplier-master-list" style="display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     PURCHASE
+══════════════════════════════════════════════ -->
+<div class="page" id="page-purchase">
+  <div class="page-hdr">
+    <div><h2>Purchase Management</h2></div>
+    <div class="btn-row" style="margin:0">
+      <button class="btn btn-primary btn-sm" onclick="openModal('modal-newpo')">+ New PO</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportTblCSV('po-tbl','Purchase Orders')">CSV</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="tbl-wrap"><table id="po-tbl">
+      <thead><tr><th>PO#</th><th>Date</th><th>Vendor</th><th>Item</th><th>Qty</th><th>Rate</th><th>Amount</th><th>Expected</th><th>Status</th></tr></thead>
+      <tbody id="po-tbody"></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SALES
+══════════════════════════════════════════════ -->
+<div class="page" id="page-sales">
+  <div class="page-hdr">
+    <div><h2>Sales & Orders</h2></div>
+    <div class="btn-row" style="margin:0">
+      <button class="btn btn-primary btn-sm" onclick="openModal('modal-newso')">+ New Order</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportTblCSV('so-tbl','Sales Orders')">CSV</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportTblPDF('so-tbl','Sales Order Report')">PDF</button>
+    </div>
+  </div>
+  <div class="kpi-grid">
+    <div class="kpi green"><div class="label">Orders This Month</div><div class="value">24</div></div>
+    <div class="kpi accent"><div class="label">Revenue</div><div class="value">₹18.4L</div></div>
+    <div class="kpi warn"><div class="label">Pending</div><div class="value">8</div></div>
+  </div>
+  <div class="card">
+    <div class="tbl-wrap"><table id="so-tbl">
+      <thead><tr><th>SO#</th><th>Date</th><th>Customer</th><th>Product</th><th>Qty</th><th>Rate</th><th>Amount</th><th>Delivery</th><th>Status</th></tr></thead>
+      <tbody id="so-tbody"></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     DOCUMENTS
+══════════════════════════════════════════════ -->
+<div class="page" id="page-documents">
+  <div class="page-hdr">
+    <div><h2>Document Management</h2><div class="meta">All files · linked to Finance Invoices/Vouchers where applicable</div></div>
+    <div class="btn-row" style="margin:0">
+      <button class="btn btn-primary btn-sm" onclick="openModal('modal-uploaddoc')">+ Upload Doc</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="docTab(this,'all')">All</button>
+    <button class="tab" onclick="docTab(this,'invoice')">🧾 Invoices</button>
+    <button class="tab" onclick="docTab(this,'voucher')">📝 Vouchers</button>
+    <button class="tab" onclick="docTab(this,'po')">Purchase Orders</button>
+    <button class="tab" onclick="docTab(this,'quality')">QC Certs</button>
+    <button class="tab" onclick="docTab(this,'legal')">Legal</button>
+    <button class="tab" onclick="docTab(this,'other')">Other</button>
+  </div>
+
+  <div class="card">
+    <div class="search-bar"><span>🔍</span><input placeholder="Search document..." oninput="filterDocs(this)"></div>
+    <div id="doc-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     REPORTS
+══════════════════════════════════════════════ -->
+<div class="page" id="page-reports">
+  <div class="page-hdr">
+    <div><h2>Reports</h2><div class="meta">Generate & download reports</div></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px">
+    <div class="card" style="cursor:pointer" onclick="genReport('production')">
+      <div style="font-size:2rem;margin-bottom:8px">🏭</div>
+      <div style="font-weight:700;margin-bottom:4px">Production Report</div>
+      <div style="font-size:.8rem;color:var(--muted)">Batch-wise production summary with yield & losses</div>
+      <div class="btn-row"><span class="btn btn-ghost btn-sm">CSV</span><span class="btn btn-ghost btn-sm">PDF</span></div>
+    </div>
+    <div class="card" style="cursor:pointer" onclick="genReport('inventory')">
+      <div style="font-size:2rem;margin-bottom:8px">📦</div>
+      <div style="font-weight:700;margin-bottom:4px">Stock Report</div>
+      <div style="font-size:.8rem;color:var(--muted)">Current stock levels, valuation & reorder status</div>
+      <div class="btn-row"><span class="btn btn-ghost btn-sm">CSV</span><span class="btn btn-ghost btn-sm">PDF</span></div>
+    </div>
+    <div class="card" style="cursor:pointer" onclick="genReport('attendance')">
+      <div style="font-size:2rem;margin-bottom:8px">🕐</div>
+      <div style="font-weight:700;margin-bottom:4px">Attendance Report</div>
+      <div style="font-size:.8rem;color:var(--muted)">Monthly attendance with leave & absent summary</div>
+      <div class="btn-row"><span class="btn btn-ghost btn-sm">CSV</span><span class="btn btn-ghost btn-sm">PDF</span></div>
+    </div>
+    <div class="card" style="cursor:pointer" onclick="genReport('finance')">
+      <div style="font-size:2rem;margin-bottom:8px">💰</div>
+      <div style="font-weight:700;margin-bottom:4px">P&L Statement</div>
+      <div style="font-size:.8rem;color:var(--muted)">Profit & loss with expense breakdown</div>
+      <div class="btn-row"><span class="btn btn-ghost btn-sm">CSV</span><span class="btn btn-ghost btn-sm">PDF</span></div>
+    </div>
+    <div class="card" style="cursor:pointer" onclick="genReport('dispatch')">
+      <div style="font-size:2rem;margin-bottom:8px">🚚</div>
+      <div style="font-weight:700;margin-bottom:4px">Dispatch Report</div>
+      <div style="font-size:.8rem;color:var(--muted)">Outward dispatch with delivery status</div>
+      <div class="btn-row"><span class="btn btn-ghost btn-sm">CSV</span><span class="btn btn-ghost btn-sm">PDF</span></div>
+    </div>
+    <div class="card" style="cursor:pointer" onclick="genReport('quality')">
+      <div style="font-size:2rem;margin-bottom:8px">🔬</div>
+      <div style="font-weight:700;margin-bottom:4px">QC Report</div>
+      <div style="font-size:.8rem;color:var(--muted)">Test results & quality statistics</div>
+      <div class="btn-row"><span class="btn btn-ghost btn-sm">CSV</span><span class="btn btn-ghost btn-sm">PDF</span></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:8px">
+    <div class="card-title"><span>⚙️</span>Custom Report Builder</div>
+    <div class="form-grid">
+      <div class="field"><label>Report Type</label>
+        <select id="rep-type">
+          <option>Production</option><option>Inventory</option><option>Attendance</option>
+          <option>Finance</option><option>Dispatch</option><option>Sales</option>
+        </select>
+      </div>
+      <div class="field"><label>From Date</label><input type="date" id="rep-from"></div>
+      <div class="field"><label>To Date</label><input type="date" id="rep-to"></div>
+      <div class="field"><label>Format</label>
+        <select id="rep-fmt"><option value="csv">CSV</option><option value="pdf">PDF</option></select>
+      </div>
+    </div>
+    <div class="btn-row"><button class="btn btn-primary" onclick="customReport()">Generate Report</button></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SETTINGS
+══════════════════════════════════════════════ -->
+<div class="page" id="page-settings">
+  <div class="page-hdr"><h2>Settings</h2></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px">
+    <div class="card">
+      <div class="card-title"><span>🏢</span>Company Info</div>
+      <div class="form-grid">
+        <div class="field"><label>Company Name</label><input id="s-company" value="Innotek Products"></div>
+        <div class="field"><label>GSTIN</label><input id="s-gst" placeholder="27XXXXX..."></div>
+        <div class="field"><label>Address</label><textarea id="s-addr" rows="2"></textarea></div>
+        <div class="field"><label>Contact</label><input id="s-phone" type="tel"></div>
+        <div class="field"><label>Email</label><input id="s-email" type="email"></div>
+      </div>
+      <div class="btn-row"><button class="btn btn-primary" onclick="saveSettings()">Save</button></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span>🔗</span>Google Apps Script Backend</div>
+      <div class="form-grid">
+        <div class="field"><label>GAS Web App URL</label><input id="s-gas" placeholder="https://script.google.com/macros/s/..."></div>
+        <div class="field"><label>Google Sheet ID</label><input id="s-sheetid" placeholder="Sheet ID"></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="saveSettings()">Save</button>
+        <button class="btn btn-ghost" onclick="testGAS()">Test Connection</button>
+      </div>
+      <div id="gas-status" style="margin-top:10px;font-size:.8rem;color:var(--muted)"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span>👥</span>User Roles</div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Module</th><th>Admin</th><th>Manager</th><th>Staff</th></tr></thead>
+        <tbody>
+          <tr><td>Production</td><td>✅</td><td>✅</td><td>View</td></tr>
+          <tr><td>Finance</td><td>✅</td><td>View</td><td>❌</td></tr>
+          <tr><td>Inventory</td><td>✅</td><td>✅</td><td>View</td></tr>
+          <tr><td>Attendance</td><td>✅</td><td>✅</td><td>Self</td></tr>
+          <tr><td>Dispatch</td><td>✅</td><td>✅</td><td>View</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span>💾</span>Data Management</div>
+      <div class="btn-row" style="flex-direction:column;align-items:flex-start">
+        <button class="btn btn-ghost" onclick="exportAll()">⬇ Export All Data (CSV)</button>
+        <button class="btn btn-ghost" onclick="importData()">⬆ Import Data</button>
+        <button class="btn btn-ghost" onclick="clearCache()">🗑 Clear Local Cache</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</main><!-- end #main -->
+
+<!-- ══════════════════════════════════════════════
+     MODALS
+══════════════════════════════════════════════ -->
+
+<!-- New Batch -->
+<div class="modal-bg" id="modal-newbatch">
+  <div class="modal">
+    <h3>🏭 New Production Batch</h3>
+    <div class="form-grid">
+      <div class="field"><label>Batch Number</label><input id="b-num" placeholder="Auto"></div>
+      <div class="field"><label>Date</label><input id="b-start" type="date"></div>
+      <div class="field" style="grid-column:1/-1"><label>Product Code</label>
+        <select id="b-product" onchange="onBatchProductChange()">
+          <option value="">Select product code</option>
+          <option>85200150</option><option>9080230</option><option>8550280</option>
+          <option>9650280</option><option>9980200</option><option>9950280</option>
+          <option>9980180</option><option>9680200</option><option>9650300</option>
+          <option>9050300</option><option>9450300</option><option>9450120</option>
+          <option>9080180</option>
+        </select>
+      </div>
+      <div class="field"><label>NFG Code (auto from product)</label><input id="b-nfg-code" readonly placeholder="Select product code above"></div>
+      <div class="field"><label>Grade Label</label><input id="b-grade" placeholder="e.g. GR-98"></div>
+      <div class="field"><label>Planned Qty (MT)</label><input id="b-qty" type="number" step="0.01"></div>
+      <div class="field"><label>Operator</label><input id="b-op" placeholder="Operator name"></div>
+      <div class="field" style="grid-column:1/-1"><label>NFG — Select GRN (Bag 1)</label>
+        <select id="b-nfg-grn-1"><option value="">Select GRN</option></select>
+      </div>
+      <div class="field" style="grid-column:1/-1"><label>L1 — Select GRN</label>
+        <select id="b-l1-grn"><option value="">Select L1 GRN (latest first)</option></select>
+      </div>
+      <div class="field"><label>L1 Concentration</label><input id="b-l1-conc" readonly placeholder="Auto"></div>
+      <div class="field"><label>L1 Density</label><input id="b-l1-density" readonly placeholder="Auto"></div>
+      <div class="field" style="grid-column:1/-1"><label>Select CB</label>
+        <div class="tabs" id="b-cb-row">
+          <button class="tab active" onclick="selectCB(this,'CB1')">CB1</button>
+          <button class="tab" onclick="selectCB(this,'CB2')">CB2</button>
+          <button class="tab" onclick="selectCB(this,'CB3')">CB3</button>
+          <button class="tab" onclick="selectCB(this,'CB4')">CB4</button>
+        </div>
+      </div>
+      <div class="field" style="grid-column:1/-1"><label>Observations</label><textarea id="b-notes" rows="2"></textarea></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveBatch()">Create Batch</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-newbatch')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- NFG GRN Create -->
+<div class="modal-bg" id="modal-nfg-grn">
+  <div class="modal">
+    <h3>🪨 Create NFG GRN</h3>
+    <div class="form-grid">
+      <div class="field"><label>Date</label><input id="nfg-date" type="date"></div>
+      <div class="field"><label>Innotek PO Number</label><input id="nfg-po" placeholder="e.g. 26-27/049"></div>
+      <div class="field"><label>NFG Grade</label>
+        <select id="nfg-grade" onchange="onNfgGradeChange()">
+          <option value="">Select grade</option>
+          <option value="+899">+899</option><option value="+599">+599</option>
+          <option value="+899.5">+899.5</option><option value="+599.5">+599.5</option>
+          <option value="+8520">+8520</option><option value="+897">+897</option>
+          <option value="+597">+597</option><option value="+895">+895</option>
+          <option value="+595">+595</option><option value="+890">+890</option><option value="+590">+590</option>
+        </select>
+      </div>
+      <div class="field"><label>NFG Code (auto)</label><input id="nfg-code-out" readonly></div>
+      <div class="field"><label>Supplier</label>
+        <select id="nfg-supplier">
+          <option value="">Select supplier</option>
+          <option value="Asbury|Gallois">Asbury</option>
+          <option value="DGD Industries|Tanzania / Mozambique">DGD Industries</option>
+          <option value="Advanced Graphite Vizag|Tanzania / Vizag">Advanced Graphite Vizag</option>
+          <option value="Goyal Enterprises|Tanzania / Bhuj">Goyal Enterprises</option>
+          <option value="Pranagraf|Madagascar">Pranagraf</option>
+          <option value="NextSource|Madagascar">NextSource</option>
+        </select>
+      </div>
+      <div class="field"><label>Number of Bags</label><input id="nfg-num-bags" type="number" min="1" max="100"></div>
+      <div class="field"><label>Total Estimated Weight (Kg)</label><input id="nfg-total-weight" type="number"></div>
+      <div class="field" style="grid-column:1/-1"><label>NFG GRN (auto-generated)</label><input id="nfg-grn-out" readonly placeholder="Fill PO No. and Grade above"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveNfgGrn()">Submit ✓</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-nfg-grn')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- L1 GRN Create -->
+<div class="modal-bg" id="modal-l1-grn">
+  <div class="modal">
+    <h3>🧪 Create L1 GRN</h3>
+    <div class="form-grid">
+      <div class="field"><label>Date In</label><input id="l1-date" type="date" onchange="updateL1GrnOut()"></div>
+      <div class="field"><label>Weight (Kg)</label><input id="l1-weight" type="number"></div>
+      <div class="field"><label>Supplier Name</label>
+        <select id="l1-supplier"><option value="">Select supplier</option><option>Shreehari Enterprises</option><option>Reliable Chemicals</option></select>
+      </div>
+      <div class="field"><label>Concentration (%)</label><input id="l1-conc" type="number" step="0.01"></div>
+      <div class="field"><label>Density</label><input id="l1-density" type="number" step="0.01"></div>
+      <div class="field" style="grid-column:1/-1"><label>GRN-L1 (auto-generated)</label><input id="l1-grn-out" readonly placeholder="Select date above"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveL1Grn()">Submit ✓</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-l1-grn')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Pre-Mix Stage Entry -->
+<div class="modal-bg" id="modal-premix">
+  <div class="modal">
+    <h3>🥣 Pre-Mix — Ribbon Blender Data</h3>
+    <p style="font-size:.8rem;color:var(--muted);margin-bottom:10px" id="premix-batch-label"></p>
+    <div class="form-grid">
+      <div class="field"><label>Total P1 (Kg)</label><input id="pm-total-p1" type="number" step="0.01"></div>
+      <div class="field"><label>Total L2 (Kg)</label><input id="pm-total-l2" type="number" step="0.01"></div>
+    </div>
+    <div class="card-title" style="margin-top:10px"><span>🔵</span>Ribbon Blender A — Round Totals</div>
+    <div class="form-grid">
+      <div class="field"><label>P1 (Kg)</label><input id="pm-a-p1" type="number" step="0.01"></div>
+      <div class="field"><label>L2 (Kg)</label><input id="pm-a-l2" type="number" step="0.01"></div>
+    </div>
+    <div class="card-title"><span>🔵</span>Ribbon Blender B — Round Totals</div>
+    <div class="form-grid">
+      <div class="field"><label>P1 (Kg)</label><input id="pm-b-p1" type="number" step="0.01"></div>
+      <div class="field"><label>L2 (Kg)</label><input id="pm-b-l2" type="number" step="0.01"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="submitPremix()">Submit ✓</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-premix')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- CB Stage Entry -->
+<div class="modal-bg" id="modal-cb">
+  <div class="modal">
+    <h3>🔬 CB Stage — Quantities, Temps & Times</h3>
+    <p style="font-size:.8rem;color:var(--muted);margin-bottom:10px" id="cb-batch-label"></p>
+    <div class="form-grid">
+      <div class="field"><label>L1 Quantity (Kg)</label><input id="cb-l1-qty" type="number" step="0.01"></div>
+      <div class="field"><label>L3 Quantity (Kg)</label><input id="cb-l3-qty" type="number" step="0.01"></div>
+      <div class="field"><label>Start Time</label><input id="cb-start-time" type="time"></div>
+      <div class="field"><label>Start Temp (°C)</label><input id="cb-start-temp" type="number"></div>
+      <div class="field"><label>End Time</label><input id="cb-end-time" type="time"></div>
+      <div class="field"><label>End Temp (°C)</label><input id="cb-end-temp" type="number"></div>
+      <div class="field"><label>L3 Add Time</label><input id="cb-l3-time" type="time"></div>
+      <div class="field"><label>L3 Add Temp (°C)</label><input id="cb-l3-temp" type="number"></div>
+      <div class="field"><label>Unload Time</label><input id="cb-unload-time" type="time"></div>
+      <div class="field"><label>Unload Temp (°C)</label><input id="cb-unload-temp" type="number"></div>
+      <div class="field"><label>Expansion at CB Stage (CC)</label><input id="cb-expansion" type="number"></div>
+      <div class="field" style="grid-column:1/-1"><label>Observations</label><textarea id="cb-obs" rows="2" placeholder="No. of trips/halts, during addition/during soak etc."></textarea></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="submitCB()">Submit ✓</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-cb')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Decant Stage Entry -->
+<div class="modal-bg" id="modal-decant">
+  <div class="modal">
+    <h3>🧴 Decant Stage</h3>
+    <p style="font-size:.8rem;color:var(--muted);margin-bottom:10px" id="decant-batch-label"></p>
+    <div class="form-grid">
+      <div class="field"><label>Total P2 Quantity (Kg)</label><input id="decant-p2" type="number" step="0.01"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="submitDecant()">Submit ✓</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-decant')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Stock -->
+<div class="modal-bg" id="modal-addstock">
+  <div class="modal">
+    <h3>📦 Add / Update Stock</h3>
+    <div class="form-grid">
+      <div class="field"><label>Item Code</label><input id="s-code" placeholder="ITM-001"></div>
+      <div class="field"><label>Description</label><input id="s-desc"></div>
+      <div class="field"><label>Category</label>
+        <select id="s-cat">
+          <option>Raw Material</option><option>WIP</option><option>Finished Goods</option><option>Packing</option>
+        </select>
+      </div>
+      <div class="field"><label>UOM</label>
+        <select id="s-uom"><option>MT</option><option>Kg</option><option>Bags</option><option>Nos</option><option>Ltrs</option></select>
+      </div>
+      <div class="field"><label>Opening Stock</label><input id="s-qty" type="number"></div>
+      <div class="field"><label>Reorder Level</label><input id="s-reorder" type="number"></div>
+      <div class="field"><label>Location</label><input id="s-loc" placeholder="Warehouse A, Bin 3"></div>
+      <div class="field"><label>Unit Cost (₹)</label><input id="s-cost" type="number" step="0.01"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveStock()">Save</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-addstock')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Dispatch -->
+<div class="modal-bg" id="modal-newdispatch">
+  <div class="modal">
+    <h3>🚚 New Dispatch</h3>
+    <div class="form-grid">
+      <div class="field"><label>Sales Order#</label><input id="d-so" placeholder="SO-"></div>
+      <div class="field"><label>Customer</label><input id="d-cust"></div>
+      <div class="field"><label>Product</label><input id="d-prod"></div>
+      <div class="field"><label>Qty (MT)</label><input id="d-qty" type="number" step="0.001"></div>
+      <div class="field"><label>Vehicle No</label><input id="d-vehicle" placeholder="MH 12 AB 1234"></div>
+      <div class="field"><label>Driver Name</label><input id="d-driver"></div>
+      <div class="field"><label>Driver Phone</label><input id="d-dphone" type="tel"></div>
+      <div class="field"><label>Dispatch Date</label><input id="d-date" type="date"></div>
+      <div class="field"><label>ETA</label><input id="d-eta" type="date"></div>
+      <div class="field"><label>LR Number</label><input id="d-lr"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveDispatch()">Create DO</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-newdispatch')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- New QC Test -->
+<!-- New Employee -->
+<div class="modal-bg" id="modal-newemp">
+  <div class="modal">
+    <h3>👤 Add Employee</h3>
+    <div class="form-grid">
+      <div class="field"><label>Employee ID</label><input id="e-id" placeholder="EMP-"></div>
+      <div class="field"><label>Full Name</label><input id="e-name"></div>
+      <div class="field"><label>Department</label>
+        <select id="e-dept"><option>Production</option><option>QC</option><option>Store</option><option>Admin</option><option>Dispatch</option></select>
+      </div>
+      <div class="field"><label>Designation</label><input id="e-desg"></div>
+      <div class="field"><label>Managed By (Company)</label>
+        <select id="e-managedby"><option>Innotek</option><option>BVG</option><option>Valkunde</option><option>Vicky Ent.</option></select>
+      </div>
+      <div class="field"><label>Phone</label><input id="e-phone" type="tel"></div>
+      <div class="field"><label>Join Date</label><input id="e-join" type="date"></div>
+      <div class="field"><label>Basic Salary (₹)</label><input id="e-sal" type="number"></div>
+      <div class="field"><label>Aadhar#</label><input id="e-aadhar"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveEmployee()">Add Employee</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-newemp')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Voucher -->
+<div class="modal-bg" id="modal-newvoucher">
+  <div class="modal">
+    <h3>💰 Add Voucher</h3>
+    <div class="form-grid">
+      <div class="field"><label>Date</label><input id="v-date" type="date"></div>
+      <div class="field"><label>Type</label>
+        <select id="v-type"><option>Receipt</option><option>Payment</option><option>Journal</option><option>Contra</option></select>
+      </div>
+      <div class="field"><label>Party</label><input id="v-party"></div>
+      <div class="field"><label>Amount (₹)</label><input id="v-amt" type="number"></div>
+      <div class="field" style="grid-column:1/-1"><label>Narration</label><input id="v-narr"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveVoucher()">Save Voucher</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-newvoucher')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- New PO -->
+<div class="modal-bg" id="modal-newpo">
+  <div class="modal">
+    <h3>🛒 New Purchase Order</h3>
+    <div class="form-grid">
+      <div class="field"><label>Vendor</label><input id="po-vendor"></div>
+      <div class="field"><label>Item</label><input id="po-item"></div>
+      <div class="field"><label>Qty</label><input id="po-qty" type="number"></div>
+      <div class="field"><label>UOM</label><select id="po-uom"><option>MT</option><option>Kg</option><option>Nos</option></select></div>
+      <div class="field"><label>Rate (₹)</label><input id="po-rate" type="number" step="0.01"></div>
+      <div class="field"><label>Expected Date</label><input id="po-eta" type="date"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="savePO()">Place Order</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-newpo')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Sales Order -->
+<div class="modal-bg" id="modal-newso">
+  <div class="modal">
+    <h3>📈 New Sales Order</h3>
+    <div class="form-grid">
+      <div class="field"><label>Customer</label><input id="so-cust"></div>
+      <div class="field"><label>Product</label>
+        <select id="so-prod">
+          <option>NFG - Natural Flake Graphite</option><option>Micronized Graphite</option>
+          <option>Graphite Powder</option>
+        </select>
+      </div>
+      <div class="field"><label>Grade</label><input id="so-grade"></div>
+      <div class="field"><label>Qty (MT)</label><input id="so-qty" type="number" step="0.001"></div>
+      <div class="field"><label>Rate (₹/MT)</label><input id="so-rate" type="number"></div>
+      <div class="field"><label>Delivery Date</label><input id="so-del" type="date"></div>
+      <div class="field" style="grid-column:1/-1"><label>Special Instructions</label><textarea id="so-notes" rows="2"></textarea></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveSO()">Create Order</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-newso')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Upload Doc -->
+<div class="modal-bg" id="modal-uploaddoc">
+  <div class="modal">
+    <h3>📁 Upload Document</h3>
+    <div class="form-grid">
+      <div class="field"><label>Document Name</label><input id="doc-name"></div>
+      <div class="field"><label>Category</label>
+        <select id="doc-cat"><option value="invoice">Invoice</option><option value="voucher">Voucher</option><option value="po">Purchase Order</option>
+          <option value="quality">QC Certificate</option><option value="legal">Legal</option><option value="other">Other</option>
+        </select>
+      </div>
+      <div class="field"><label>Reference#</label><input id="doc-ref" placeholder="Invoice# / PO#"></div>
+      <div class="field"><label>Date</label><input id="doc-date" type="date"></div>
+      <div class="field" style="grid-column:1/-1">
+        <label>File (Photo / PDF)</label>
+        <input type="file" id="doc-file" accept="image/*,application/pdf" style="color:var(--text)">
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveDoc()">Upload</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-uploaddoc')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- PIN Modal (admin auth for face enrollment) -->
+<div class="modal-bg" id="modal-pin">
+  <div class="modal" style="max-width:320px;text-align:center">
+    <h3>🔒 Admin Access</h3>
+    <p style="font-size:.8rem;color:var(--muted);margin-bottom:14px">Enter PIN to enroll faces</p>
+    <input type="password" id="pin-input-field" maxlength="4" inputmode="numeric"
+      style="width:100%;text-align:center;font-size:1.5rem;letter-spacing:8px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;color:var(--text);margin-bottom:8px">
+    <div id="pin-error-msg" style="color:var(--danger);font-size:.75rem;min-height:18px"></div>
+    <div class="btn-row" style="justify-content:center">
+      <button class="btn btn-ghost" onclick="closeModal('modal-pin')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitPin()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Enroll Face Modal -->
+<div class="modal-bg" id="modal-enroll">
+  <div class="modal">
+    <h3>👤 Enroll Face</h3>
+    <div class="field" style="margin-bottom:10px">
+      <label>Select Employee</label>
+      <select id="enrollEmpSel"><option value="">— Select —</option></select>
+    </div>
+    <div style="position:relative;text-align:center;margin-bottom:10px">
+      <video id="enrollVideo" autoplay playsinline muted style="width:100%;max-width:280px;border-radius:10px;background:#000"></video>
+      <div id="enrollHintText" style="font-size:.78rem;color:var(--muted);margin-top:6px">Position face in frame</div>
+    </div>
+    <button class="btn btn-success" style="width:100%" onclick="doEnrollCapture()" id="btnEnrollCapture" disabled>📸 Capture & Save</button>
+    <div id="enrollStatusMsg" style="font-size:.75rem;color:var(--muted);text-align:center;margin-top:8px;min-height:16px"></div>
+    <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:10px">
+      <div class="card-title"><span>📋</span>Enrolled (<span id="enrolledCt">0</span>)</div>
+      <div id="enrolledList" style="max-height:150px;overflow-y:auto"></div>
+    </div>
+    <div class="btn-row"><button class="btn btn-ghost" onclick="closeEnrollModal()">Close</button></div>
+  </div>
+</div>
+
+<!-- Send DMS Report Modal -->
+<div class="modal-bg" id="modal-senddms">
+  <div class="modal">
+    <h3>📤 Upload & Send Report</h3>
+    <p style="font-size:.8rem;color:var(--muted);margin-bottom:12px">Review today's entries then send</p>
+    <div class="card-title"><span>📋</span>Today's Unsent Entries</div>
+    <div id="send-entries-list" style="max-height:180px;overflow-y:auto;margin-bottom:14px"></div>
+    <div class="card-title"><span>✉️</span>Send To</div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
+      <label style="font-size:.8rem;display:flex;align-items:center;gap:8px"><input type="checkbox" id="dms-em1" checked> accounts@innotekproducts.com</label>
+      <label style="font-size:.8rem;display:flex;align-items:center;gap:8px"><input type="checkbox" id="dms-em2" checked> ceo@innotekproducts.com</label>
+      <label style="font-size:.8rem;display:flex;align-items:center;gap:8px"><input type="checkbox" id="dms-em3" checked> business@innotekproducts.com</label>
+      <label style="font-size:.8rem;display:flex;align-items:center;gap:8px"><input type="checkbox" id="dms-em4"> accounts.finance@unitycpl.com</label>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="sendDmsReport()">📤 Send</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-senddms')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- ══════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════ -->
+<script>
+// ── BACKEND CONFIG (real, existing GAS deployments) ──────────────────────────────────────
+const BACKEND = {
+  // Attendance Ledger + FaceIN (same Apps Script — combined sheet backend)
+  ATTENDANCE_GAS_URL: 'https://script.google.com/macros/s/AKfycbzOOJNnKTf1N5uAXOYzwkP7H4s6SM9JMtkKXr2QSdQi8PlNlcWT80T_fGv4Qct43wGe/exec',
+  FACEIN_GAS_URL:     'https://script.google.com/macros/s/AKfycbzOOJNnKTf1N5uAXOYzwkP7H4s6SM9JMtkKXr2QSdQi8PlNlcWT80T_fGv4Qct43wGe/exec',
+  ATTENDANCE_SHEET_ID: '1bixbhqwXgLI4FvDCddIhynf7QXVlQ2uMpftG2BHhgpM',
+  // Doc Mgmt System (Invoice / Voucher / Due / Supplier Master)
+  DOCMGMT_GAS_URL: 'https://script.google.com/macros/s/AKfycbx604OvD680m-CSBdCNquBZSizXzTJmaW-2eBF5cyT-JBCaFYjdJ8qjYiTldlzzsWC_/exec',
+  // Innotek QCQA Lab (Batch / Pre-Mix / CB / Decant / NFG / L1 / Dispatch samples)
+  QCQA_GAS_URL: 'https://script.google.com/macros/s/AKfycbw0PiBAnef8ov_G8OOTnqnZ7eMFaFSjB9u5QD4wzZ2p52K1leWTGM67swDoen2Yq3Z7Vw/exec',
+};
+const FACE_MODEL_CDN = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
+const FACE_MODEL_FALLBACK = 'https://justadudewhohacks.github.io/face-api.js/models';
+const FACE_MATCH_THRESHOLD = 0.50;
+const ADMIN_PIN = '1234'; // face enroll PIN (from Attendance Ledger app)
+
+// ── GLOBALS ──────────────────────────────────────
+const DB = {
+  employees: JSON.parse(localStorage.getItem('erp_employees') || '[]'),
+  batches:   JSON.parse(localStorage.getItem('erp_batches')   || '[]'),
+  inventory: JSON.parse(localStorage.getItem('erp_inventory') || '[]'),
+  dispatch:  JSON.parse(localStorage.getItem('erp_dispatch')  || '[]'),
+  qc:        JSON.parse(localStorage.getItem('erp_qc')        || '[]'),
+  attendance:JSON.parse(localStorage.getItem('erp_attendance')|| '[]'),
+  leaves:    JSON.parse(localStorage.getItem('erp_leaves')    || '[]'),
+  finance:   JSON.parse(localStorage.getItem('erp_finance')   || '[]'),
+  expenses:  JSON.parse(localStorage.getItem('erp_expenses')  || '[]'),
+  po:        JSON.parse(localStorage.getItem('erp_po')        || '[]'),
+  so:        JSON.parse(localStorage.getItem('erp_so')        || '[]'),
+  documents: JSON.parse(localStorage.getItem('erp_documents') || '[]'),
+  docEntries:JSON.parse(localStorage.getItem('erp_docEntries')|| '[]'),
+  suppliers: JSON.parse(localStorage.getItem('erp_suppliers') || '[]'),
+  nfgGrns:   JSON.parse(localStorage.getItem('erp_nfgGrns')   || '[]'),
+  l1Grns:    JSON.parse(localStorage.getItem('erp_l1Grns')    || '[]'),
+};
+function save(key){ localStorage.setItem('erp_'+key, JSON.stringify(DB[key])); }
+let camStream = null;
+let currentFaceTab = 'face';
+let currentInvTab  = 'raw';
+let currentFinTab  = 'ledger';
+let currentDocCat  = 'all';
+let currentMbFilter = '';
+
+// ── SEED DATA ──────────────────────────────────────
+function seedIfEmpty(){
+  if(DB.employees.length === 0){
+    DB.employees = [
+      {id:'E001',name:'Ravi Kumar',dept:'Sales',desg:'Sales Executive',managedBy:'Innotek',phone:'9876543210',join:'2020-01-15',salary:18000,status:'Active'},
+      {id:'E002',name:'Anita Sharma',dept:'Accounts',desg:'Accountant',managedBy:'BVG',phone:'9876543211',join:'2019-06-01',salary:22000,status:'Active'},
+      {id:'E003',name:'John Mathew',dept:'Operations',desg:'Operations Lead',managedBy:'Innotek',phone:'9876543212',join:'2021-03-10',salary:20000,status:'Active'},
+      {id:'E004',name:'Priya Nair',dept:'Sales',desg:'Sales Executive',managedBy:'Valkunde',phone:'9876543213',join:'2018-11-20',salary:16000,status:'Active'},
+      {id:'EMP-005',name:'Ramesh Jadhav',dept:'Production',desg:'Line Operator',managedBy:'Innotek',phone:'9876543214',join:'2020-01-15',salary:18000,status:'Active'},
+      {id:'EMP-006',name:'Suresh Pawar',dept:'QC',desg:'QC Analyst',managedBy:'Innotek',phone:'9876543215',join:'2019-06-01',salary:22000,status:'Active'},
+    ];
+    save('employees');
+  }
+  if(DB.batches.length === 0){
+    DB.batches = [
+      {num:'BTH-2406-001',product:'85200150',nfgCode:'NFG-8520',grade:'GR-95',qty:5.2,start:today(),nfgGrn:'NFG-049-899',l1Grn:'',cb:'CB1',stage:'CB',progress:33,operator:'Ramesh Jadhav',status:'In Process',premix:{totalP1:120,totalL2:45},cbData:null,decant:null},
+      {num:'BTH-2406-002',product:'9080230',nfgCode:'NFG-908',grade:'MG-300',qty:2.1,start:today(),nfgGrn:'',l1Grn:'',cb:'CB2',stage:'Pre-Mix',progress:11,operator:'Priya Sharma',status:'In Process',premix:null,cbData:null,decant:null},
+      {num:'BTH-2406-003',product:'9650280',nfgCode:'NFG-965',grade:'GP-100',qty:3.0,start:prevDate(2),nfgGrn:'',l1Grn:'',cb:'CB3',stage:'Drying',progress:89,operator:'Ramesh Jadhav',status:'Near Complete',premix:{totalP1:200,totalL2:80},cbData:{l1Qty:150,l3Qty:30},decant:{p2:90}},
+    ];
+    save('batches');
+  }
+  if(DB.inventory.length === 0){
+    DB.inventory = [
+      {code:'RM-001',desc:'Raw Graphite Ore',cat:'Raw Material',uom:'MT',stock:45.2,reorder:20,location:'Yard A',updated:today(),cost:12000},
+      {code:'RM-002',desc:'Acid (HCl)',cat:'Raw Material',uom:'Ltrs',stock:320,reorder:500,location:'Chemical Store',updated:today(),cost:45},
+      {code:'FG-001',desc:'NFG GR-95',cat:'Finished Goods',uom:'MT',stock:8.4,reorder:5,location:'FG Warehouse',updated:today(),cost:85000},
+      {code:'FG-002',desc:'Micronized GR-300',cat:'Finished Goods',uom:'MT',stock:3.1,reorder:3,location:'FG Warehouse',updated:today(),cost:95000},
+      {code:'PM-001',desc:'HDPE Bags 25 Kg',cat:'Packing',uom:'Nos',stock:1200,reorder:500,location:'Store B',updated:today(),cost:35},
+      {code:'PM-002',desc:'Jumbo Bags 500 Kg',cat:'Packing',uom:'Nos',stock:80,reorder:100,location:'Store B',updated:today(),cost:450},
+    ];
+    save('inventory');
+  }
+  if(DB.dispatch.length === 0){
+    DB.dispatch = [
+      {do:'DO-2406-001',so:'SO-2406-003',customer:'Graphene Corp India',product:'NFG GR-95',qty:5,vehicle:'MH 12 XX 4567',driver:'Mahesh Sable',dphone:'9823456789',date:today(),eta:nextDate(3),lr:'LR-456123',status:'In Transit'},
+      {do:'DO-2406-002',so:'SO-2406-005',customer:'Carbon Tech Ltd',product:'Micronized GP-300',qty:2.5,vehicle:'MH 14 AB 1122',driver:'Raju Patil',dphone:'9812345678',date:prevDate(1),eta:today(),lr:'LR-456124',status:'Delivered'},
+    ];
+    save('dispatch');
+  }
+  if(DB.qc.length === 0){
+    DB.qc = [
+      {num:'QC-001',ref:'NFG-049-899 (Bag 1)',qcType:'NFG',param:'pH / Bulk Density / Carbon% / Mesh',value:'pH:7.1 BD:0.82 C:95.8%',tester:'Suresh Pawar',date:today(),result:'Pass'},
+      {num:'QC-002',ref:'NFG-049-899 (Bag 2)',qcType:'NFG',param:'pH / Bulk Density / Carbon% / Mesh',value:'pH:7.0 BD:0.81 C:96.1%',tester:'Suresh Pawar',date:today(),result:'Pass'},
+      {num:'QC-003',ref:'LOT-2406-12 (Blend 1 Sample 1)',qcType:'Dispatch',param:'Expansion/pH/BD/VM%/Carbon%/Mesh',value:'Exp:285 VM:0.6% C:95.2%',tester:'QC Lab',date:prevDate(1),result:'Pass'},
+    ];
+    save('qc');
+  }
+  if(DB.finance.length === 0){
+    DB.finance = [
+      {date:prevDate(3),voucher:'RCV-001',type:'Receipt',party:'Graphene Corp India',narration:'Payment against Invoice INV-042',debit:350000,credit:0,balance:350000},
+      {date:prevDate(2),voucher:'PMT-001',type:'Payment',party:'Raw Material Supplier',narration:'RM Purchase - Graphite Ore',debit:0,credit:120000,balance:230000},
+      {date:prevDate(1),voucher:'RCV-002',type:'Receipt',party:'Carbon Tech Ltd',narration:'Advance for SO-2406-005',debit:200000,credit:0,balance:430000},
+      {date:today(),voucher:'PMT-002',type:'Payment',party:'Electricity Board',narration:'Monthly Utility Bill',debit:0,credit:45000,balance:385000},
+    ];
+    save('finance');
+  }
+  if(DB.so.length === 0){
+    DB.so = [
+      {num:'SO-2406-001',date:prevDate(10),customer:'Graphene Corp India',product:'NFG GR-95',grade:'GR-95',qty:10,rate:85000,amount:850000,delivery:nextDate(5),status:'Confirmed'},
+      {num:'SO-2406-002',date:prevDate(5),customer:'Carbon Tech Ltd',product:'Micronized GP',grade:'MG-300',qty:5,rate:95000,amount:475000,delivery:nextDate(3),status:'In Process'},
+      {num:'SO-2406-003',date:prevDate(3),customer:'Steel India Co.',product:'Graphite Powder',grade:'GP-100',qty:8,rate:70000,amount:560000,delivery:nextDate(7),status:'Pending'},
+    ];
+    save('so');
+  }
+  if(DB.po.length === 0){
+    DB.po = [
+      {num:'PO-2406-001',date:prevDate(7),vendor:'Graphite Mines Ltd',item:'Raw Graphite Ore',qty:50,uom:'MT',rate:12000,amount:600000,eta:nextDate(5),status:'Confirmed'},
+      {num:'PO-2406-002',date:prevDate(2),vendor:'Chem Suppliers',item:'HCl Acid',qty:500,uom:'Ltrs',rate:45,amount:22500,eta:nextDate(2),status:'Pending'},
+    ];
+    save('po');
+  }
+  if(DB.documents.length === 0){
+    DB.documents = [
+      {id:'DOC-001',name:'Invoice INV-042',cat:'invoice',ref:'INV-042',date:prevDate(3),size:'245 KB',type:'PDF'},
+      {id:'DOC-002',name:'PO-2406-001 Graphite Ore',cat:'po',ref:'PO-2406-001',date:prevDate(7),size:'128 KB',type:'PDF'},
+      {id:'DOC-003',name:'QC Certificate BTH-2406-001',cat:'quality',ref:'QC-001',date:today(),size:'95 KB',type:'PDF'},
+    ];
+    save('documents');
+  }
+
+  if(DB.suppliers.length === 0){
+    DB.suppliers = ['Graphite Mines Ltd','Chem Suppliers','Asbury','DGD Industries','Advanced Graphite Vizag','Goyal Enterprises','Pranagraf','NextSource','Shreehari Enterprises','Reliable Chemicals'];
+    save('suppliers');
+  }
+  if(DB.nfgGrns.length === 0){
+    DB.nfgGrns = [
+      {grn:'NFG-049-899', date:prevDate(5), po:'26-27/049', grade:'+899', code:'NFG-899', supplier:'Asbury', source:'Gallois', bags:2, weight:1000, qcDone:true},
+      {grn:'NFG-050-597', date:prevDate(2), po:'26-27/050', grade:'+597', code:'NFG-597', supplier:'DGD Industries', source:'Tanzania / Mozambique', bags:3, weight:1500, qcDone:false},
+    ];
+    save('nfgGrns');
+  }
+  if(DB.l1Grns.length === 0){
+    DB.l1Grns = [
+      {grn:'L1-GRN-'+prevDate(4).replace(/-/g,''), date:prevDate(4), weight:500, supplier:'Shreehari Enterprises', conc:98.5, density:1.84},
+      {grn:'L1-GRN-'+prevDate(1).replace(/-/g,''), date:prevDate(1), weight:600, supplier:'Reliable Chemicals', conc:97.2, density:1.81},
+    ];
+    save('l1Grns');
+  }
+}
+
+// ── DATE UTILS ──────────────────────────────────────
+function today(){ return new Date().toISOString().split('T')[0]; }
+function prevDate(d){ const dt=new Date(); dt.setDate(dt.getDate()-d); return dt.toISOString().split('T')[0]; }
+function nextDate(d){ const dt=new Date(); dt.setDate(dt.getDate()+d); return dt.toISOString().split('T')[0]; }
+function fmtDate(d){ if(!d)return '—'; const dt=new Date(d); return dt.toLocaleDateString('en-IN'); }
+
+// ── CLOCK ──────────────────────────────────────
+function updateClock(){
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('dash-date').textContent =
+    now.toLocaleDateString('en-IN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+}
+setInterval(updateClock, 1000); updateClock();
+
+// ── NAV ──────────────────────────────────────
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(b=>{ if(b.getAttribute('onclick')===`showPage('${id}')`) b.classList.add('active'); });
+  if(window.innerWidth<768) toggleSidebar();
+  if(id==='attendance'){ populateEmpSelects(); setDefaults(); }
+  if(id==='dashboard') renderDashboard();
+  if(id==='production') renderProduction();
+  if(id==='inventory') renderInventory();
+  if(id==='dispatch') renderDispatch();
+  if(id==='quality') renderQC();
+  if(id==='employees') renderEmployees();
+  if(id==='finance') renderFinance();
+  if(id==='purchase') renderPO();
+  if(id==='sales') renderSO();
+  if(id==='documents') renderDocs();
+}
+
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('open');
+}
+
+// ── MODAL ──────────────────────────────────────
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-bg').forEach(m=>{
+  m.addEventListener('click',e=>{ if(e.target===m) m.classList.remove('open'); });
+});
+
+// ── TOAST ──────────────────────────────────────
+function toast(msg,ms=2500){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),ms);
+}
+
+// ── FILTER TABLE ──────────────────────────────────────
+function filterTbl(inp, tblId){
+  const q = inp.value.toLowerCase();
+  document.querySelectorAll(`#${tblId} tbody tr`).forEach(tr=>{
+    tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+// ── COUNTER ──────────────────────────────────────
+let counters = JSON.parse(localStorage.getItem('erp_counters') || '{}');
+function nextNum(prefix){
+  counters[prefix] = (counters[prefix]||0) + 1;
+  localStorage.setItem('erp_counters', JSON.stringify(counters));
+  return `${prefix}${String(counters[prefix]).padStart(3,'0')}`;
+}
+
+// ─────────────────────────────────────────────────────
+// DASHBOARD
+// ─────────────────────────────────────────────────────
+function renderDashboard(){
+  document.getElementById('kpi-present').textContent = DB.attendance.filter(a=>a.date===today()&&a.type==='Present').length || 18;
+  document.getElementById('kpi-orders').textContent = DB.so.filter(s=>s.status!=='Delivered').length || 12;
+  document.getElementById('kpi-lowstock').textContent = DB.inventory.filter(i=>i.stock <= i.reorder).length || 7;
+  document.getElementById('kpi-dispatch').textContent = DB.dispatch.filter(d=>d.date===today()).length || 3;
+
+  // Mini prod chart
+  const vals = [3.2,4.1,2.8,4.5,3.9,3.5];
+  const max = Math.max(...vals);
+  document.getElementById('prod-chart').innerHTML = vals.map(v=>`<div class="mini-bar" style="height:${(v/max*100)}%;background:var(--accent);" title="${v} MT"></div>`).join('');
+
+  // Cash chart
+  const cvals = [210000,380000,290000,450000,310000,420000];
+  const cmax = Math.max(...cvals);
+  document.getElementById('cash-chart').innerHTML = cvals.map((v,i)=>`<div class="mini-bar" style="height:${(v/cmax*100)}%;background:${i%2?'var(--accent2)':'var(--accent)'};" title="₹${(v/100000).toFixed(1)}L"></div>`).join('');
+
+  // Alerts
+  const alerts = [
+    {time:'08:30',text:'Low stock: HCl Acid below reorder level',sub:'Reorder required',color:'var(--danger)'},
+    {time:'09:15',text:'Batch BTH-2406-003 nearing completion',sub:'Packaging stage - 90%',color:'var(--accent2)'},
+    {time:'10:00',text:'Dispatch DO-2406-001 in transit',sub:'ETA: '+fmtDate(nextDate(3)),color:'var(--accent)'},
+    {time:'11:30',text:'QC passed: BTH-2406-001 Fixed Carbon 95.8%',sub:'Ready for dispatch',color:'var(--accent2)'},
+  ];
+  document.getElementById('alert-timeline').innerHTML = alerts.map(a=>`
+    <div class="tl-item">
+      <div class="tl-time">${a.time}</div>
+      <div>
+        <div class="tl-body" style="color:${a.color}">${a.text}</div>
+        <div class="tl-sub">${a.sub}</div>
+      </div>
+    </div>`).join('');
+
+  // Dispatch preview
+  const rows = DB.dispatch.slice(0,4).map(d=>`<tr>
+    <td>${d.do}</td><td>${d.customer}</td><td>${fmtDate(d.eta)}</td>
+    <td><span class="badge ${d.status==='Delivered'?'badge-green':d.status==='In Transit'?'badge-blue':'badge-warn'}">${d.status}</span></td>
+  </tr>`).join('');
+  document.getElementById('dash-dispatch-tbl').innerHTML = rows || '<tr><td colspan="4" style="color:var(--muted);text-align:center">No dispatches</td></tr>';
+}
+
+// ─────────────────────────────────────────────────────
+// PRODUCTION
+// ─────────────────────────────────────────────────────
+// NFG Grade → Code mapping (from QCQA app)
+const NFG_GRADE_CODES = {
+  '+899':'NFG-899','+599':'NFG-599','+899.5':'NFG-8995','+599.5':'NFG-5995',
+  '+8520':'NFG-8520','+897':'NFG-897','+597':'NFG-597','+895':'NFG-895',
+  '+595':'NFG-595','+890':'NFG-890','+590':'NFG-590',
+};
+const PRODUCT_TO_NFG = {
+  '85200150':'NFG-8520','9080230':'NFG-908','8550280':'NFG-855',
+  '9650280':'NFG-965','9980200':'NFG-998','9950280':'NFG-995',
+  '9980180':'NFG-998','9680200':'NFG-968','9650300':'NFG-965',
+  '9050300':'NFG-905','9450300':'NFG-945','9450120':'NFG-945','9080180':'NFG-908',
+};
+const STAGE_FLOW = ['Ore Receipt','Pre-Mix','CB','Decant','Tank Wash','RDS','Centrifuge','Drying','Packaging'];
+let selectedCB = 'CB1';
+let activeBatchForStage = null;
+
+function selectCB(el, cb){
+  document.querySelectorAll('#b-cb-row .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  selectedCB = cb;
+}
+
+function onBatchProductChange(){
+  const code = document.getElementById('b-product').value;
+  document.getElementById('b-nfg-code').value = PRODUCT_TO_NFG[code] || '';
+  populateGrnSelects();
+}
+
+function populateGrnSelects(){
+  const nfgSel = document.getElementById('b-nfg-grn-1');
+  if(nfgSel) nfgSel.innerHTML = '<option value="">Select GRN</option>' +
+    DB.nfgGrns.map(g=>`<option value="${g.grn}">${g.grn} (${g.weight}Kg)</option>`).join('');
+  const l1Sel = document.getElementById('b-l1-grn');
+  if(l1Sel) l1Sel.innerHTML = '<option value="">Select L1 GRN (latest first)</option>' +
+    [...DB.l1Grns].reverse().map(g=>`<option value="${g.grn}">${g.grn}</option>`).join('');
+}
+
+document.addEventListener('change', e=>{
+  if(e.target.id==='b-l1-grn'){
+    const g = DB.l1Grns.find(x=>x.grn===e.target.value);
+    document.getElementById('b-l1-conc').value = g ? g.conc+'%' : '';
+    document.getElementById('b-l1-density').value = g ? g.density : '';
+  }
+});
+
+function renderProduction(){
+  populateGrnSelects();
+  const tbody = document.getElementById('prod-tbody');
+  tbody.innerHTML = DB.batches.map(b=>{
+    const pct = b.progress||0;
+    const bc = pct>=90?'green':pct>=50?'':'warn';
+    return `<tr>
+      <td><b>${b.num}</b></td>
+      <td>${b.product}</td><td>${b.grade}</td>
+      <td>${b.nfgCode||'—'}</td><td><span class="badge badge-muted">${b.cb||'—'}</span></td>
+      <td>${fmtDate(b.start)}</td>
+      <td><span class="badge badge-blue">${b.stage}</span></td>
+      <td><div class="progress-bar"><div class="progress-fill ${bc}" style="width:${pct}%"></div></div><small>${pct}%</small></td>
+      <td>${b.operator}</td>
+      <td><span class="badge ${b.status==='Near Complete'?'badge-green':b.status==='In Process'?'badge-blue':'badge-muted'}">${b.status}</span></td>
+      <td><button class="btn btn-ghost btn-sm" onclick="openStageEntry('${b.num}')">Enter Stage Data</button></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="11" style="text-align:center;color:var(--muted)">No batches. Create one!</td></tr>';
+
+  // Stage log
+  document.getElementById('stage-log').innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap;">` +
+    STAGE_FLOW.map((s,i)=>`<div style="
+      background:${i<5?'rgba(0,194,255,.15)':'var(--surface)'};
+      border:1px solid ${i<5?'var(--accent)':'var(--border)'};
+      border-radius:6px;padding:8px 14px;font-size:.8rem;
+      color:${i<5?'var(--accent)':'var(--muted)'};">
+      ${i<5?'✅':'⬜'} ${s}
+    </div>`).join('') + `</div>`;
+
+  // GRN registers
+  document.getElementById('nfg-tbody').innerHTML = DB.nfgGrns.map(g=>`<tr>
+    <td><b>${g.grn}</b></td><td>${g.grade}</td><td>${g.supplier}</td>
+    <td>${g.bags}</td><td>${g.weight}</td>
+    <td><span class="badge ${g.qcDone?'badge-green':'badge-warn'}">${g.qcDone?'Done':'Pending'}</span>
+    ${!g.qcDone?`<button class="btn btn-ghost btn-sm" onclick="openNfgQC('${g.grn}')">QC Entry</button>`:''}</td>
+  </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted)">No NFG GRNs</td></tr>';
+
+  document.getElementById('l1-tbody').innerHTML = DB.l1Grns.map(g=>`<tr>
+    <td><b>${g.grn}</b></td><td>${g.supplier}</td><td>${g.weight}</td>
+    <td>${g.conc}%</td><td>${g.density}</td>
+  </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted)">No L1 GRNs</td></tr>';
+}
+
+function saveBatch(){
+  const code = document.getElementById('b-product').value;
+  const b = {
+    num: document.getElementById('b-num').value || nextNum('BTH-2406-'),
+    product: code || 'Unspecified',
+    nfgCode: document.getElementById('b-nfg-code').value,
+    grade: document.getElementById('b-grade').value,
+    qty: parseFloat(document.getElementById('b-qty').value)||0,
+    start: document.getElementById('b-start').value || today(),
+    nfgGrn: document.getElementById('b-nfg-grn-1').value,
+    l1Grn: document.getElementById('b-l1-grn').value,
+    cb: selectedCB,
+    notes: document.getElementById('b-notes').value,
+    stage:'Ore Receipt', progress:0,
+    operator: document.getElementById('b-op').value,
+    status:'Planned',
+    premix:null, cbData:null, decant:null,
+  };
+  DB.batches.unshift(b); save('batches');
+
+  qcqaApi({sheet:'BATCHES', action:'append', data:b});
+
+  closeModal('modal-newbatch'); toast('Batch created ✓');
+  renderProduction();
+}
+
+function openStageEntry(num){
+  activeBatchForStage = num;
+  const b = DB.batches.find(x=>x.num===num);
+  if(!b) return;
+  const idx = STAGE_FLOW.indexOf(b.stage);
+  const nextStage = STAGE_FLOW[idx+1];
+  if(!nextStage){ toast('Batch already complete'); return; }
+
+  const label = `Batch: ${b.num} · Product: ${b.product} · CB: ${b.cb} · Date: ${fmtDate(b.start)}`;
+
+  if(nextStage==='Pre-Mix'){
+    document.getElementById('premix-batch-label').textContent = label;
+    openModal('modal-premix');
+  } else if(nextStage==='CB'){
+    document.getElementById('cb-batch-label').textContent = label;
+    openModal('modal-cb');
+  } else if(nextStage==='Decant'){
+    document.getElementById('decant-batch-label').textContent = label;
+    openModal('modal-decant');
+  } else {
+    // Tank Wash / RDS / Centrifuge / Drying / Packaging — quick advance
+    advanceStage(num);
+  }
+}
+
+function advanceStage(num, data){
+  const b = DB.batches.find(x=>x.num===num);
+  if(!b) return;
+  const idx = STAGE_FLOW.indexOf(b.stage);
+  if(idx < STAGE_FLOW.length-1){
+    b.stage = STAGE_FLOW[idx+1];
+    b.progress = Math.round((idx+2)/STAGE_FLOW.length*100);
+    if(data) Object.assign(b, data);
+    if(b.progress>=100) b.status='Complete'; else b.status='In Process';
+    save('batches'); toast(`Moved to: ${b.stage}`); renderProduction();
+  } else { toast('Already at final stage'); }
+}
+
+function submitPremix(){
+  const data = {
+    totalP1: parseFloat(document.getElementById('pm-total-p1').value)||0,
+    totalL2: parseFloat(document.getElementById('pm-total-l2').value)||0,
+    blenderA: {p1:parseFloat(document.getElementById('pm-a-p1').value)||0, l2:parseFloat(document.getElementById('pm-a-l2').value)||0},
+    blenderB: {p1:parseFloat(document.getElementById('pm-b-p1').value)||0, l2:parseFloat(document.getElementById('pm-b-l2').value)||0},
+  };
+  qcqaApi({sheet:'PREMIX', action:'appendBatch', data:{batch:activeBatchForStage, ...data}});
+  closeModal('modal-premix');
+  advanceStage(activeBatchForStage, {premix:data});
+}
+
+function submitCB(){
+  const data = {
+    l1Qty: parseFloat(document.getElementById('cb-l1-qty').value)||0,
+    l3Qty: parseFloat(document.getElementById('cb-l3-qty').value)||0,
+    startTime: document.getElementById('cb-start-time').value,
+    startTemp: document.getElementById('cb-start-temp').value,
+    endTime: document.getElementById('cb-end-time').value,
+    endTemp: document.getElementById('cb-end-temp').value,
+    l3Time: document.getElementById('cb-l3-time').value,
+    l3Temp: document.getElementById('cb-l3-temp').value,
+    unloadTime: document.getElementById('cb-unload-time').value,
+    unloadTemp: document.getElementById('cb-unload-temp').value,
+    expansion: document.getElementById('cb-expansion').value,
+    obs: document.getElementById('cb-obs').value,
+  };
+  qcqaApi({sheet:'BATCH_PROCESS', action:'append', data:{batch:activeBatchForStage, stage:'CB', ...data}});
+  closeModal('modal-cb');
+  advanceStage(activeBatchForStage, {cbData:data});
+}
+
+function submitDecant(){
+  const data = { p2: parseFloat(document.getElementById('decant-p2').value)||0 };
+  qcqaApi({sheet:'DECANT', action:'append', data:{batch:activeBatchForStage, ...data}});
+  closeModal('modal-decant');
+  advanceStage(activeBatchForStage, {decant:data});
+}
+
+// ── NFG / L1 GRN ──
+function onNfgGradeChange(){
+  const grade = document.getElementById('nfg-grade').value;
+  const code = NFG_GRADE_CODES[grade] || '';
+  document.getElementById('nfg-code-out').value = code;
+  updateNfgGrnOut();
+}
+function updateNfgGrnOut(){
+  const po = document.getElementById('nfg-po').value;
+  const grade = document.getElementById('nfg-grade').value;
+  document.getElementById('nfg-grn-out').value = (po && grade) ? `NFG-${po}-${grade.replace('+','')}` : '';
+}
+document.addEventListener('input', e=>{
+  if(e.target.id==='nfg-po') updateNfgGrnOut();
+});
+
+function saveNfgGrn(){
+  const supplierRaw = document.getElementById('nfg-supplier').value;
+  const [supplier,source] = supplierRaw.split('|');
+  const g = {
+    grn: document.getElementById('nfg-grn-out').value || nextNum('NFG-GRN-'),
+    date: document.getElementById('nfg-date').value || today(),
+    po: document.getElementById('nfg-po').value,
+    grade: document.getElementById('nfg-grade').value,
+    code: document.getElementById('nfg-code-out').value,
+    supplier: supplier || '', source: source || '',
+    bags: parseInt(document.getElementById('nfg-num-bags').value)||0,
+    weight: parseFloat(document.getElementById('nfg-total-weight').value)||0,
+    qcDone: false,
+  };
+  DB.nfgGrns.unshift(g); save('nfgGrns');
+  qcqaApi({sheet:'NFG_GRN', action:'append', data:g});
+  closeModal('modal-nfg-grn'); toast('NFG GRN created ✓'); renderProduction();
+}
+
+function updateL1GrnOut(){
+  const date = document.getElementById('l1-date').value;
+  document.getElementById('l1-grn-out').value = date ? `L1-GRN-${date.replace(/-/g,'')}` : '';
+}
+
+function saveL1Grn(){
+  const g = {
+    grn: document.getElementById('l1-grn-out').value || nextNum('L1-GRN-'),
+    date: document.getElementById('l1-date').value || today(),
+    weight: parseFloat(document.getElementById('l1-weight').value)||0,
+    supplier: document.getElementById('l1-supplier').value,
+    conc: parseFloat(document.getElementById('l1-conc').value)||0,
+    density: parseFloat(document.getElementById('l1-density').value)||0,
+  };
+  DB.l1Grns.push(g); save('l1Grns');
+  qcqaApi({sheet:'L1_GRN', action:'append', data:g});
+  closeModal('modal-l1-grn'); toast('L1 GRN created ✓'); renderProduction();
+}
+
+// ── QCQA backend comms ──
+async function qcqaApi(payload){
+  const form = new FormData();
+  form.append('payload', JSON.stringify(payload));
+  try{ await fetch(BACKEND.QCQA_GAS_URL, {method:'POST', body:form, mode:'no-cors'}); }catch(_){}
+}
+
+// ─────────────────────────────────────────────────────
+// INVENTORY
+// ─────────────────────────────────────────────────────
+function renderInventory(cat=''){
+  const filtered = cat ? DB.inventory.filter(i=>i.cat===cat) : DB.inventory;
+  document.getElementById('inv-tbody').innerHTML = filtered.map(i=>{
+    const low = i.stock <= i.reorder;
+    return `<tr>
+      <td><b>${i.code}</b></td><td>${i.desc}</td>
+      <td><span class="badge badge-muted">${i.cat}</span></td>
+      <td>${i.uom}</td>
+      <td style="color:${low?'var(--danger)':'var(--accent2)'}"><b>${i.stock}</b></td>
+      <td>${i.reorder}</td><td>${i.location}</td>
+      <td>${fmtDate(i.updated)}</td>
+      <td><span class="badge ${low?'badge-danger':'badge-green'}">${low?'Low Stock':'OK'}</span></td>
+      <td>
+        <button class="btn btn-ghost btn-sm" onclick="adjustStock('${i.code}',1)">+</button>
+        <button class="btn btn-ghost btn-sm" onclick="adjustStock('${i.code}',-1)">−</button>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="10" style="text-align:center;color:var(--muted)">No items</td></tr>';
+}
+
+function invTab(el, cat){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); el.classList.add('active');
+  currentInvTab = cat;
+  const catMap = {raw:'Raw Material',wip:'WIP',fg:'Finished Goods',packing:'Packing',movements:''};
+  if(cat==='movements'){
+    document.getElementById('inv-tbody').innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted)">Movement log — connect to GAS backend to view history</td></tr>';
+  } else { renderInventory(catMap[cat]); }
+}
+
+function adjustStock(code, delta){
+  const item = DB.inventory.find(i=>i.code===code);
+  if(!item) return;
+  const amt = parseFloat(prompt(`Adjust stock for ${item.desc}\nCurrent: ${item.stock} ${item.uom}\nEnter amount to ${delta>0?'add':'remove'}:`))||0;
+  item.stock = Math.max(0, item.stock + Math.abs(amt)*delta);
+  item.updated = today();
+  save('inventory'); toast('Stock updated ✓'); renderInventory();
+}
+
+function saveStock(){
+  const s = {
+    code: document.getElementById('s-code').value,
+    desc: document.getElementById('s-desc').value,
+    cat: document.getElementById('s-cat').value,
+    uom: document.getElementById('s-uom').value,
+    stock: parseFloat(document.getElementById('s-qty').value)||0,
+    reorder: parseFloat(document.getElementById('s-reorder').value)||0,
+    location: document.getElementById('s-loc').value,
+    cost: parseFloat(document.getElementById('s-cost').value)||0,
+    updated: today(),
+  };
+  DB.inventory.unshift(s); save('inventory');
+  closeModal('modal-addstock'); toast('Stock item added ✓'); renderInventory();
+}
+
+// ─────────────────────────────────────────────────────
+// DISPATCH
+// ─────────────────────────────────────────────────────
+function renderDispatch(){
+  document.getElementById('disp-tbody').innerHTML = DB.dispatch.map(d=>`<tr>
+    <td><b>${d.do}</b></td><td>${d.so}</td><td>${d.customer}</td>
+    <td>${d.product}</td><td>${d.qty} MT</td>
+    <td>${d.vehicle}</td><td>${d.driver}</td>
+    <td>${fmtDate(d.date)}</td><td>${fmtDate(d.eta)}</td>
+    <td><span class="badge ${d.status==='Delivered'?'badge-green':d.status==='In Transit'?'badge-blue':d.status==='Delayed'?'badge-danger':'badge-warn'}">${d.status}</span></td>
+    <td><button class="btn btn-ghost btn-sm" onclick="markDelivered('${d.do}')">✓ Delivered</button></td>
+  </tr>`).join('') || '<tr><td colspan="11" style="text-align:center;color:var(--muted)">No dispatches</td></tr>';
+}
+
+function saveDispatch(){
+  const d = {
+    do: nextNum('DO-2406-'),
+    so: document.getElementById('d-so').value,
+    customer: document.getElementById('d-cust').value,
+    product: document.getElementById('d-prod').value,
+    qty: parseFloat(document.getElementById('d-qty').value)||0,
+    vehicle: document.getElementById('d-vehicle').value,
+    driver: document.getElementById('d-driver').value,
+    dphone: document.getElementById('d-dphone').value,
+    date: document.getElementById('d-date').value,
+    eta: document.getElementById('d-eta').value,
+    lr: document.getElementById('d-lr').value,
+    status:'Prepared',
+  };
+  DB.dispatch.unshift(d); save('dispatch');
+  closeModal('modal-newdispatch'); toast('Dispatch order created ✓'); renderDispatch();
+}
+
+function markDelivered(doNum){
+  const d = DB.dispatch.find(x=>x.do===doNum);
+  if(d){ d.status='Delivered'; save('dispatch'); toast('Marked as Delivered ✓'); renderDispatch(); }
+}
+
+// ─────────────────────────────────────────────────────
+// QUALITY
+// ─────────────────────────────────────────────────────
+function qcTab(el, tab){
+  document.querySelectorAll('#page-quality .tab').forEach(t=>t.classList.remove('active')); el.classList.add('active');
+  document.querySelectorAll('.qc-tab').forEach(t=>t.style.display='none');
+  document.getElementById('qc-'+tab).style.display='';
+  if(tab==='nfgqc') populateNfgQcSelect();
+}
+
+function renderQC(){
+  document.getElementById('qc-tbody').innerHTML = DB.qc.map(q=>`<tr>
+    <td>${q.num}</td><td>${q.ref}</td><td><span class="badge badge-muted">${q.qcType||'NFG'}</span></td>
+    <td>${q.param}</td><td>${q.value}</td>
+    <td>${q.tester}</td><td>${fmtDate(q.date)}</td>
+    <td><span class="badge ${q.result==='Pass'?'badge-green':'badge-danger'}">${q.result}</span></td>
+  </tr>`).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--muted)">No tests</td></tr>';
+}
+
+// ── NFG QC (per-bag: pH, Bulk Density, Carbon% via crucible, Mesh Analysis) ──
+function populateNfgQcSelect(){
+  const sel = document.getElementById('nfgqc-grn-select');
+  const pending = DB.nfgGrns.filter(g=>!g.qcDone);
+  sel.innerHTML = '<option value="">Select NFG GRN pending QC...</option>' +
+    pending.map(g=>`<option value="${g.grn}">${g.grn} — ${g.bags} bag(s), ${g.weight}Kg</option>`).join('');
+}
+
+function openNfgQC(grn){
+  if(!grn){ document.getElementById('nfgqc-form-area').innerHTML=''; return; }
+  const g = DB.nfgGrns.find(x=>x.grn===grn);
+  if(!g) return;
+  const bagCount = g.bags || 1;
+  let html = `<div class="card"><div class="card-title"><span>🪨</span>NFG QC Entry — ${g.grn}</div>`;
+  for(let i=1;i<=bagCount;i++){
+    const uid = `nqc${i}`;
+    html += `
+      <div style="border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:12px">
+        <div style="font-weight:700;color:var(--accent);margin-bottom:10px">Bag ${i}</div>
+        <div class="form-grid">
+          <div class="field"><label>pH</label><input type="number" step="0.01" id="${uid}-ph"></div>
+          <div class="field"><label>Bulk Density</label><input type="number" step="0.001" id="${uid}-bd"></div>
+        </div>
+        <div class="card-title" style="margin-top:8px"><span>⚗️</span>Carbon % (via Crucible)</div>
+        <div class="form-grid">
+          <div class="field"><label>Empty Crucible</label><input type="number" step="0.01" id="${uid}-c1" oninput="calcNfgCarbon('${uid}')"></div>
+          <div class="field"><label>Filled Crucible</label><input type="number" step="0.01" id="${uid}-c2" oninput="calcNfgCarbon('${uid}')"></div>
+          <div class="field"><label>Final Wt</label><input type="number" step="0.01" id="${uid}-c3" oninput="calcNfgCarbon('${uid}')"></div>
+          <div class="field"><label>Carbon %</label><div id="${uid}-cout" style="padding:9px;color:var(--accent2);font-weight:700">—</div></div>
+        </div>
+        <div class="card-title" style="margin-top:8px"><span>🔬</span>Mesh Analysis</div>
+        <div class="form-grid">
+          <div class="field"><label>+50</label><input type="number" step="0.01" id="${uid}-m50"></div>
+          <div class="field"><label>+80</label><input type="number" step="0.01" id="${uid}-m80"></div>
+          <div class="field"><label>+100</label><input type="number" step="0.01" id="${uid}-m100"></div>
+          <div class="field"><label>+150</label><input type="number" step="0.01" id="${uid}-m150"></div>
+          <div class="field"><label>+200</label><input type="number" step="0.01" id="${uid}-m200"></div>
+        </div>
+      </div>`;
+  }
+  html += `<div class="btn-row"><button class="btn btn-primary" onclick="submitNfgQC('${grn}',${bagCount})">Submit & Finalise ✓</button></div></div>`;
+  document.getElementById('nfgqc-form-area').innerHTML = html;
+}
+
+function calcNfgCarbon(uid){
+  const c2 = parseFloat(document.getElementById(uid+'-c2')?.value);
+  const c3 = parseFloat(document.getElementById(uid+'-c3')?.value);
+  const el = document.getElementById(uid+'-cout');
+  if(!el) return;
+  el.textContent = (!isNaN(c2) && !isNaN(c3) && c2!==0) ? ((1-(c3/c2))*100).toFixed(2)+'%' : '—';
+}
+
+function submitNfgQC(grn, bagCount){
+  const tester = prompt('Tester name:') || 'Unknown';
+  for(let i=1;i<=bagCount;i++){
+    const uid=`nqc${i}`;
+    const g=id=>document.getElementById(uid+'-'+id)?.value||'';
+    const carbon = document.getElementById(uid+'-cout')?.textContent||'—';
+    DB.qc.unshift({
+      num: nextNum('QC-'), ref:`${grn} (Bag ${i})`, qcType:'NFG',
+      param:'pH / Bulk Density / Carbon% / Mesh',
+      value:`pH:${g('ph')} BD:${g('bd')} C:${carbon}`,
+      tester, date: today(), result:'Pass',
+      detail:{ph:g('ph'),bd:g('bd'),carbon,mesh:{m50:g('m50'),m80:g('m80'),m100:g('m100'),m150:g('m150'),m200:g('m200')}}
+    });
+  }
+  save('qc');
+  const grnObj = DB.nfgGrns.find(x=>x.grn===grn);
+  if(grnObj){ grnObj.qcDone=true; save('nfgGrns'); }
+  qcqaApi({sheet:'NFG_QC', action:'append', data:{grn, finalized:'yes'}});
+  toast('NFG QC finalised ✓');
+  document.getElementById('nfgqc-form-area').innerHTML='';
+  populateNfgQcSelect();
+  renderQC(); renderProduction();
+}
+
+// ── DISPATCH SAMPLE QC (Expansion, pH, BD, VM%, Carbon%, Mesh — auto (blends×2)+2 sets) ──
+let currentDispatchQc = null;
+
+function startDispatchSamples(){
+  const lot = document.getElementById('dq-lot').value;
+  const product = document.getElementById('dq-product').value;
+  const weight = document.getElementById('dq-weight').value;
+  const blends = parseInt(document.getElementById('dq-blends').value)||1;
+  if(!lot){ toast('Enter material lot number'); return; }
+  currentDispatchQc = {lotNo:lot, product, weight, blends};
+  const totalSets = (blends*2)+2;
+  let html = `<div class="card">
+    <div class="card-title"><span>🚚</span>Dispatch Samples — Lot: ${lot} · Product: ${product} · ${totalSets} sample sets</div>`;
+  for(let i=0;i<totalSets;i++){
+    const uid=`ds${i}`;
+    const blendNum = Math.floor(i/2)+1, sampleNum=(i%2)+1;
+    html += `
+      <div style="border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:12px">
+        <div style="font-weight:700;color:var(--accent);margin-bottom:10px">Blend ${blendNum} Sample ${sampleNum}</div>
+        <div class="form-grid">
+          <div class="field"><label>Date</label><input type="date" id="${uid}-date" value="${today()}"></div>
+          <div class="field"><label>Time</label><input type="time" id="${uid}-time"></div>
+        </div>
+        <div class="card-title" style="margin-top:8px"><span>📏</span>Expansion (CC)</div>
+        <div class="form-grid">
+          <div class="field"><label>Test 1</label><input type="number" id="${uid}-t1" oninput="calcDqAvg('${uid}')"></div>
+          <div class="field"><label>Test 2</label><input type="number" id="${uid}-t2" oninput="calcDqAvg('${uid}')"></div>
+          <div class="field"><label>Test 3</label><input type="number" id="${uid}-t3" oninput="calcDqAvg('${uid}')"></div>
+          <div class="field"><label>Avg</label><div id="${uid}-avg" style="padding:9px;color:var(--accent2);font-weight:700">—</div></div>
+        </div>
+        <div class="form-grid">
+          <div class="field"><label>pH</label><input type="number" step="0.01" min="0" max="14" id="${uid}-ph"></div>
+          <div class="field"><label>Bulk Density</label><input type="number" step="0.001" id="${uid}-bd"></div>
+        </div>
+        <div class="card-title" style="margin-top:8px"><span>💧</span>Volatile Matter</div>
+        <div class="form-grid">
+          <div class="field"><label>Empty Crucible</label><input type="number" step="0.01" id="${uid}-vm1" oninput="calcDqVM('${uid}')"></div>
+          <div class="field"><label>Filled Crucible</label><input type="number" step="0.01" id="${uid}-vm2" oninput="calcDqVM('${uid}')"></div>
+          <div class="field"><label>Final Wt</label><input type="number" step="0.01" id="${uid}-vm3" oninput="calcDqVM('${uid}')"></div>
+          <div class="field"><label>VM %</label><div id="${uid}-vmout" style="padding:9px;color:var(--accent2);font-weight:700">—</div></div>
+        </div>
+        <div class="card-title" style="margin-top:8px"><span>⚗️</span>% Carbon</div>
+        <div class="form-grid">
+          <div class="field"><label>Empty Crucible</label><input type="number" step="0.01" id="${uid}-c1" oninput="calcDqCarbon('${uid}')"></div>
+          <div class="field"><label>Filled Crucible</label><input type="number" step="0.01" id="${uid}-c2" oninput="calcDqCarbon('${uid}')"></div>
+          <div class="field"><label>Final Wt</label><input type="number" step="0.01" id="${uid}-c3" oninput="calcDqCarbon('${uid}')"></div>
+          <div class="field"><label>Carbon %</label><div id="${uid}-cout" style="padding:9px;color:var(--accent2);font-weight:700">—</div></div>
+        </div>
+        <div class="card-title" style="margin-top:8px"><span>🔬</span>Mesh Analysis</div>
+        <div class="form-grid">
+          <div class="field"><label>+50</label><input type="number" step="0.01" id="${uid}-m50"></div>
+          <div class="field"><label>+80</label><input type="number" step="0.01" id="${uid}-m80"></div>
+          <div class="field"><label>+100</label><input type="number" step="0.01" id="${uid}-m100"></div>
+          <div class="field"><label>+150</label><input type="number" step="0.01" id="${uid}-m150"></div>
+          <div class="field"><label>+200</label><input type="number" step="0.01" id="${uid}-m200"></div>
+        </div>
+      </div>`;
+  }
+  html += `<div class="btn-row"><button class="btn btn-primary" onclick="submitDispatchQc(${totalSets})">✓ Submit All Data</button></div></div>`;
+  document.getElementById('dispatchqc-form-area').innerHTML = html;
+}
+
+function calcDqAvg(uid){
+  const t1=parseFloat(document.getElementById(uid+'-t1')?.value);
+  const t2=parseFloat(document.getElementById(uid+'-t2')?.value);
+  const t3=parseFloat(document.getElementById(uid+'-t3')?.value);
+  const vals=[t1,t2,t3].filter(v=>!isNaN(v));
+  const el=document.getElementById(uid+'-avg');
+  if(!el) return;
+  el.textContent = vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1) : '—';
+}
+function calcDqVM(uid){
+  const v2=parseFloat(document.getElementById(uid+'-vm2')?.value);
+  const v3=parseFloat(document.getElementById(uid+'-vm3')?.value);
+  const el=document.getElementById(uid+'-vmout');
+  if(!el) return;
+  el.textContent = (!isNaN(v2)&&!isNaN(v3)&&v2!==0) ? ((1-(v3/v2))*100).toFixed(2)+'%' : '—';
+}
+function calcDqCarbon(uid){
+  const c2=parseFloat(document.getElementById(uid+'-c2')?.value);
+  const c3=parseFloat(document.getElementById(uid+'-c3')?.value);
+  const el=document.getElementById(uid+'-cout');
+  if(!el) return;
+  el.textContent = (!isNaN(c2)&&!isNaN(c3)&&c2!==0) ? ((1-(c3/c2))*100).toFixed(2)+'%' : '—';
+}
+
+function submitDispatchQc(totalSets){
+  const g=id=>document.getElementById(id)?.value||'';
+  const gc=id=>document.getElementById(id)?.textContent||'';
+  const samples=[];
+  for(let i=0;i<totalSets;i++){
+    const uid=`ds${i}`;
+    const blendNum=Math.floor(i/2)+1, sampleNum=(i%2)+1;
+    const sample = {
+      lotNo: currentDispatchQc.lotNo, sampleLabel:`Blend ${blendNum} Sample ${sampleNum}`,
+      date:g(uid+'-date'), time:g(uid+'-time'),
+      expAvg:gc(uid+'-avg'), ph:g(uid+'-ph'), bulkDensity:g(uid+'-bd'),
+      vmPct:gc(uid+'-vmout'), cPct:gc(uid+'-cout'),
+      mesh:{m50:g(uid+'-m50'),m80:g(uid+'-m80'),m100:g(uid+'-m100'),m150:g(uid+'-m150'),m200:g(uid+'-m200')}
+    };
+    samples.push(sample);
+    DB.qc.unshift({
+      num: nextNum('QC-'), ref:`${currentDispatchQc.lotNo} (${sample.sampleLabel})`, qcType:'Dispatch',
+      param:'Expansion/pH/BD/VM%/Carbon%/Mesh',
+      value:`Exp:${sample.expAvg} VM:${sample.vmPct} C:${sample.cPct}`,
+      tester:'QC Lab', date: today(), result:'Pass', detail:sample
+    });
+  }
+  save('qc');
+  qcqaApi({sheet:'DISPATCH', action:'append', data:currentDispatchQc});
+  qcqaApi({sheet:'DISPATCH_SAMPLES', action:'appendBatch', data:samples});
+  toast('Dispatch sample data submitted ✓');
+  document.getElementById('dispatchqc-form-area').innerHTML='';
+  renderQC();
+}
+
+// ─────────────────────────────────────────────────────
+// EMPLOYEES
+// ─────────────────────────────────────────────────────
+function renderEmployees(){
+  document.getElementById('emp-tbody').innerHTML = DB.employees.map(e=>`<tr>
+    <td>${e.id}</td><td><b>${e.name}</b></td>
+    <td>${e.dept}</td><td>${e.desg}</td>
+    <td><span class="badge badge-muted">${e.managedBy||'Innotek'}</span></td>
+    <td>${e.phone}</td>
+    <td>${fmtDate(e.join)}</td>
+    <td>₹${(e.salary||0).toLocaleString('en-IN')}</td>
+    <td><span class="badge ${e.status==='Active'?'badge-green':'badge-danger'}">${e.status}</span></td>
+    <td>
+      <button class="btn btn-ghost btn-sm" onclick="toggleEmpStatus('${e.id}')">${e.status==='Active'?'Deactivate':'Activate'}</button>
+    </td>
+  </tr>`).join('') || '<tr><td colspan="10" style="text-align:center;color:var(--muted)">No employees</td></tr>';
+  populateEmpSelects();
+}
+
+function saveEmployee(){
+  const e = {
+    id: document.getElementById('e-id').value || nextNum('EMP-'),
+    name: document.getElementById('e-name').value,
+    dept: document.getElementById('e-dept').value,
+    desg: document.getElementById('e-desg').value,
+    managedBy: document.getElementById('e-managedby').value,
+    phone: document.getElementById('e-phone').value,
+    join: document.getElementById('e-join').value,
+    salary: parseFloat(document.getElementById('e-sal').value)||0,
+    status:'Active',
+  };
+  DB.employees.push(e); save('employees');
+  closeModal('modal-newemp'); toast('Employee added ✓'); renderEmployees();
+}
+
+function importEmployeesCSV(){
+  const file = document.getElementById('emp-import-file').files[0];
+  if(!file){ toast('Choose a CSV file first'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    const lines = e.target.result.split('\n').map(l=>l.trim()).filter(Boolean);
+    const header = lines[0].split(',').map(h=>h.trim().toLowerCase());
+    const idIdx = header.indexOf('employeeid'), nameIdx = header.indexOf('employeename');
+    const deptIdx = header.indexOf('department'), mbIdx = header.indexOf('managedby');
+    let added=0, updated=0;
+    for(let i=1;i<lines.length;i++){
+      const cols = lines[i].split(',').map(c=>c.trim());
+      if(!cols[idIdx]) continue;
+      const existing = DB.employees.find(emp=>emp.id===cols[idIdx]);
+      if(existing){
+        existing.name=cols[nameIdx]||existing.name;
+        existing.dept=cols[deptIdx]||existing.dept;
+        existing.managedBy=cols[mbIdx]||existing.managedBy;
+        updated++;
+      } else {
+        DB.employees.push({id:cols[idIdx], name:cols[nameIdx]||'', dept:cols[deptIdx]||'',
+          managedBy:cols[mbIdx]||'Innotek', desg:'', phone:'', join:today(), salary:0, status:'Active'});
+        added++;
+      }
+    }
+    save('employees'); renderEmployees();
+    document.getElementById('emp-sync-status').textContent = `✓ Imported: ${added} added, ${updated} updated`;
+    toast(`Employees imported: ${added} new, ${updated} updated`);
+  };
+  reader.readAsText(file);
+}
+
+async function syncEmployeesFromSheet(){
+  const statusEl = document.getElementById('emp-sync-status');
+  statusEl.textContent = '⏳ Syncing from Attendance Google Sheet...';
+  try{
+    const r = await gasGet({action:'getEmployees'});
+    if(r.ok && r.employees){
+      let added=0, updated=0;
+      r.employees.forEach(emp=>{
+        const existing = DB.employees.find(e=>e.id===emp.id || e.id===emp.EmployeeID);
+        const empId = emp.id||emp.EmployeeID, empName=emp.name||emp.EmployeeName;
+        if(existing){
+          existing.name=empName||existing.name;
+          existing.dept=emp.department||emp.Department||existing.dept;
+          existing.managedBy=emp.managedBy||emp.ManagedBy||existing.managedBy;
+          updated++;
+        } else {
+          DB.employees.push({id:empId, name:empName, dept:emp.department||emp.Department||'',
+            managedBy:emp.managedBy||emp.ManagedBy||'Innotek', desg:'', phone:'', join:today(), salary:0, status:'Active'});
+          added++;
+        }
+      });
+      save('employees'); renderEmployees();
+      statusEl.textContent = `✓ Synced: ${added} added, ${updated} updated from Sheet ID ${BACKEND.ATTENDANCE_SHEET_ID.slice(0,8)}...`;
+      toast('Synced from Google Sheet ✓');
+    } else {
+      statusEl.textContent = '⚠️ Could not reach Attendance backend — check connection';
+    }
+  }catch(e){
+    statusEl.textContent = '⚠️ Sync failed: '+e.message+' (using local data)';
+  }
+}
+
+function toggleEmpStatus(id){
+  const e = DB.employees.find(x=>x.id===id);
+  if(e){ e.status = e.status==='Active'?'Inactive':'Active'; save('employees'); renderEmployees(); }
+}
+
+function populateEmpSelects(){
+  const emps = DB.employees.filter(e=>e.status==='Active');
+  const opts = emps.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+  ['att-emp','leave-emp'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){ el.innerHTML='<option value="">Select Employee</option>'+opts; }
+  });
+}
+
+// ─────────────────────────────────────────────────────
+// ATTENDANCE
+// ─────────────────────────────────────────────────────
+function attTab(el, tab){
+  document.querySelectorAll('#page-attendance .tab').forEach(t=>t.classList.remove('active')); el.classList.add('active');
+  document.querySelectorAll('.att-tab').forEach(t=>t.style.display='none');
+  document.getElementById('att-'+tab).style.display='';
+  if(tab==='register') loadAttRegister();
+}
+
+function setDefaults(){
+  const td = document.getElementById('att-date'); if(td) td.value=today();
+  const tt = document.getElementById('att-time'); if(tt) tt.value=new Date().toTimeString().slice(0,5);
+  const am = document.getElementById('att-month'); if(am) am.value=today().slice(0,7);
+  const pm = document.getElementById('payroll-month'); if(pm) pm.value=today().slice(0,7);
+}
+
+function saveManualAtt(){
+  const empId = document.getElementById('att-emp').value;
+  const emp = DB.employees.find(e=>e.id===empId);
+  if(!emp){ toast('Select employee first'); return; }
+  const rec = {
+    empId, empName:emp.name, dept:emp.dept,
+    date: document.getElementById('att-date').value,
+    type: document.getElementById('att-type').value,
+    time: document.getElementById('att-time').value,
+    remarks: document.getElementById('att-remarks').value,
+    method: 'Manual',
+  };
+  DB.attendance.push(rec); save('attendance');
+  toast(`Attendance saved for ${emp.name} ✓`);
+  loadAttRegister();
+}
+
+function markBulkPresent(){
+  DB.employees.filter(e=>e.status==='Active').forEach(emp=>{
+    DB.attendance.push({
+      empId:emp.id, empName:emp.name, dept:emp.dept,
+      date:today(), type:'Present', time:'09:00', method:'Bulk',
+    });
+  });
+  save('attendance'); toast('All marked Present ✓');
+}
+
+function renderMbGrid(){
+  const grid = document.getElementById('att-mb-grid');
+  if(!grid) return;
+  const companies = ['All','Innotek','BVG','Valkunde','Vicky Ent.'];
+  grid.innerHTML = companies.map(c=>{
+    const val = c==='All' ? '' : c;
+    const active = currentMbFilter===val ? 'active' : '';
+    return `<button class="tab ${active}" onclick="setMbFilter('${val}')">${c}</button>`;
+  }).join('');
+}
+function setMbFilter(val){
+  currentMbFilter = val;
+  renderMbGrid();
+  loadAttRegister();
+}
+
+function loadAttRegister(){
+  renderMbGrid();
+  const month = document.getElementById('att-month')?.value || today().slice(0,7);
+  const [yr, mo] = month.split('-').map(Number);
+  const days = new Date(yr, mo, 0).getDate();
+
+  // Header
+  const hdr = document.getElementById('att-hdr');
+  if(hdr){
+    hdr.innerHTML = '<th>Employee</th><th>Co.</th>' +
+      Array.from({length:days},(_,i)=>`<th style="min-width:32px">${i+1}</th>`).join('') +
+      '<th>P</th><th>A</th><th>L</th>';
+  }
+
+  // Body
+  const tbody = document.getElementById('att-tbody');
+  if(!tbody) return;
+  const emps = DB.employees.filter(e=>e.status==='Active' && (!currentMbFilter || e.managedBy===currentMbFilter));
+  tbody.innerHTML = emps.map(emp=>{
+    let P=0,A=0,L=0;
+    const cells = Array.from({length:days},(_,i)=>{
+      const d = `${month}-${String(i+1).padStart(2,'0')}`;
+      const rec = DB.attendance.find(a=>(a.empId===emp.id||a.employeeId===emp.id) && a.date===d);
+      if(!rec){ A++; return `<td style="color:var(--muted)">-</td>`; }
+      if(rec.type==='Leave'||rec.type==='Half Day'||rec.status==='Leave'){ L++; return `<td style="color:var(--warn)">L</td>`; }
+      P++; return `<td style="color:var(--accent2)">P</td>`;
+    }).join('');
+    return `<tr><td><b>${emp.name}</b></td><td><span class="badge badge-muted">${emp.managedBy||'—'}</span></td>${cells}<td style="color:var(--accent2)">${P}</td><td style="color:var(--danger)">${A}</td><td style="color:var(--warn)">${L}</td></tr>`;
+  }).join('');
+}
+
+function applyLeave(){
+  const empId = document.getElementById('leave-emp').value;
+  const emp = DB.employees.find(e=>e.id===empId);
+  if(!emp){ toast('Select employee'); return; }
+  const from = document.getElementById('leave-from').value;
+  const to = document.getElementById('leave-to').value;
+  if(!from||!to){ toast('Select dates'); return; }
+  const days = Math.round((new Date(to)-new Date(from))/(86400000))+1;
+  const rec = {
+    empId, empName:emp.name,
+    type: document.getElementById('leave-type').value,
+    from, to, days,
+    reason: document.getElementById('leave-reason').value,
+    status:'Pending',
+    applied:today(),
+  };
+  DB.leaves.push(rec); save('leaves');
+  toast(`Leave applied for ${emp.name} ✓`); renderLeaves();
+}
+
+function renderLeaves(){
+  const tbody = document.getElementById('leave-tbody');
+  if(!tbody) return;
+  tbody.innerHTML = DB.leaves.map(l=>`<tr>
+    <td>${l.empName}</td><td>${l.type}</td>
+    <td>${fmtDate(l.from)}</td><td>${fmtDate(l.to)}</td>
+    <td>${l.days}</td><td>${l.reason}</td>
+    <td>
+      <span class="badge ${l.status==='Approved'?'badge-green':l.status==='Rejected'?'badge-danger':'badge-warn'}">${l.status}</span>
+      ${l.status==='Pending'?`<button class="btn btn-ghost btn-sm" style="margin-left:4px" onclick="approveLeave(${DB.leaves.indexOf(l)})">Approve</button>`:''}
+    </td>
+  </tr>`).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--muted)">No leave records</td></tr>';
+}
+
+function approveLeave(idx){ DB.leaves[idx].status='Approved'; save('leaves'); renderLeaves(); toast('Leave Approved ✓'); }
+
+// Face recognition (camera)
+function startCamera(){
+  if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+    navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false})
+      .then(stream=>{
+        camStream=stream;
+        const v=document.getElementById('cam-view'); v.srcObject=stream;
+        document.getElementById('btn-cam-start').style.display='none';
+        document.getElementById('btn-capture').style.display='';
+        document.getElementById('cam-status').textContent='📷 Camera active — position face in frame';
+        document.getElementById('cam-status').style.color='var(--accent2)';
+      })
+      .catch(e=>{
+        document.getElementById('cam-status').textContent='⚠️ Camera error: '+e.message;
+        document.getElementById('cam-status').style.color='var(--warn)';
+      });
+  } else {
+    document.getElementById('cam-status').textContent='Camera not supported on this device/browser';
+  }
+}
+
+function captureAndRecognize(){
+  const v=document.getElementById('cam-view');
+  const c=document.getElementById('cam-canvas');
+  c.width=v.videoWidth||320; c.height=v.videoHeight||240;
+  c.getContext('2d').drawImage(v,0,0);
+  // Simulated recognition (in production: send frame to GAS/ML backend)
+  const emp = DB.employees[Math.floor(Math.random()*DB.employees.length)];
+  document.getElementById('cam-status').textContent=`✅ Recognized: ${emp.name} — Attendance marked!`;
+  document.getElementById('cam-status').style.color='var(--accent2)';
+  const rec = {empId:emp.id,empName:emp.name,dept:emp.dept,date:today(),type:'Present',time:new Date().toTimeString().slice(0,5),method:'Face'};
+  DB.attendance.push(rec); save('attendance');
+  const log = document.getElementById('face-log');
+  log.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--surface);border-radius:8px;border:1px solid var(--accent2)">
+    <div style="font-size:2rem">👤</div>
+    <div><div style="font-weight:700;color:var(--accent2)">${emp.name}</div>
+    <div style="font-size:.75rem;color:var(--muted)">${emp.dept} • ${rec.time} • Face</div></div>
+    <span class="badge badge-green" style="margin-left:auto">✓ In</span>
+  </div>` + log.innerHTML;
+  toast(`${emp.name} marked Present via Face ✓`);
+}
+
+// ─────────────────────────────────────────────────────
+// FINANCE
+// ─────────────────────────────────────────────────────
+function renderFinance(){
+  document.getElementById('fin-tbody').innerHTML = DB.finance.map(f=>`<tr>
+    <td>${fmtDate(f.date)}</td><td>${f.voucher}</td>
+    <td><span class="badge ${f.type==='Receipt'?'badge-green':'badge-danger'}">${f.type}</span></td>
+    <td>${f.party}</td><td>${f.narration}</td>
+    <td>${f.debit?'₹'+f.debit.toLocaleString('en-IN'):'-'}</td>
+    <td>${f.credit?'₹'+f.credit.toLocaleString('en-IN'):'-'}</td>
+    <td>₹${(f.balance||0).toLocaleString('en-IN')}</td>
+  </tr>`).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--muted)">No entries</td></tr>';
+
+  renderInvoices();
+}
+
+function finTab(el, tab){
+  document.querySelectorAll('#page-finance .tab').forEach(t=>t.classList.remove('active')); el.classList.add('active');
+  document.querySelectorAll('.fin-tab').forEach(t=>t.style.display='none');
+  document.getElementById('fin-'+tab).style.display='';
+  if(tab==='payroll') loadPayroll();
+  if(tab==='docentry') renderDocEntries();
+  if(tab==='docdue') renderPaymentDue();
+  if(tab==='docmaster') renderSupplierMaster();
+}
+
+function docEntryTab(el, type){
+  document.querySelectorAll('#fin-docentry .tab').forEach(t=>t.classList.remove('active')); el.classList.add('active');
+  document.querySelectorAll('.docentry-type').forEach(t=>t.style.display='none');
+  document.getElementById('docentry-'+type).style.display='';
+}
+
+// ── DOC MGMT: Invoice/Voucher entry, sync to real GAS backend ──
+async function dmsApiPost(payload){
+  const form = new FormData();
+  form.append('payload', JSON.stringify(payload));
+  try{
+    await fetch(BACKEND.DOCMGMT_GAS_URL, {method:'POST', body:form, mode:'no-cors'});
+    return {status:'success'};
+  }catch(e){ return {status:'error', message:e.message}; }
+}
+
+function saveDocEntry(type){
+  const prefix = type==='invoice' ? 'dms-inv' : 'dms-vou';
+  const party = type==='invoice'
+    ? document.getElementById('dms-inv-supplier').value
+    : document.getElementById('dms-vou-person').value;
+  const amount = parseFloat(document.getElementById(prefix+'-amount').value)||0;
+  if(!party || !amount){ toast('Fill required fields'); return; }
+  const entry = {
+    id: nextNum('DMS-'),
+    date: today(),
+    docType: type,
+    party,
+    amount,
+    type: document.getElementById(prefix+'-type').value,
+    about: document.getElementById(prefix+'-about').value,
+    dueDate: document.getElementById(prefix+'-due').value,
+    paid: false,
+    synced: false,
+    docId: null, // linked DB.documents record, set below if file attached
+  };
+  const file = document.getElementById(prefix+'-file').files[0];
+  if(file){
+    entry.fileName = file.name;
+    // Auto-create a linked record in the Documents module
+    const doc = {
+      id: nextNum('DOC-'),
+      name: `${type==='invoice'?'Invoice':'Voucher'} — ${party} (₹${amount.toLocaleString('en-IN')})`,
+      cat: type, // 'invoice' or 'voucher' — matches Documents page tabs
+      ref: entry.id,
+      date: entry.date,
+      size: (file.size/1024).toFixed(0)+' KB',
+      type: file.type.includes('image') ? 'Image' : 'PDF',
+      linkedEntryId: entry.id, // back-reference to Finance entry
+    };
+    DB.documents.unshift(doc); save('documents');
+    entry.docId = doc.id;
+  }
+
+  DB.docEntries.unshift(entry); save('docEntries');
+
+  // Track new supplier
+  if(type==='invoice' && party && !DB.suppliers.includes(party)){
+    DB.suppliers.push(party); save('suppliers');
+  }
+
+  dmsApiPost({sheet:type==='invoice'?'INVOICES':'VOUCHERS', action:'append', data:entry})
+    .then(r=>{ if(r.status==='success'){ entry.synced=true; save('docEntries'); renderDocEntries(); } });
+
+  // Clear form
+  document.getElementById(prefix+'-amount').value='';
+  document.getElementById(prefix+'-about').value='';
+  document.getElementById(prefix+'-due').value='';
+  if(type==='invoice') document.getElementById('dms-inv-supplier').value='';
+
+  toast(`${type==='invoice'?'Invoice':'Voucher'} saved ✓${file?' · linked to Documents':''}`);
+  renderDocEntries();
+}
+
+function renderDocEntries(){
+  // Supplier datalist
+  const dl = document.getElementById('supplier-list');
+  if(dl) dl.innerHTML = DB.suppliers.map(s=>`<option value="${s}">`).join('');
+
+  const todayCt = DB.docEntries.filter(d=>d.date===today()).length;
+  const pendingCt = DB.docEntries.filter(d=>!d.synced).length;
+  document.getElementById('dms-stat-today').textContent = todayCt;
+  document.getElementById('dms-stat-pending').textContent = pendingCt;
+  document.getElementById('dms-stat-total').textContent = DB.docEntries.length;
+
+  document.getElementById('dms-tbody').innerHTML = DB.docEntries.map(d=>`<tr>
+    <td>${fmtDate(d.date)}</td>
+    <td><span class="badge ${d.docType==='invoice'?'badge-blue':'badge-warn'}">${d.docType==='invoice'?'Invoice':'Voucher'}</span></td>
+    <td>${d.party}</td>
+    <td>₹${d.amount.toLocaleString('en-IN')}</td>
+    <td>${d.type}</td>
+    <td>${d.dueDate?fmtDate(d.dueDate):'—'}</td>
+    <td>${d.synced?'<span class="badge badge-green">✓ Synced</span>':'<span class="badge badge-warn">Pending</span>'}</td>
+    <td>${d.docId?`<button class="btn btn-ghost btn-sm" onclick="jumpToDocuments('${d.docType}')">📎 View Doc</button>`:'—'}</td>
+  </tr>`).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--muted)">No entries yet</td></tr>';
+}
+
+function jumpToDocuments(cat){
+  showPage('documents');
+  setTimeout(()=>{
+    document.querySelectorAll('#page-documents .tab').forEach(t=>t.classList.remove('active'));
+    document.querySelector(`#page-documents .tab[onclick*="'${cat}'"]`)?.classList.add('active');
+    currentDocCat = cat; renderDocs(cat);
+  }, 100);
+}
+
+function renderPaymentDue(){
+  const now = new Date();
+  const dued = DB.docEntries.filter(d=>d.dueDate && !d.paid);
+  const overdue = dued.filter(d=>new Date(d.dueDate) < now);
+  const upcoming = dued.filter(d=>new Date(d.dueDate) >= now);
+
+  const renderCard = (d,isOverdue)=>`
+    <div class="card" style="border-color:${isOverdue?'var(--danger)':'var(--border)'};margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:start">
+        <div>
+          <div style="font-weight:700">${d.party}</div>
+          <div style="font-size:.75rem;color:var(--muted)">${d.docType==='invoice'?'Invoice':'Voucher'} · ${d.type} · ${d.about||''}</div>
+          <div style="font-size:.75rem;color:${isOverdue?'var(--danger)':'var(--warn)'};margin-top:4px">Due: ${fmtDate(d.dueDate)}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-weight:700;color:var(--accent)">₹${d.amount.toLocaleString('en-IN')}</div>
+          <button class="btn btn-success btn-sm" style="margin-top:6px" onclick="markDuePaid('${d.id}')">✓ Mark Paid</button>
+        </div>
+      </div>
+    </div>`;
+
+  document.getElementById('due-overdue-section').innerHTML = overdue.length ?
+    `<div class="card-title" style="color:var(--danger)"><span>⚠️</span>Overdue (${overdue.length})</div>` + overdue.map(d=>renderCard(d,true)).join('') : '';
+  document.getElementById('due-upcoming-section').innerHTML = upcoming.length ?
+    `<div class="card-title"><span>📅</span>Upcoming (${upcoming.length})</div>` + upcoming.map(d=>renderCard(d,false)).join('') : '';
+  document.getElementById('due-empty').style.display = (overdue.length===0 && upcoming.length===0) ? '' : 'none';
+}
+
+function markDuePaid(id){
+  const d = DB.docEntries.find(x=>x.id===id);
+  if(d){ d.paid=true; save('docEntries'); renderPaymentDue(); toast('Marked as Paid ✓'); }
+}
+
+function renderSupplierMaster(){
+  document.getElementById('supplier-count').textContent = DB.suppliers.length;
+  document.getElementById('supplier-master-list').innerHTML = DB.suppliers.map(s=>{
+    const inUse = DB.docEntries.some(d=>d.party===s);
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--surface);border-radius:7px">
+      <span>${s} ${inUse?'<span class="badge badge-green" style="margin-left:6px">✓ in use</span>':''}</span>
+      ${!inUse?`<button class="btn btn-ghost btn-sm" onclick="removeSupplier('${s}')">Remove</button>`:''}
+    </div>`;
+  }).join('') || '<div style="color:var(--muted);text-align:center;padding:20px">No suppliers yet</div>';
+}
+
+function addSupplier(){
+  const val = document.getElementById('new-supplier-input').value.trim();
+  if(!val){ toast('Enter a supplier name'); return; }
+  if(DB.suppliers.includes(val)){ toast('Supplier already exists'); return; }
+  DB.suppliers.push(val); save('suppliers');
+  document.getElementById('new-supplier-input').value='';
+  renderSupplierMaster(); toast('Supplier added ✓');
+}
+
+function removeSupplier(name){
+  DB.suppliers = DB.suppliers.filter(s=>s!==name); save('suppliers');
+  renderSupplierMaster(); toast('Supplier removed');
+}
+
+function sendDmsReport(){
+  const unsent = DB.docEntries.filter(d=>!d.synced);
+  const emails = [];
+  if(document.getElementById('dms-em1').checked) emails.push('accounts@innotekproducts.com');
+  if(document.getElementById('dms-em2').checked) emails.push('ceo@innotekproducts.com');
+  if(document.getElementById('dms-em3').checked) emails.push('business@innotekproducts.com');
+  if(document.getElementById('dms-em4').checked) emails.push('accounts.finance@unitycpl.com');
+  dmsApiPost({sheet:'REPORTS', action:'sendDailyReport', data:{entries:unsent, emails}})
+    .then(()=>{ toast(`Report sent to ${emails.length} recipient(s) ✓`); });
+  closeModal('modal-senddms');
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  const sendList = document.getElementById('send-entries-list');
+});
+function openModalSendDms(){
+  const unsent = DB.docEntries.filter(d=>!d.synced);
+  document.getElementById('send-entries-list').innerHTML = unsent.map(d=>
+    `<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:.8rem">${d.party} — ₹${d.amount.toLocaleString('en-IN')} (${d.docType})</div>`
+  ).join('') || '<div style="color:var(--muted);font-size:.8rem">No unsent entries</div>';
+  openModal('modal-senddms');
+}
+
+function renderInvoices(){
+  const invoices = DB.so.map((s,i)=>({
+    num:'INV-'+String(i+100),date:s.date,customer:s.customer,
+    amount:s.amount,due:nextDate(30),paid:Math.floor(s.amount*0.6),
+    balance:Math.ceil(s.amount*0.4),
+    status:i%3===0?'Overdue':i%3===1?'Partial':'Pending',
+  }));
+  document.getElementById('inv2-tbody').innerHTML = invoices.map(inv=>`<tr>
+    <td><b>${inv.num}</b></td><td>${fmtDate(inv.date)}</td><td>${inv.customer}</td>
+    <td>₹${inv.amount.toLocaleString('en-IN')}</td>
+    <td>${fmtDate(inv.due)}</td>
+    <td>₹${inv.paid.toLocaleString('en-IN')}</td>
+    <td>₹${inv.balance.toLocaleString('en-IN')}</td>
+    <td><span class="badge ${inv.status==='Overdue'?'badge-danger':inv.status==='Partial'?'badge-warn':'badge-blue'}">${inv.status}</span></td>
+  </tr>`).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--muted)">No invoices</td></tr>';
+}
+
+function saveVoucher(){
+  const type = document.getElementById('v-type').value;
+  const amt = parseFloat(document.getElementById('v-amt').value)||0;
+  const lastBal = DB.finance.length ? DB.finance[DB.finance.length-1].balance : 0;
+  const debit = type==='Receipt'||type==='Contra'?amt:0;
+  const credit = type==='Payment'||type==='Journal'?amt:0;
+  const v = {
+    date:document.getElementById('v-date').value||today(),
+    voucher:nextNum('VCH-'),
+    type,
+    party:document.getElementById('v-party').value,
+    narration:document.getElementById('v-narr').value,
+    debit, credit,
+    balance: lastBal + debit - credit,
+  };
+  DB.finance.push(v); save('finance');
+  closeModal('modal-newvoucher'); toast('Voucher saved ✓'); renderFinance();
+}
+
+function addExpense(){
+  const e = {
+    date:document.getElementById('exp-date').value||today(),
+    cat:document.getElementById('exp-cat').value,
+    amt:parseFloat(document.getElementById('exp-amt').value)||0,
+    rem:document.getElementById('exp-rem').value,
+  };
+  DB.expenses.push(e); save('expenses');
+  document.getElementById('exp-tbody').innerHTML = DB.expenses.map(x=>`<tr>
+    <td>${fmtDate(x.date)}</td><td>${x.cat}</td>
+    <td>₹${x.amt.toLocaleString('en-IN')}</td><td>${x.rem}</td>
+  </tr>`).join('');
+  toast('Expense added ✓');
+}
+
+function loadPayroll(){
+  const month = document.getElementById('payroll-month')?.value || today().slice(0,7);
+  const tbody = document.getElementById('payroll-tbody');
+  if(!tbody) return;
+  const [yr,mo] = month.split('-').map(Number);
+  const days = new Date(yr,mo,0).getDate();
+
+  tbody.innerHTML = DB.employees.filter(e=>e.status==='Active').map(emp=>{
+    const present = DB.attendance.filter(a=>a.empId===emp.id && a.date.startsWith(month) && a.type==='Present').length;
+    const perDay = (emp.salary||0)/26;
+    const gross = Math.round(perDay * present);
+    const ded = Math.round(gross*0.12); // PF
+    const net = gross - ded;
+    return `<tr>
+      <td>${emp.name}</td><td>${present}/${days}</td>
+      <td>₹${(emp.salary||0).toLocaleString('en-IN')}</td>
+      <td>₹${ded.toLocaleString('en-IN')}</td>
+      <td>₹0</td>
+      <td style="color:var(--accent2)"><b>₹${net.toLocaleString('en-IN')}</b></td>
+      <td><span class="badge badge-warn">Pending</span></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--muted)">No employees</td></tr>';
+}
+
+function processPayroll(){ toast('Payroll processed ✓ (Connect GAS to distribute payslips)'); }
+
+// ─────────────────────────────────────────────────────
+// PURCHASE & SALES
+// ─────────────────────────────────────────────────────
+function renderPO(){
+  document.getElementById('po-tbody').innerHTML = DB.po.map(p=>`<tr>
+    <td><b>${p.num}</b></td><td>${fmtDate(p.date)}</td><td>${p.vendor}</td>
+    <td>${p.item}</td><td>${p.qty} ${p.uom}</td>
+    <td>₹${(p.rate||0).toLocaleString('en-IN')}</td>
+    <td>₹${(p.amount||0).toLocaleString('en-IN')}</td>
+    <td>${fmtDate(p.eta)}</td>
+    <td><span class="badge ${p.status==='Received'?'badge-green':p.status==='Confirmed'?'badge-blue':'badge-warn'}">${p.status}</span></td>
+  </tr>`).join('') || '<tr><td colspan="9" style="text-align:center;color:var(--muted)">No POs</td></tr>';
+}
+
+function savePO(){
+  const qty = parseFloat(document.getElementById('po-qty').value)||0;
+  const rate = parseFloat(document.getElementById('po-rate').value)||0;
+  const p = {
+    num:nextNum('PO-2406-'),
+    date:today(),
+    vendor:document.getElementById('po-vendor').value,
+    item:document.getElementById('po-item').value,
+    qty,
+    uom:document.getElementById('po-uom').value,
+    rate, amount:qty*rate,
+    eta:document.getElementById('po-eta').value,
+    status:'Pending',
+  };
+  DB.po.unshift(p); save('po');
+  closeModal('modal-newpo'); toast('Purchase Order created ✓'); renderPO();
+}
+
+function renderSO(){
+  document.getElementById('so-tbody').innerHTML = DB.so.map(s=>`<tr>
+    <td><b>${s.num}</b></td><td>${fmtDate(s.date)}</td><td>${s.customer}</td>
+    <td>${s.product}</td><td>${s.qty} MT</td>
+    <td>₹${(s.rate||0).toLocaleString('en-IN')}</td>
+    <td>₹${(s.amount||0).toLocaleString('en-IN')}</td>
+    <td>${fmtDate(s.delivery)}</td>
+    <td><span class="badge ${s.status==='Delivered'?'badge-green':s.status==='In Process'?'badge-blue':s.status==='Confirmed'?'badge-blue':'badge-warn'}">${s.status}</span></td>
+  </tr>`).join('') || '<tr><td colspan="9" style="text-align:center;color:var(--muted)">No orders</td></tr>';
+}
+
+function saveSO(){
+  const qty = parseFloat(document.getElementById('so-qty').value)||0;
+  const rate = parseFloat(document.getElementById('so-rate').value)||0;
+  const s = {
+    num:nextNum('SO-2406-'),
+    date:today(),
+    customer:document.getElementById('so-cust').value,
+    product:document.getElementById('so-prod').value,
+    grade:document.getElementById('so-grade').value,
+    qty, rate, amount:qty*rate,
+    delivery:document.getElementById('so-del').value,
+    status:'Confirmed',
+  };
+  DB.so.unshift(s); save('so');
+  closeModal('modal-newso'); toast('Sales Order created ✓'); renderSO();
+}
+
+// ─────────────────────────────────────────────────────
+// DOCUMENTS
+// ─────────────────────────────────────────────────────
+function renderDocs(cat=''){
+  const docs = cat && cat!=='all' ? DB.documents.filter(d=>d.cat===cat) : DB.documents;
+  document.getElementById('doc-grid').innerHTML = docs.map(d=>{
+    const isLinked = d.linkedEntryId && (d.cat==='invoice' || d.cat==='voucher');
+    return `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;cursor:${isLinked?'pointer':'default'}" ${isLinked?`onclick="jumpToFinanceEntry('${d.linkedEntryId}')"`:''}>
+      <div style="font-size:2rem;margin-bottom:8px">${d.type==='PDF'?'📄':d.type==='Image'?'🖼️':'📎'}</div>
+      <div style="font-weight:600;font-size:.85rem;margin-bottom:4px">${d.name}</div>
+      <div style="font-size:.72rem;color:var(--muted)">${d.ref} • ${fmtDate(d.date)}</div>
+      <div style="font-size:.7rem;color:var(--muted);margin-top:4px">${d.size}</div>
+      <span class="badge ${isLinked?'badge-blue':'badge-muted'}" style="margin-top:6px">${d.cat}</span>
+      ${isLinked?'<div style="font-size:.68rem;color:var(--accent);margin-top:6px">🔗 Linked to Finance — tap to view</div>':''}
+    </div>`;
+  }).join('') || '<div style="color:var(--muted);text-align:center;padding:40px;grid-column:1/-1">No documents uploaded</div>';
+}
+
+function jumpToFinanceEntry(entryId){
+  const entry = DB.docEntries.find(e=>e.id===entryId);
+  if(!entry){ toast('Linked Finance entry not found'); return; }
+  showPage('finance');
+  setTimeout(()=>{
+    document.querySelectorAll('#page-finance .tab').forEach(t=>t.classList.remove('active'));
+    document.querySelector('#page-finance .tab[onclick*="docentry"]')?.classList.add('active');
+    document.querySelectorAll('.fin-tab').forEach(t=>t.style.display='none');
+    document.getElementById('fin-docentry').style.display='';
+    renderDocEntries();
+    toast(`Viewing: ${entry.party} — ₹${entry.amount.toLocaleString('en-IN')} (${entry.docType})`);
+  }, 100);
+}
+
+function docTab(el, cat){
+  document.querySelectorAll('#page-documents .tab').forEach(t=>t.classList.remove('active')); el.classList.add('active');
+  currentDocCat = cat; renderDocs(cat);
+}
+
+function filterDocs(inp){
+  const q = inp.value.toLowerCase();
+  document.querySelectorAll('#doc-grid > div').forEach(d=>{
+    d.style.display = d.textContent.toLowerCase().includes(q)?'':'none';
+  });
+}
+
+function saveDoc(){
+  const cat = document.getElementById('doc-cat').value;
+  const d = {
+    id: nextNum('DOC-'),
+    name: document.getElementById('doc-name').value,
+    cat,
+    ref: document.getElementById('doc-ref').value,
+    date: document.getElementById('doc-date').value || today(),
+    size: '—',
+    type: 'PDF',
+  };
+  const file = document.getElementById('doc-file').files[0];
+  if(file){ d.size = (file.size/1024).toFixed(0)+' KB'; d.type=file.type.includes('image')?'Image':'PDF'; }
+  DB.documents.unshift(d); save('documents');
+
+  // If uploaded directly as Invoice/Voucher category, also create a matching Finance entry stub
+  if(cat==='invoice' || cat==='voucher'){
+    const entry = {
+      id: nextNum('DMS-'),
+      date: d.date, docType: cat,
+      party: d.ref || 'Unspecified',
+      amount: 0, type:'Expense', about: d.name,
+      dueDate:'', paid:false, synced:false, docId: d.id,
+      fileName: file ? file.name : '',
+    };
+    DB.docEntries.unshift(entry); save('docEntries');
+    d.linkedEntryId = entry.id; save('documents');
+    toast('Document uploaded ✓ — stub entry added to Finance (edit amount there)');
+  } else {
+    toast('Document uploaded ✓');
+  }
+
+  closeModal('modal-uploaddoc'); renderDocs(currentDocCat);
+}
+
+// ─────────────────────────────────────────────────────
+// REPORTS & EXPORTS
+// ─────────────────────────────────────────────────────
+function tblToCSV(tblId){
+  const tbl = document.getElementById(tblId);
+  if(!tbl) return '';
+  const rows = [...tbl.querySelectorAll('tr')];
+  return rows.map(r=>[...r.querySelectorAll('th,td')].map(c=>'"'+c.textContent.trim().replace(/"/g,'""')+'"').join(',')).join('\n');
+}
+
+function downloadCSV(csv, filename){
+  const blob = new Blob([csv],{type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename+'.csv';
+  a.click();
+  toast('CSV downloaded ✓');
+}
+
+function exportTblCSV(tblId, label){
+  downloadCSV(tblToCSV(tblId), label+'_'+today());
+}
+
+function exportTblPDF(tblId, title){
+  const tbl = document.getElementById(tblId);
+  if(!tbl){ toast('Table not found'); return; }
+  const rows = [...tbl.querySelectorAll('tr')];
+  const csvData = rows.map(r=>[...r.querySelectorAll('th,td')].map(c=>c.textContent.trim()));
+
+  const w = window.open('','_blank');
+  w.document.write(`
+    <html><head><title>${title}</title>
+    <style>
+      body{font-family:Arial,sans-serif;font-size:11px;padding:20px;}
+      h2{font-size:14px;margin-bottom:4px;}
+      .meta{color:#666;font-size:10px;margin-bottom:16px;}
+      table{width:100%;border-collapse:collapse;}
+      th{background:#0f1923;color:#e8f4fd;padding:6px 8px;text-align:left;font-size:10px;}
+      td{padding:5px 8px;border-bottom:1px solid #ddd;font-size:10px;}
+      tr:nth-child(even) td{background:#f5f9fc;}
+      .footer{margin-top:20px;font-size:9px;color:#999;text-align:center;}
+    </style></head>
+    <body>
+      <h2>Innotek Products — ${title}</h2>
+      <div class="meta">Generated: ${new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
+      <table>${rows.map((r,ri)=>`<tr>${[...r.querySelectorAll('th,td')].map(c=>`<${ri===0?'th':'td'}>${c.textContent.trim()}</${ri===0?'th':'td'}>`).join('')}</tr>`).join('')}</table>
+      <div class="footer">Innotek Products • Manufacturing ERP • Confidential</div>
+    </body></html>`);
+  w.document.close();
+  setTimeout(()=>w.print(), 500);
+  toast('PDF print dialog opened ✓');
+}
+
+function exportDashPDF(){
+  const w = window.open('','_blank');
+  w.document.write(`
+    <html><head><title>Innotek ERP - Dashboard</title>
+    <style>body{font-family:Arial;padding:20px;font-size:12px;}h2{margin-bottom:4px;}
+    .kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0;}
+    .kpi{border:1px solid #ccc;border-radius:6px;padding:12px;}
+    .kpi .label{font-size:10px;color:#666;}.kpi .value{font-size:18px;font-weight:700;}
+    table{width:100%;border-collapse:collapse;margin-top:12px;}
+    th{background:#0f1923;color:#fff;padding:6px 8px;font-size:10px;}
+    td{padding:5px 8px;border-bottom:1px solid #ddd;font-size:10px;}
+    </style></head><body>
+    <h2>Innotek ERP — Dashboard Summary</h2>
+    <p style="color:#666;font-size:10px">Generated: ${new Date().toLocaleString('en-IN')}</p>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="label">Active Orders</div><div class="value">${DB.so.filter(s=>s.status!=='Delivered').length}</div></div>
+      <div class="kpi"><div class="label">Production Batches</div><div class="value">${DB.batches.length}</div></div>
+      <div class="kpi"><div class="label">Low Stock Items</div><div class="value">${DB.inventory.filter(i=>i.stock<=i.reorder).length}</div></div>
+      <div class="kpi"><div class="label">Employees</div><div class="value">${DB.employees.filter(e=>e.status==='Active').length}</div></div>
+      <div class="kpi"><div class="label">Dispatches</div><div class="value">${DB.dispatch.length}</div></div>
+      <div class="kpi"><div class="label">QC Tests</div><div class="value">${DB.qc.length}</div></div>
+    </div>
+    </body></html>`);
+  w.document.close(); setTimeout(()=>w.print(),400);
+}
+
+function genReport(type){
+  const tblMap = {production:'prod-tbl',inventory:'inv-tbl',attendance:'att-tbl',finance:'fin-tbl',dispatch:'disp-tbl',quality:'qc-tbl'};
+  const labelMap = {production:'Production Report',inventory:'Inventory Report',attendance:'Attendance Register',finance:'Financial Ledger',dispatch:'Dispatch Register',quality:'QC Test Report'};
+  exportTblPDF(tblMap[type]||'fin-tbl', labelMap[type]||type);
+}
+
+function customReport(){
+  const type = document.getElementById('rep-type').value;
+  const fmt = document.getElementById('rep-fmt').value;
+  const tblMap = {Production:'prod-tbl',Inventory:'inv-tbl',Attendance:'att-tbl',Finance:'fin-tbl',Dispatch:'disp-tbl',Sales:'so-tbl'};
+  const tbl = tblMap[type]||'fin-tbl';
+  if(fmt==='csv') exportTblCSV(tbl, type);
+  else exportTblPDF(tbl, type+' Report');
+}
+
+function exportAll(){
+  const all = {
+    employees:DB.employees, batches:DB.batches, inventory:DB.inventory,
+    dispatch:DB.dispatch, qc:DB.qc, finance:DB.finance, so:DB.so, po:DB.po,
+    attendance:DB.attendance, leaves:DB.leaves,
+  };
+  downloadCSV(JSON.stringify(all,null,2),'InnotekERP_Full_Export_'+today());
+}
+
+function importData(){
+  const input=document.createElement('input');
+  input.type='file'; input.accept='.json,.csv';
+  input.onchange=e=>{ toast('Import: Connect to GAS backend for full import support'); };
+  input.click();
+}
+
+function clearCache(){
+  if(confirm('Clear all local data? This cannot be undone.')){
+    Object.keys(localStorage).filter(k=>k.startsWith('erp_')).forEach(k=>localStorage.removeItem(k));
+    toast('Cache cleared. Reloading...'); setTimeout(()=>location.reload(),1000);
+  }
+}
+
+// ─────────────────────────────────────────────────────
+// SETTINGS
+// ─────────────────────────────────────────────────────
+function saveSettings(){
+  const cfg = {
+    company:document.getElementById('s-company').value,
+    gst:document.getElementById('s-gst').value,
+    gas:document.getElementById('s-gas').value,
+    sheetId:document.getElementById('s-sheetid').value,
+  };
+  localStorage.setItem('erp_config', JSON.stringify(cfg));
+  toast('Settings saved ✓');
+}
+
+function testGAS(){
+  const url = document.getElementById('s-gas').value;
+  const el = document.getElementById('gas-status');
+  if(!url){ el.textContent='⚠️ Enter GAS URL first'; return; }
+  el.textContent='⏳ Testing connection...';
+  const img=new Image();
+  img.onload=()=>{ el.style.color='var(--accent2)'; el.textContent='✅ Connected to GAS backend'; };
+  img.onerror=()=>{ el.style.color='var(--warn)'; el.textContent='⚠️ Could not reach GAS URL — check deployment'; };
+  img.src = url+'?action=ping&cb='+Date.now();
+}
+
+// ── INIT ──────────────────────────────────────
+function init(){
+  seedIfEmpty();
+  renderDashboard();
+  populateEmpSelects();
+  setDefaults();
+  const cfg = JSON.parse(localStorage.getItem('erp_config')||'{}');
+  if(cfg.gas && document.getElementById('s-gas')) document.getElementById('s-gas').value=cfg.gas;
+  if(cfg.sheetId && document.getElementById('s-sheetid')) document.getElementById('s-sheetid').value=cfg.sheetId;
+
+  // Deep-link support: erp.html#inventory opens the Inventory page directly
+  const hash = window.location.hash.replace('#','');
+  const validPages = ['dashboard','production','inventory','dispatch','quality','attendance',
+                       'employees','finance','purchase','sales','documents','reports','settings'];
+  if(hash && validPages.includes(hash)){
+    showPage(hash);
+  }
+}
+
+init();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   FACE ATTENDANCE MODULE — replicated from Attendance Ledger / FaceIN app
+   ═══════════════════════════════════════════════════════════════ */
+let modelsLoaded = false;
+let faceStream = null, faceDetRAF = null, lastDetections = [];
+let capturedFaces = [], faceDB = [], faceMode = 'ENTRY', facingMode = 'user';
+let enrollStream = null, enrollDetRAF = null;
+let pendingPinAction = null;
+
+function pad(n){ return String(n).padStart(2,'0'); }
+function todayStr(){ return new Date().toISOString().split('T')[0]; }
+
+// ── GAS comms (JSONP get / POST) — same pattern as original FaceIN app ──
+function gasGet(params){
+  return new Promise((res,rej)=>{
+    const cb = 'cb_'+Date.now();
+    const url = BACKEND.FACEIN_GAS_URL+'?'+Object.entries({...params,callback:cb}).map(([k,v])=>encodeURIComponent(k)+'='+encodeURIComponent(v)).join('&');
+    const sc = document.createElement('script');
+    const t = setTimeout(()=>{cleanup();rej(new Error('Timeout'));},15000);
+    window[cb] = (data)=>{cleanup();res(data);};
+    function cleanup(){clearTimeout(t);delete window[cb];sc.remove();}
+    sc.onerror = ()=>{cleanup();rej(new Error('Network error'));};
+    sc.src = url; document.head.appendChild(sc);
+  });
+}
+async function gasPost(body){
+  try{
+    const r = await fetch(BACKEND.FACEIN_GAS_URL, {method:'POST', body:JSON.stringify(body)});
+    return await r.json();
+  }catch(e){ return {ok:false, error:e.message}; }
+}
+
+async function loadFaceModels(){
+  const nets = [
+    {l:'Face detector…', n:faceapi.nets.ssdMobilenetv1},
+    {l:'Landmarks…', n:faceapi.nets.faceLandmark68Net},
+    {l:'Recogniser…', n:faceapi.nets.faceRecognitionNet},
+  ];
+  for(let i=0;i<nets.length;i++){
+    setFaceProgress(Math.round((i/nets.length)*82), nets[i].l);
+    try{ await nets[i].n.loadFromUri(FACE_MODEL_CDN); }
+    catch(_){ await nets[i].n.loadFromUri(FACE_MODEL_FALLBACK); }
+  }
+  modelsLoaded = true;
+}
+
+function setFaceProgress(p,label){
+  const fill=document.getElementById('faceProgFill');
+  const lbl=document.getElementById('faceProgLabel');
+  if(fill) fill.style.width=p+'%';
+  if(lbl) lbl.textContent=label;
+}
+
+function hideFaceSplash(){
+  const s=document.getElementById('faceSplash');
+  if(!s) return;
+  s.style.opacity='0'; setTimeout(()=>{ s.style.display='none'; },400);
+}
+
+async function loadFaceDB(){
+  try{
+    const r = await gasGet({action:'getFaceDB'});
+    if(r.ok){
+      faceDB = r.faces.map(f=>({...f, descriptor:new Float32Array(f.Descriptor)}));
+      renderEnrolledList();
+    }
+  }catch(_){
+    // Fall back to localStorage cache
+    const cached = JSON.parse(localStorage.getItem('erp_facedb')||'[]');
+    faceDB = cached.map(f=>({...f, descriptor:new Float32Array(f.descriptor)}));
+  }
+}
+
+async function startFaceCam(){
+  try{
+    if(faceStream) faceStream.getTracks().forEach(t=>t.stop());
+    const video = document.getElementById('faceVideo');
+    faceStream = await navigator.mediaDevices.getUserMedia({
+      video:{facingMode, width:{ideal:1280}, height:{ideal:720}}, audio:false
+    });
+    video.srcObject = faceStream; await video.play();
+    hideFaceSplash();
+    document.getElementById('btnFaceCapture').disabled=false;
+    startFaceDetectionLoop();
+  }catch(e){
+    setFaceProgress(0, '⚠️ Camera error: '+e.message);
+  }
+}
+
+function stopFaceCam(){
+  if(faceDetRAF){ cancelAnimationFrame(faceDetRAF); faceDetRAF=null; }
+  if(faceStream){ faceStream.getTracks().forEach(t=>t.stop()); faceStream=null; }
+}
+
+function startFaceDetectionLoop(){
+  if(faceDetRAF) cancelAnimationFrame(faceDetRAF);
+  let last=0;
+  async function loop(ts){
+    faceDetRAF = requestAnimationFrame(loop);
+    if(ts-last<400) return; last=ts;
+    const video=document.getElementById('faceVideo');
+    if(!modelsLoaded || video.readyState<2) return;
+    try{
+      const dets = await faceapi.detectAllFaces(video, new faceapi.SsdMobilenetv1Options({minConfidence:.5}))
+        .withFaceLandmarks().withFaceDescriptors();
+      lastDetections = dets;
+      const badge=document.getElementById('faceBadge');
+      if(badge) badge.textContent = dets.length ? `${dets.length} face(s) detected` : '';
+    }catch(_){}
+  }
+  faceDetRAF = requestAnimationFrame(loop);
+}
+
+function recognise(descriptor){
+  if(!faceDB.length) return null;
+  let best=null, bestDist=Infinity;
+  faceDB.forEach(f=>{
+    const d = faceapi.euclideanDistance(descriptor, f.descriptor);
+    if(d<bestDist){ bestDist=d; best=f; }
+  });
+  return bestDist <= FACE_MATCH_THRESHOLD ? best : null;
+}
+
+async function captureAndRecognize(){
+  if(!lastDetections.length){ toast('No faces in frame — point camera at people'); return; }
+  const video=document.getElementById('faceVideo');
+  const snap=document.createElement('canvas');
+  snap.width=video.videoWidth; snap.height=video.videoHeight;
+  snap.getContext('2d').drawImage(video,0,0);
+  capturedFaces = lastDetections.map((det,i)=>{
+    const box=det.detection.box, padd=20;
+    const sx=Math.max(0,box.x-padd), sy=Math.max(0,box.y-padd);
+    const sw=Math.min(snap.width-sx, box.width+padd*2), sh=Math.min(snap.height-sy, box.height+padd*2);
+    const fc=document.createElement('canvas'); fc.width=fc.height=46;
+    fc.getContext('2d').drawImage(snap, sx,sy,sw,sh, 0,0,46,46);
+    const match=recognise(det.descriptor);
+    const dist=match?faceapi.euclideanDistance(det.descriptor,match.descriptor):null;
+    return {
+      id:i, label:match?match.EmployeeName:'Unknown', empData:match||null, mode:faceMode,
+      score:det.detection.score, confidence:dist?Math.round((1-dist)*100):null,
+      canvas:fc, known:!!match
+    };
+  });
+  buildFaceCards();
+}
+
+function buildFaceCards(){
+  const log=document.getElementById('face-log');
+  if(!log) return;
+  log.innerHTML = capturedFaces.map(face=>{
+    const confLine = face.known ? `${face.confidence}% match` : '⚠️ Not enrolled — use Enroll';
+    const dataUrl = face.canvas.toDataURL();
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--surface);border-radius:8px;border:1px solid ${face.known?'var(--accent2)':'var(--warn)'}">
+      <img src="${dataUrl}" style="width:46px;height:46px;border-radius:50%;object-fit:cover">
+      <div style="flex:1">
+        <div style="font-weight:700;color:${face.known?'var(--accent2)':'var(--warn)'}">${face.label}</div>
+        <div style="font-size:.75rem;color:var(--muted)">${confLine}</div>
+      </div>
+      <div style="display:flex;gap:4px">
+        <button class="btn btn-sm ${face.mode==='ENTRY'?'btn-success':'btn-ghost'}" onclick="setCardMode(${face.id},'ENTRY')">IN</button>
+        <button class="btn btn-sm ${face.mode==='EXIT'?'btn-danger':'btn-ghost'}" onclick="setCardMode(${face.id},'EXIT')">OUT</button>
+      </div>
+    </div>`;
+  }).join('') + (capturedFaces.some(f=>f.known) ? `<button class="btn btn-primary" style="margin-top:10px;width:100%" onclick="confirmFaceAttendance()">✓ Confirm Attendance</button>` : '');
+}
+
+function setCardMode(id, mode){
+  capturedFaces[id].mode = mode;
+  buildFaceCards();
+}
+
+function calcHours(entryT, exitT){
+  function s(t){ const p=t.split(':').map(Number); return (p[0]||0)*3600+(p[1]||0)*60+(p[2]||0); }
+  const d=Math.max(s(exitT)-s(entryT),0), a=d/3600;
+  let p=a-.5; if(p<4) p=4;
+  const r=Math.min(p,8), o=Math.max(p-8,0);
+  return { actual:Math.round(a*100)/100, paid:Math.round(p*100)/100, regular:Math.round(r*100)/100, ot:Math.round(o*100)/100 };
+}
+
+function findAttRow(date, empId){
+  return DB.attendance.find(r=>r.date===date && (r.empId===empId || r.employeeId===empId));
+}
+
+function doMarkEntry(emp, t){
+  const today=todayStr();
+  let row=findAttRow(today, emp.id||emp.EmployeeID);
+  const empId=emp.id||emp.EmployeeID, empName=emp.name||emp.EmployeeName;
+  if(row){
+    if(row.status==='Leave'||row.status==='Absent') return {ok:false,text:`${empName}: marked ${row.status} today.`};
+    if(row.entryTime) return {ok:false,text:`${empName}: entry already at ${row.entryTime}.`};
+    row.entryTime=t; row.status='Present'; row.type='Present';
+  } else {
+    DB.attendance.push({date:today, empId, employeeId:empId, empName, employeeName:empName,
+      dept:emp.department||emp.dept||'', department:emp.department||emp.dept||'',
+      status:'Present', type:'Present', entryTime:t, exitTime:'', method:'Face',
+      actualHours:'', paidHours:'', regularHours:'', overtimeHours:''});
+  }
+  save('attendance');
+  gasPost({action:'markEntry', date:today, employeeId:empId, employeeName:empName, entryTime:t}).catch(()=>{});
+  return {ok:true, text:`${empName}: ENTRY at ${t}.`};
+}
+
+function doMarkExit(emp, t){
+  const today=todayStr();
+  const empId=emp.id||emp.EmployeeID, empName=emp.name||emp.EmployeeName;
+  const row=findAttRow(today, empId);
+  if(!row||!row.entryTime) return {ok:false,text:`${empName}: no entry found.`};
+  if(row.exitTime) return {ok:false,text:`${empName}: exit already at ${row.exitTime}.`};
+  const h=calcHours(row.entryTime, t);
+  row.exitTime=t; row.actualHours=h.actual; row.paidHours=h.paid; row.regularHours=h.regular; row.overtimeHours=h.ot;
+  save('attendance');
+  gasPost({action:'markExit', date:today, employeeId:empId, employeeName:empName, exitTime:t}).catch(()=>{});
+  return {ok:true, text:`${empName}: EXIT at ${t}. Paid ${h.paid}hr(s).`};
+}
+
+async function confirmFaceAttendance(){
+  const known = capturedFaces.filter(f=>f.known);
+  if(!known.length){ toast('No recognised faces. Enroll employees first.'); return; }
+  const now=new Date();
+  const timeStr = pad(now.getHours())+':'+pad(now.getMinutes())+':'+pad(now.getSeconds());
+  let resultMsgs=[];
+  known.forEach(face=>{
+    const r = face.mode==='ENTRY' ? doMarkEntry(face.empData, timeStr) : doMarkExit(face.empData, timeStr);
+    resultMsgs.push(r.text);
+  });
+  const records = known.map(f=>({employeeId:f.empData.EmployeeID||f.empData.id, employeeName:f.empData.EmployeeName||f.empData.name,
+    department:f.empData.Department||f.empData.department||'', type:f.mode, confidence:f.confidence+'%'}));
+  gasPost({action:'logFaceAttendance', records}).catch(()=>{});
+  toast(resultMsgs.join(' · '));
+  capturedFaces=[];
+  document.getElementById('face-log').innerHTML='';
+  loadAttRegister();
+}
+
+function setFaceMode(m){
+  faceMode=m;
+  document.getElementById('fTabEntry')?.classList.toggle('active', m==='ENTRY');
+  document.getElementById('fTabExit')?.classList.toggle('active', m==='EXIT');
+}
+
+async function startCamera(){
+  document.getElementById('cam-status').textContent='⏳ Loading Face AI… (first load ~20 sec)';
+  document.getElementById('btn-cam-start').style.display='none';
+  if(!modelsLoaded){
+    try{
+      await loadFaceModels();
+      await loadFaceDB();
+    }catch(e){
+      document.getElementById('cam-status').textContent='⚠️ Model load failed — check connection';
+      document.getElementById('btn-cam-start').style.display='';
+      return;
+    }
+  }
+  await startFaceCam();
+  document.getElementById('btn-capture').style.display='';
+  document.getElementById('cam-status').textContent='📷 Camera active — position face in frame, tap Capture';
+  document.getElementById('cam-status').style.color='var(--accent2)';
+}
+
+function flipFaceCam(){
+  facingMode = facingMode==='user' ? 'environment' : 'user';
+  startFaceCam();
+}
+
+// ── ENROLLMENT (PIN protected) ──
+function requirePin(action){
+  pendingPinAction = action;
+  openModal('modal-pin');
+  document.getElementById('pin-input-field').value='';
+  document.getElementById('pin-input-field').focus();
+}
+function submitPin(){
+  const val = document.getElementById('pin-input-field').value;
+  if(val===ADMIN_PIN){
+    closeModal('modal-pin');
+    if(pendingPinAction) pendingPinAction();
+  } else {
+    document.getElementById('pin-error-msg').textContent='Incorrect PIN';
+  }
+}
+function openEnrollModal(){ requirePin(doOpenEnrollModal); }
+function doOpenEnrollModal(){
+  const sel=document.getElementById('enrollEmpSel');
+  sel.innerHTML='<option value="">— Select —</option>' +
+    DB.employees.filter(e=>e.status==='Active').map(emp=>
+      `<option value="${emp.id}" data-name="${emp.name}" data-dept="${emp.dept}">${emp.name} · ${emp.dept}</option>`
+    ).join('');
+  renderEnrolledList();
+  openModal('modal-enroll');
+  startEnrollCam();
+}
+function closeEnrollModal(){
+  closeModal('modal-enroll');
+  stopEnrollCam();
+}
+async function startEnrollCam(){
+  try{
+    if(enrollStream) enrollStream.getTracks().forEach(t=>t.stop());
+    enrollStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:false});
+    const ev=document.getElementById('enrollVideo');
+    ev.srcObject=enrollStream; await ev.play();
+    document.getElementById('btnEnrollCapture').disabled=false;
+    startEnrollDet();
+  }catch(e){
+    document.getElementById('enrollStatusMsg').textContent='Camera error: '+e.message;
+  }
+}
+function stopEnrollCam(){
+  if(enrollDetRAF){ cancelAnimationFrame(enrollDetRAF); enrollDetRAF=null; }
+  if(enrollStream){ enrollStream.getTracks().forEach(t=>t.stop()); enrollStream=null; }
+}
+function startEnrollDet(){
+  if(enrollDetRAF) cancelAnimationFrame(enrollDetRAF);
+  let last=0;
+  async function loop(ts){
+    enrollDetRAF=requestAnimationFrame(loop);
+    if(ts-last<600) return; last=ts;
+    const ev=document.getElementById('enrollVideo');
+    if(!modelsLoaded||ev.readyState<2) return;
+    try{
+      const dets = await faceapi.detectAllFaces(ev, new faceapi.SsdMobilenetv1Options({minConfidence:.5})).withFaceLandmarks();
+      const hint=document.getElementById('enrollHintText');
+      if(dets.length===1){ hint.textContent='✓ Face ready — tap Capture'; hint.style.color='var(--accent2)'; }
+      else if(dets.length===0){ hint.textContent='Position face in frame'; hint.style.color='var(--muted)'; }
+      else{ hint.textContent='One face only please'; hint.style.color='var(--danger)'; }
+    }catch(_){}
+  }
+  enrollDetRAF=requestAnimationFrame(loop);
+}
+async function doEnrollCapture(){
+  const sel=document.getElementById('enrollEmpSel');
+  const empId=sel.value;
+  if(!empId){ document.getElementById('enrollStatusMsg').textContent='Select an employee first'; return; }
+  const ev=document.getElementById('enrollVideo');
+  if(!modelsLoaded){ document.getElementById('enrollStatusMsg').textContent='Models still loading…'; return; }
+  document.getElementById('enrollStatusMsg').textContent='Capturing…';
+  try{
+    const det = await faceapi.detectSingleFace(ev, new faceapi.SsdMobilenetv1Options({minConfidence:.5}))
+      .withFaceLandmarks().withFaceDescriptor();
+    if(!det){ document.getElementById('enrollStatusMsg').textContent='No face detected — try again'; return; }
+    const opt = sel.options[sel.selectedIndex];
+    const empData = {
+      EmployeeID:empId, EmployeeName:opt.dataset.name, Department:opt.dataset.dept,
+      Descriptor:Array.from(det.descriptor)
+    };
+    // Local cache
+    const cached = JSON.parse(localStorage.getItem('erp_facedb')||'[]');
+    const idx = cached.findIndex(f=>f.EmployeeID===empId);
+    const entry = {...empData, descriptor:Array.from(det.descriptor)};
+    if(idx>=0) cached[idx]=entry; else cached.push(entry);
+    localStorage.setItem('erp_facedb', JSON.stringify(cached));
+    faceDB = cached.map(f=>({...f, descriptor:new Float32Array(f.descriptor)}));
+    // Sync to GAS
+    gasPost({action:'enrollFace', ...empData}).catch(()=>{});
+    document.getElementById('enrollStatusMsg').textContent=`✓ Enrolled ${opt.dataset.name}`;
+    renderEnrolledList();
+  }catch(e){
+    document.getElementById('enrollStatusMsg').textContent='Error: '+e.message;
+  }
+}
+function renderEnrolledList(){
+  const list=document.getElementById('enrolledList');
+  if(!list) return;
+  const ct=document.getElementById('enrolledCt');
+  if(ct) ct.textContent = faceDB.length;
+  list.innerHTML = faceDB.map(f=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:.8rem">${f.EmployeeName}</span>
+      <span class="badge badge-green">Enrolled</span>
+    </div>`).join('') || '<div style="color:var(--muted);font-size:.8rem">No faces enrolled yet</div>';
+}
+
+init();
+</script>
+</body>
+</html>
