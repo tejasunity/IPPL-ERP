@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f1923">
+<title>Innotek ERP</title>
+<style>
+:root {
+  --bg:       #0f1923;
+  --surface:  #162230;
+  --card:     #1d2e3f;
+  --border:   #2a3f54;
+  --accent:   #00c2ff;
+  --accent2:  #00e8a2;
+  --warn:     #f59e0b;
+  --text:     #e8f4fd;
+  --muted:    #7a9bb5;
+  --font:     'Inter', system-ui, -apple-system, sans-serif;
+  --safe-b:   env(safe-area-inset-bottom, 0px);
+  --safe-t:   env(safe-area-inset-top, 0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{
+  font-family:var(--font);background:var(--bg);color:var(--text);
+  min-height:100vh;padding:calc(20px + var(--safe-t)) 16px calc(20px + var(--safe-b));
+}
+.wrap{max-width:900px;margin:0 auto;}
+header{margin-bottom:28px;}
+.logo{font-size:1.6rem;font-weight:800;letter-spacing:-.5px;}
+.logo span{color:var(--accent);}
+.tagline{font-size:.85rem;color:var(--muted);margin-top:4px;}
+.status-row{
+  display:flex;align-items:center;gap:8px;margin-top:14px;
+  font-size:.75rem;color:var(--muted);
+}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--accent2);}
+
+.section-label{
+  font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted);margin:24px 0 12px;
+}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;}
+
+.tile{
+  background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:18px 16px;text-decoration:none;color:var(--text);
+  display:flex;flex-direction:column;gap:8px;
+  transition:transform .15s,border-color .15s,background .15s;
+  position:relative;overflow:hidden;
+}
+.tile:active{transform:scale(.97);}
+.tile:hover{border-color:var(--accent);background:#1f3245;}
+.tile .icon{font-size:1.8rem;}
+.tile .name{font-weight:700;font-size:.95rem;}
+.tile .desc{font-size:.72rem;color:var(--muted);line-height:1.4;}
+.tile .badge{
+  position:absolute;top:10px;right:10px;
+  font-size:.6rem;font-weight:700;padding:2px 8px;border-radius:20px;
+  text-transform:uppercase;letter-spacing:.03em;
+}
+.badge.live{background:rgba(0,232,162,.15);color:var(--accent2);}
+.badge.planned{background:rgba(245,158,11,.15);color:var(--warn);}
+
+footer{
+  margin-top:36px;padding-top:16px;border-top:1px solid var(--border);
+  font-size:.72rem;color:var(--muted);text-align:center;
+}
+
+@media(min-width:700px){
+  .grid{grid-template-columns:repeat(4,1fr);}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo">Inno<span>tek</span> ERP</div>
+    <div class="tagline">Manufacturing Operations System — Module Hub</div>
+    <div class="status-row"><span class="dot"></span> All systems ready — select a module below</div>
+  </header>
+
+  <div class="section-label">Core Operations</div>
+  <div class="grid">
+    <a class="tile" href="./erp.html#dashboard">
+      <span class="badge live">Live</span>
+      <div class="icon">📊</div>
+      <div class="name">Dashboard</div>
+      <div class="desc">Overview KPIs across all modules</div>
+    </a>
+    <a class="tile" href="./erp.html#production">
+      <span class="badge live">Live</span>
+      <div class="icon">🏭</div>
+      <div class="name">Production</div>
+      <div class="desc">Batches, QCQA stages, NFG/L1 GRN</div>
+    </a>
+    <a class="tile" href="./erp.html#inventory">
+      <span class="badge live">Live</span>
+      <div class="icon">📦</div>
+      <div class="name">Inventory</div>
+      <div class="desc">Stock control across all bays</div>
+    </a>
+    <a class="tile" href="./erp.html#dispatch">
+      <span class="badge live">Live</span>
+      <div class="icon">🚚</div>
+      <div class="name">Dispatch</div>
+      <div class="desc">Outward shipments &amp; delivery</div>
+    </a>
+    <a class="tile" href="./erp.html#quality">
+      <span class="badge live">Live</span>
+      <div class="icon">🔬</div>
+      <div class="name">Quality / QC</div>
+      <div class="desc">NFG QC &amp; dispatch sample testing</div>
+    </a>
+  </div>
+
+  <div class="section-label">People</div>
+  <div class="grid">
+    <a class="tile" href="./attendance/index.html">
+      <span class="badge live">Live</span>
+      <div class="icon">🕐</div>
+      <div class="name">Attendance</div>
+      <div class="desc">Face recognition &amp; daily ledger</div>
+    </a>
+    <a class="tile" href="./erp.html#employees">
+      <span class="badge live">Live</span>
+      <div class="icon">👤</div>
+      <div class="name">Employees</div>
+      <div class="desc">Employee directory</div>
+    </a>
+  </div>
+
+  <div class="section-label">Finance &amp; Records</div>
+  <div class="grid">
+    <a class="tile" href="./erp.html#finance">
+      <span class="badge live">Live</span>
+      <div class="icon">💰</div>
+      <div class="name">Finance</div>
+      <div class="desc">Ledger, invoices, vouchers, dues</div>
+    </a>
+    <a class="tile" href="./erp.html#purchase">
+      <span class="badge live">Live</span>
+      <div class="icon">🛒</div>
+      <div class="name">Purchase</div>
+      <div class="desc">Indents, POs, vendor tracking</div>
+    </a>
+    <a class="tile" href="./erp.html#sales">
+      <span class="badge live">Live</span>
+      <div class="icon">📈</div>
+      <div class="name">Sales &amp; Orders</div>
+      <div class="desc">Customer orders &amp; dispatch link</div>
+    </a>
+    <a class="tile" href="./erp.html#documents">
+      <span class="badge live">Live</span>
+      <div class="icon">📁</div>
+      <div class="name">Documents</div>
+      <div class="desc">All records, linked across modules</div>
+    </a>
+  </div>
+
+  <div class="section-label">System</div>
+  <div class="grid">
+    <a class="tile" href="./erp.html#reports">
+      <span class="badge live">Live</span>
+      <div class="icon">📋</div>
+      <div class="name">Reports</div>
+      <div class="desc">Cross-module report generation</div>
+    </a>
+    <a class="tile" href="./erp.html#settings">
+      <span class="badge live">Live</span>
+      <div class="icon">⚙️</div>
+      <div class="name">Settings</div>
+      <div class="desc">Company info, backend config</div>
+    </a>
+  </div>
+
+  <footer>
+    Innotek Products · Manufacturing ERP · Internal Use Only
+  </footer>
+
+</div>
+</body>
+</html>
