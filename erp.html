@@ -471,7 +471,7 @@ tr:hover td{background:rgba(255,255,255,.03);}
           <button class="btn btn-ghost btn-sm cat-filter-btn" onclick="setInvCatFilter(this,'Consumables')">Consumables</button>
           <button class="btn btn-ghost btn-sm cat-filter-btn" onclick="setInvCatFilter(this,'Liquid')">Liquid</button>
         </div>
-        <button class="btn btn-primary btn-sm" onclick="openModal('modal-addstock')">+ Add Item</button>
+        <button class="btn btn-primary btn-sm" onclick="openAddStockModal()">+ Add Item</button>
       </div>
       <div class="search-bar"><span>🔍</span><input placeholder="Search item..." oninput="filterTbl(this,'inv-tbl')"></div>
       <div class="tbl-wrap"><table id="inv-tbl">
@@ -1532,7 +1532,8 @@ tr:hover td{background:rgba(255,255,255,.03);}
 <!-- Add Stock -->
 <div class="modal-bg" id="modal-addstock">
   <div class="modal">
-    <h3>📦 Add New Inventory Item</h3>
+    <h3 id="stock-modal-title">📦 Add New Inventory Item</h3>
+    <input type="hidden" id="s-edit-code" value="">
     <p style="font-size:.78rem;color:var(--muted);margin-bottom:10px">For items not yet in your Master Data — quick add. Full details can be filled via Master Excel import later.</p>
     <div class="form-grid">
       <div class="field"><label>Item Code</label><input id="s-code" placeholder="ITM-001"></div>
@@ -2492,7 +2493,11 @@ function renderInventory(){
       <td>${i.uom}</td>
       <td><span class="badge ${badgeClass}">${status}</span></td>
       <td>₹${value.toLocaleString('en-IN',{maximumFractionDigits:0})}</td>
-      <td><button class="btn btn-ghost btn-sm" onclick="drilldownItem('${i.code}')">${i.batchTracked==='Y'?'View Batches':'Details'}</button></td>
+      <td>
+        <button class="btn btn-ghost btn-sm" onclick="drilldownItem('${i.code}')">${i.batchTracked==='Y'?'Batches':'View'}</button>
+        <button class="btn btn-ghost btn-sm" onclick="openEditStockModal('${i.code}')">✏️</button>
+        <button class="btn btn-ghost btn-sm" onclick="deleteStockItem('${i.code}')">🗑️</button>
+      </td>
     </tr>`;
   }).join('') || '<tr><td colspan="9" style="text-align:center;color:var(--muted)">No items — add via Settings > Master Data Excel, or + Add Item</td></tr>';
 }
@@ -2519,25 +2524,127 @@ function drilldownItem(code){
   </div>`;
 }
 
+function openAddStockModal(){
+  document.getElementById('stock-modal-title').textContent = '📦 Add New Inventory Item';
+  document.getElementById('s-edit-code').value = '';
+  document.getElementById('s-code').value = '';
+  document.getElementById('s-code').disabled = false;
+  document.getElementById('s-desc').value = '';
+  document.getElementById('s-subcat').value = '';
+  document.getElementById('s-loc').value = '';
+  document.getElementById('s-qty').value = '';
+  document.getElementById('s-reorder').value = '';
+  document.getElementById('s-critical').value = '';
+  document.getElementById('s-cost').value = '';
+  document.getElementById('s-batchtracked').value = 'N';
+  openModal('modal-addstock');
+}
+
+function openEditStockModal(code){
+  const item = DB.inventory.find(i=>i.code===code);
+  if(!item) return;
+  document.getElementById('stock-modal-title').textContent = `✏️ Edit Item — ${code}`;
+  document.getElementById('s-edit-code').value = code;
+  document.getElementById('s-code').value = item.code;
+  document.getElementById('s-code').disabled = true; // item code is the key — don't allow changing it here
+  document.getElementById('s-desc').value = item.desc;
+  document.getElementById('s-cat').value = item.cat;
+  document.getElementById('s-subcat').value = item.subCat||'';
+  document.getElementById('s-uom').value = item.uom;
+  document.getElementById('s-loc').value = item.location||'';
+  document.getElementById('s-qty').value = item.batchTracked==='Y' ? '' : (item.stock||0);
+  document.getElementById('s-reorder').value = item.reorder||0;
+  document.getElementById('s-critical').value = item.critical||0;
+  document.getElementById('s-cost').value = item.cost||0;
+  document.getElementById('s-batchtracked').value = item.batchTracked||'N';
+  if(item.batchTracked==='Y'){
+    document.getElementById('s-qty').disabled = true;
+    document.getElementById('s-qty').placeholder = 'Batch-tracked — edit via GRN/Issue, not here';
+  } else {
+    document.getElementById('s-qty').disabled = false;
+  }
+  openModal('modal-addstock');
+}
+
+function syncStockItemToBackend(item){
+  queueWrite(BACKEND.INVPUR_GAS_URL, {sheet:'StockItems', action:'upsert', keyField:'ItemCode', data:{
+    ItemCode:item.code, Description:item.desc, Category:item.cat, SubCategory:item.subCat||'', UOM:item.uom,
+    BayLocation:item.location||'', Stock:item.stock||0, ReorderLevel:item.reorder||0, CriticalLevel:item.critical||0,
+    MaxStockLevel:item.maxStock||0, PreferredVendor1:item.vendor1||'', PreferredVendor2:item.vendor2||'',
+    UnitCost:item.cost||0, ValuationMethod:item.valuation||'Weighted Avg', BatchTracked:item.batchTracked||'N',
+    Status:item.status||'Active', LastUpdated:item.updated,
+  }});
+}
+
 function saveStock(){
-  const s = {
-    code: document.getElementById('s-code').value,
-    desc: document.getElementById('s-desc').value,
-    cat: document.getElementById('s-cat').value,
-    subCat: document.getElementById('s-subcat').value,
-    uom: document.getElementById('s-uom').value,
-    location: document.getElementById('s-loc').value,
-    stock: parseFloat(document.getElementById('s-qty').value)||0,
-    reorder: parseFloat(document.getElementById('s-reorder').value)||0,
-    critical: parseFloat(document.getElementById('s-critical').value)||0,
-    cost: parseFloat(document.getElementById('s-cost').value)||0,
-    batchTracked: document.getElementById('s-batchtracked').value,
-    batches: [],
-    updated: today(),
-  };
-  if(!s.code || !s.desc){ toast('Item Code and Description required'); return; }
-  DB.inventory.unshift(s); save('inventory');
-  closeModal('modal-addstock'); toast('Item added ✓'); renderInventory();
+  const editCode = document.getElementById('s-edit-code').value;
+
+  if(editCode){
+    // EDIT existing item
+    const item = DB.inventory.find(i=>i.code===editCode);
+    if(!item){ toast('Item not found'); return; }
+    item.desc = document.getElementById('s-desc').value;
+    item.cat = document.getElementById('s-cat').value;
+    item.subCat = document.getElementById('s-subcat').value;
+    item.uom = document.getElementById('s-uom').value;
+    item.location = document.getElementById('s-loc').value;
+    if(item.batchTracked!=='Y'){
+      item.stock = parseFloat(document.getElementById('s-qty').value)||0;
+    }
+    item.reorder = parseFloat(document.getElementById('s-reorder').value)||0;
+    item.critical = parseFloat(document.getElementById('s-critical').value)||0;
+    item.cost = parseFloat(document.getElementById('s-cost').value)||0;
+    item.batchTracked = document.getElementById('s-batchtracked').value;
+    item.updated = today();
+    save('inventory');
+    syncStockItemToBackend(item);
+    toast('Item updated ✓');
+  } else {
+    // ADD new item
+    const s = {
+      code: document.getElementById('s-code').value,
+      desc: document.getElementById('s-desc').value,
+      cat: document.getElementById('s-cat').value,
+      subCat: document.getElementById('s-subcat').value,
+      uom: document.getElementById('s-uom').value,
+      location: document.getElementById('s-loc').value,
+      stock: parseFloat(document.getElementById('s-qty').value)||0,
+      reorder: parseFloat(document.getElementById('s-reorder').value)||0,
+      critical: parseFloat(document.getElementById('s-critical').value)||0,
+      cost: parseFloat(document.getElementById('s-cost').value)||0,
+      batchTracked: document.getElementById('s-batchtracked').value,
+      batches: [],
+      status: 'Active',
+      updated: today(),
+    };
+    if(!s.code || !s.desc){ toast('Item Code and Description required'); return; }
+    if(DB.inventory.some(i=>i.code===s.code)){ toast('Item Code already exists — use Edit instead'); return; }
+    DB.inventory.unshift(s); save('inventory');
+    syncStockItemToBackend(s);
+    toast('Item added ✓ — synced to Inventory & Purchase sheet');
+  }
+  document.getElementById('s-code').disabled = false;
+  closeModal('modal-addstock');
+  renderInventory();
+}
+
+function deleteStockItem(code){
+  const item = DB.inventory.find(i=>i.code===code);
+  if(!item) return;
+  const stock = getItemTotalStock(item);
+  if(stock > 0){
+    if(!confirm(`${item.desc} still has ${stock} ${item.uom} in stock.\n\nDeleting will remove it from the register entirely (existing stock records here will be lost from this device — the Sheet keeps its own history). Continue?`)) return;
+  } else {
+    if(!confirm(`Delete ${item.desc} (${code}) from the Stock Register?`)) return;
+  }
+  DB.inventory = DB.inventory.filter(i=>i.code!==code);
+  save('inventory');
+  // Mark inactive on the backend rather than truly deleting the row — safer for audit history
+  queueWrite(BACKEND.INVPUR_GAS_URL, {sheet:'StockItems', action:'upsert', keyField:'ItemCode', data:{
+    ItemCode:code, Status:'Deleted', LastUpdated:today(),
+  }});
+  toast(`${item.desc} removed ✓`);
+  renderInventory();
 }
 
 // ── RECEIVE STOCK (GRN) ──────────────────────────────────────
