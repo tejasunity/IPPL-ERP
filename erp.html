@@ -387,13 +387,16 @@ tr:hover td{background:rgba(255,255,255,.03);}
   <div class="page-hdr">
     <div><h2>Production Control</h2><div class="meta">Batch management & progress tracking (QCQA workflow)</div></div>
     <div class="btn-row" style="margin:0">
+      <button class="btn btn-success btn-sm" onclick="refreshBatchesFromQCQA()">🔄 Refresh from QCQA</button>
       <button class="btn btn-primary btn-sm" onclick="openModal('modal-newbatch')">+ New Batch</button>
       <button class="btn btn-ghost btn-sm" onclick="openModal('modal-nfg-grn')">+ NFG GRN</button>
       <button class="btn btn-ghost btn-sm" onclick="openModal('modal-l1-grn')">+ L1 GRN</button>
+      <button class="btn btn-ghost btn-sm" onclick="openManageStagesModal()">⚙️ Manage Stages</button>
       <button class="btn btn-ghost btn-sm" onclick="exportTblCSV('prod-tbl','Production')">CSV</button>
       <button class="btn btn-ghost btn-sm" onclick="exportTblPDF('prod-tbl','Production Batches')">PDF</button>
     </div>
   </div>
+  <div id="qcqa-refresh-status" style="font-size:.78rem;color:var(--muted);margin-bottom:12px"></div>
 
   <div class="kpi-grid">
     <div class="kpi accent"><div class="label">Planned Today</div><div class="value">4.2 MT</div></div>
@@ -1529,6 +1532,26 @@ tr:hover td{background:rgba(255,255,255,.03);}
   </div>
 </div>
 
+<!-- Manage Production Stages -->
+<div class="modal-bg" id="modal-managestages">
+  <div class="modal">
+    <h3>⚙️ Manage Production Stages</h3>
+    <p style="font-size:.78rem;color:var(--muted);margin-bottom:10px">
+      Add, rename, reorder, or remove stages in the process flow. Changes save to this device
+      immediately and sync to the Production Plan sheet's ProcessStages tab.
+    </p>
+    <div id="manage-stages-list"></div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <input id="new-stage-name" placeholder="New stage name (e.g. Milling)" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text)">
+      <button class="btn btn-primary btn-sm" onclick="addNewStage()">+ Add</button>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-ghost btn-sm" onclick="refreshStagesFromPlanSheet()">🔄 Refresh from Sheet</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-managestages')">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- Add Stock -->
 <div class="modal-bg" id="modal-addstock">
   <div class="modal">
@@ -1807,7 +1830,7 @@ const BACKEND = {
   // ── NEW BACKENDS — paste your deployed Web App URLs here (or via Settings page) ──
   MASTERS_GAS_URL:    localStorage.getItem('erp_url_masters')    || 'https://script.google.com/macros/s/AKfycby6noofIJWisvJK7GrJPrlsjx8TLEQh43UvYWv2jMqiUsuI0RQI41IL_nG3wyoYybHnGw/exec',
   INVPUR_GAS_URL:     localStorage.getItem('erp_url_invpur')     || 'https://script.google.com/macros/s/AKfycbwc4mJQsxg51wYUKM5m-m1A_e_FhtX82lwx4lOdyIDjf8UFbJofnJmOC1UlSr_f6iK6/exec',
-  PLAN_GAS_URL:       localStorage.getItem('erp_url_plan')       || 'https://script.google.com/macros/s/AKfycbzmd1atOMZHj0v9zgBskgg4D4yOaVo0D3JkBDULVPCnsJRuw8REs54ToXfzm-xz5Mkmqg/exec',
+  PLAN_GAS_URL:       localStorage.getItem('erp_url_plan')       || 'https://script.google.com/macros/s/AKfycby3WP1d9rH44tuFUF7-hZJ3q9Jf0TBGafactgrBZxPFjBvKxYlTRCombLPebK_ISRhvBQ/exec',
   FINANCE_GAS_URL:    localStorage.getItem('erp_url_finance')    || 'https://script.google.com/macros/s/AKfycbzuuGfUT0ASs0jsCxixLTxGs6fr2lQWzOrsG1j7wfKI39HlOAzUjgtiAJJaYi8Rvo7Aag/exec',
   SALESDISP_GAS_URL:  localStorage.getItem('erp_url_salesdisp')  || 'https://script.google.com/a/macros/unitycpl.com/s/AKfycbxIKM1BwmxpdoOqkVbFO2quvYzhtbD9ewcWeaEEGiyrNRVAnOsiAblPKi5JYRA9Lnr4LA/exec',
 };
@@ -2181,7 +2204,85 @@ const PRODUCT_TO_NFG = {
   '9980180':'NFG-998','9680200':'NFG-968','9650300':'NFG-965',
   '9050300':'NFG-905','9450300':'NFG-945','9450120':'NFG-945','9080180':'NFG-908',
 };
-const STAGE_FLOW = ['Ore Receipt','Pre-Mix','CB','Decant','Tank Wash','RDS','Centrifuge','Drying','Packaging'];
+let STAGE_FLOW = JSON.parse(localStorage.getItem('erp_stageFlow') || 'null') ||
+  ['Ore Receipt','Pre-Mix','CB','Decant','Tank Wash','RDS','Centrifuge','Drying','Packaging'];
+
+async function refreshStagesFromPlanSheet(){
+  const statusEl = document.getElementById('qcqa-refresh-status');
+  if(!BACKEND.PLAN_GAS_URL){ toast('Production Plan backend URL not configured yet'); return; }
+  try{
+    const r = await new Promise((resolve,reject)=>{
+      const cbName = 'stgcb_'+Date.now();
+      const timeout = setTimeout(()=>{ cleanup(); reject(new Error('Timeout')); }, 10000);
+      function cleanup(){ clearTimeout(timeout); delete window[cbName]; script.remove(); }
+      window[cbName] = (json)=>{ cleanup(); json.status==='success'?resolve(json):reject(new Error(json.message)); };
+      const script = document.createElement('script');
+      script.onerror = ()=>{ cleanup(); reject(new Error('Network error')); };
+      script.src = BACKEND.PLAN_GAS_URL+'?action=getAll&sheet=ProcessStages&callback='+cbName;
+      document.head.appendChild(script);
+    });
+    const rows = (r.data||[]).sort((a,b)=>(a.SequenceNum||0)-(b.SequenceNum||0));
+    if(rows.length){
+      STAGE_FLOW = rows.map(r=>r.StageName).filter(Boolean);
+      localStorage.setItem('erp_stageFlow', JSON.stringify(STAGE_FLOW));
+      toast('Stages refreshed from Production Plan sheet ✓');
+      renderProduction();
+      renderManageStages();
+    } else {
+      toast('No stages found in sheet — add rows to ProcessStages tab first');
+    }
+  }catch(err){
+    toast('Could not reach Production Plan sheet: '+err.message);
+  }
+}
+
+function openManageStagesModal(){
+  renderManageStages();
+  openModal('modal-managestages');
+}
+
+function renderManageStages(){
+  const area = document.getElementById('manage-stages-list');
+  if(!area) return;
+  area.innerHTML = STAGE_FLOW.map((s,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface);border-radius:6px;margin-bottom:6px">
+      <span style="color:var(--muted);font-size:.75rem;width:20px">${i+1}</span>
+      <input value="${s}" style="flex:1;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text)" onchange="renameStage(${i},this.value)">
+      <button class="btn btn-ghost btn-sm" onclick="moveStage(${i},-1)" ${i===0?'disabled':''}>↑</button>
+      <button class="btn btn-ghost btn-sm" onclick="moveStage(${i},1)" ${i===STAGE_FLOW.length-1?'disabled':''}>↓</button>
+      <button class="btn btn-ghost btn-sm" onclick="removeStage(${i})">🗑️</button>
+    </div>`).join('');
+}
+
+function renameStage(idx,val){ STAGE_FLOW[idx]=val; persistStages(); }
+function moveStage(idx,dir){
+  const newIdx = idx+dir;
+  if(newIdx<0||newIdx>=STAGE_FLOW.length) return;
+  [STAGE_FLOW[idx],STAGE_FLOW[newIdx]] = [STAGE_FLOW[newIdx],STAGE_FLOW[idx]];
+  persistStages(); renderManageStages();
+}
+function removeStage(idx){
+  if(!confirm(`Remove stage "${STAGE_FLOW[idx]}"? Batches currently at this stage keep their status, but it won't appear in the process flow anymore.`)) return;
+  STAGE_FLOW.splice(idx,1);
+  persistStages(); renderManageStages(); renderProduction();
+}
+function addNewStage(){
+  const name = document.getElementById('new-stage-name').value.trim();
+  if(!name){ toast('Enter a stage name'); return; }
+  STAGE_FLOW.push(name);
+  document.getElementById('new-stage-name').value='';
+  persistStages(); renderManageStages(); renderProduction();
+}
+function persistStages(){
+  localStorage.setItem('erp_stageFlow', JSON.stringify(STAGE_FLOW));
+  renderProduction();
+  // Push the full ordered list to the Production Plan sheet (ProcessStages tab)
+  if(BACKEND.PLAN_GAS_URL){
+    queueWrite(BACKEND.PLAN_GAS_URL, {sheet:'ProcessStages', action:'replaceAll', data:
+      STAGE_FLOW.map((name,i)=>({StageName:name, SequenceNum:i+1}))
+    });
+  }
+}
 let selectedCB = 'CB1';
 let activeBatchForStage = null;
 
@@ -2214,6 +2315,73 @@ document.addEventListener('change', e=>{
   }
 });
 
+async function refreshBatchesFromQCQA(){
+  const statusEl = document.getElementById('qcqa-refresh-status');
+  if(!BACKEND.QCQA_GAS_URL){ statusEl.textContent='⚠️ QCQA backend URL not configured'; statusEl.style.color='var(--warn)'; return; }
+  statusEl.textContent = '⏳ Fetching batches from QCQA sheet...';
+  statusEl.style.color = 'var(--muted)';
+  try{
+    const r = await qcqaApiGet('getBatches');
+    const qcqaBatches = r.data || [];
+
+    // Also fetch stage/process data for these batches so CB/Decant fields (like Expansion)
+    // that already exist in QCQA are reflected here, not just the batch header.
+    let processMap = {};
+    try{
+      const procResults = await Promise.allSettled(
+        qcqaBatches.map(b=>qcqaApiGet('getBatchProcess',{batchNumber:b.batchNumber}))
+      );
+      qcqaBatches.forEach((b,i)=>{
+        if(procResults[i].status==='fulfilled') processMap[b.batchNumber] = procResults[i].value.data||[];
+      });
+    }catch(_){ /* non-fatal — batch headers still useful without process detail */ }
+
+    let added=0, updated=0;
+    qcqaBatches.forEach(qb=>{
+      const stages = processMap[qb.batchNumber]||[];
+      const cbStage = stages.find(s=>s.stage==='CB');
+      let existing = DB.batches.find(b=>b.num===qb.batchNumber);
+      const mapped = {
+        num: qb.batchNumber,
+        product: qb.product,
+        nfgCode: qb.nfgCode,
+        grade: existing?existing.grade:(qb.product||''),
+        qty: existing?existing.qty:0,
+        start: qb.date,
+        nfgGrn: qb.grn1,
+        l1Grn: qb.l1GRN,
+        cb: qb.cb,
+        notes: qb.obs,
+        operator: existing?existing.operator:'',
+        source: 'QCQA Sheet',
+        stage: existing?existing.stage:(cbStage?'CB':'Ore Receipt'),
+        progress: existing?existing.progress:(cbStage?33:0),
+        status: existing?existing.status:'In Process',
+        premix: existing?existing.premix:null,
+        cbData: cbStage ? {
+          l1Qty:cbStage.l1Qty, l3Qty:cbStage.l3Qty, startTime:cbStage.startTime, startTemp:cbStage.startTemp,
+          endTime:cbStage.endTime, endTemp:cbStage.endTemp, l3Time:cbStage.l3AddTime, l3Temp:cbStage.l3AddTemp,
+          unloadTime:cbStage.unloadTime, unloadTemp:cbStage.unloadTemp, expansion:cbStage.expansion, obs:cbStage.obs,
+        } : (existing?existing.cbData:null),
+        decant: existing?existing.decant:null,
+      };
+      if(existing){
+        Object.assign(existing, mapped); updated++;
+      } else {
+        DB.batches.unshift(mapped); added++;
+      }
+    });
+    save('batches');
+    statusEl.textContent = `✅ Synced from QCQA: ${added} new, ${updated} updated (${qcqaBatches.length} total on sheet)`;
+    statusEl.style.color = 'var(--accent2)';
+    toast('Batches refreshed from QCQA ✓');
+    renderProduction();
+  }catch(err){
+    statusEl.textContent = '⚠️ Could not reach QCQA sheet: '+err.message;
+    statusEl.style.color = 'var(--warn)';
+  }
+}
+
 function renderProduction(){
   populateGrnSelects();
   const tbody = document.getElementById('prod-tbody');
@@ -2221,17 +2389,17 @@ function renderProduction(){
     const pct = b.progress||0;
     const bc = pct>=90?'green':pct>=50?'':'warn';
     return `<tr>
-      <td><b>${b.num}</b></td>
+      <td><b>${b.num}</b> ${b.source==='QCQA Sheet'?'<span class="badge badge-blue" style="font-size:.6rem">QCQA</span>':''}</td>
       <td>${b.product}</td><td>${b.grade}</td>
       <td>${b.nfgCode||'—'}</td><td><span class="badge badge-muted">${b.cb||'—'}</span></td>
       <td>${fmtDate(b.start)}</td>
       <td><span class="badge badge-blue">${b.stage}</span></td>
       <td><div class="progress-bar"><div class="progress-fill ${bc}" style="width:${pct}%"></div></div><small>${pct}%</small></td>
-      <td>${b.operator}</td>
+      <td>${b.operator||'—'}</td>
       <td><span class="badge ${b.status==='Near Complete'?'badge-green':b.status==='In Process'?'badge-blue':'badge-muted'}">${b.status}</span></td>
-      <td><button class="btn btn-ghost btn-sm" onclick="openStageEntry('${b.num}')">Enter Stage Data</button></td>
+      <td><button class="btn btn-ghost btn-sm" onclick="openStageEntry('${b.num}')">${b.source==='QCQA Sheet'?'Open Batch':'Enter Stage Data'}</button></td>
     </tr>`;
-  }).join('') || '<tr><td colspan="11" style="text-align:center;color:var(--muted)">No batches. Create one!</td></tr>';
+  }).join('') || '<tr><td colspan="11" style="text-align:center;color:var(--muted)">No batches. Create one, or 🔄 Refresh from QCQA</td></tr>';
 
   // Stage log
   document.getElementById('stage-log').innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap;">` +
@@ -2272,14 +2440,21 @@ function saveBatch(){
     notes: document.getElementById('b-notes').value,
     stage:'Ore Receipt', progress:0,
     operator: document.getElementById('b-op').value,
-    status:'Planned',
+    status:'Planned', source:'ERP',
     premix:null, cbData:null, decant:null,
   };
   DB.batches.unshift(b); save('batches');
 
-  qcqaApi({sheet:'BATCHES', action:'append', data:b});
+  // Write to QCQA's real BATCHES sheet — field names matched exactly to the QCQA app's own schema
+  qcqaApi({sheet:'BATCHES', action:'append', data:{
+    batchNumber: b.num, date: b.start, product: b.product, nfgCode: b.nfgCode,
+    grn1: b.nfgGrn, bag1:'', weight1:'',
+    grn2:'', bag2:'', weight2:'',
+    l1GRN: b.l1Grn, l1Conc:'', l1Density:'',
+    obs: b.notes, cb: b.cb,
+  }});
 
-  closeModal('modal-newbatch'); toast('Batch created ✓');
+  closeModal('modal-newbatch'); toast('Batch created ✓ — synced to QCQA sheet');
   renderProduction();
 }
 
@@ -2348,7 +2523,17 @@ function submitCB(){
     expansion: document.getElementById('cb-expansion').value,
     obs: document.getElementById('cb-obs').value,
   };
-  qcqaApi({sheet:'BATCH_PROCESS', action:'append', data:{batch:activeBatchForStage, stage:'CB', ...data}});
+  // Write to QCQA's real BATCH_PROCESS sheet — field names matched exactly to the QCQA app's own schema
+  // so Expansion (and everything else here) shows up correctly if opened in the QCQA app itself.
+  qcqaApi({sheet:'BATCH_PROCESS', action:'append', data:{
+    batchNumber: activeBatchForStage, stage:'CB',
+    l1Qty:data.l1Qty, l3Qty:data.l3Qty,
+    startTime:data.startTime, startTemp:data.startTemp,
+    endTime:data.endTime, endTemp:data.endTemp,
+    l3AddTime:data.l3Time, l3AddTemp:data.l3Temp,
+    unloadTime:data.unloadTime, unloadTemp:data.unloadTemp,
+    obs:data.obs, expansion:data.expansion, draft:'no',
+  }});
   closeModal('modal-cb');
   advanceStage(activeBatchForStage, {cbData:data});
 }
@@ -2419,6 +2604,28 @@ async function qcqaApi(payload){
   const form = new FormData();
   form.append('payload', JSON.stringify(payload));
   try{ await fetch(BACKEND.QCQA_GAS_URL, {method:'POST', body:form, mode:'no-cors'}); }catch(_){}
+}
+
+// Fetches data FROM the real QCQA Google Sheet (JSONP — matches QCQA app's own apiGet pattern)
+function qcqaApiGet(action, params={}){
+  return new Promise((resolve,reject)=>{
+    const cbName = 'qcb_' + Date.now() + '_' + Math.floor(Math.random()*10000);
+    const timeout = setTimeout(()=>{ cleanup(); reject(new Error('Timeout reaching QCQA sheet')); }, 12000);
+    function cleanup(){ clearTimeout(timeout); delete window[cbName]; script.remove(); }
+    window[cbName] = (json)=>{
+      cleanup();
+      if(json && json.status === 'success') resolve(json);
+      else reject(new Error((json&&json.message)||'QCQA fetch failed'));
+    };
+    const url = new URL(BACKEND.QCQA_GAS_URL);
+    url.searchParams.set('action', action);
+    url.searchParams.set('callback', cbName);
+    Object.entries(params).forEach(([k,v])=>url.searchParams.set(k,String(v)));
+    const script = document.createElement('script');
+    script.onerror = ()=>{ cleanup(); reject(new Error('Network error reaching QCQA sheet')); };
+    script.src = url.toString();
+    document.head.appendChild(script);
+  });
 }
 
 // ─────────────────────────────────────────────────────
