@@ -405,6 +405,7 @@ tr:hover td{background:rgba(255,255,255,.03);}
     <div class="card">
       <div class="card-title"><span>🔔</span>Alerts & Notices</div>
       <div class="timeline" id="alert-timeline"></div>
+      <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="shareDailyDigest()">📱 Share Daily Digest</button></div>
     </div>
 
     <div class="card">
@@ -413,6 +414,10 @@ tr:hover td{background:rgba(255,255,255,.03);}
         <thead><tr><th>Order</th><th>Customer</th><th>Date</th><th>Status</th></tr></thead>
         <tbody id="dash-dispatch-tbl"></tbody>
       </table></div>
+    <div class="card" style="grid-column:1/-1">
+      <div class="card-title"><span>📈</span>Management View — Cycle Time · Plan vs Actual · QC · Allocation</div>
+      <div id="mgmt-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px"></div>
+    </div>
     </div>
 
     <div class="card">
@@ -453,11 +458,24 @@ tr:hover td{background:rgba(255,255,255,.03);}
   </div>
 
   <div class="card">
+    <div class="card-title"><span>📅</span>Upcoming Planned Batches — Next 7 Days (NFG Stage)</div>
+    <div id="upcoming-batches-area"></div>
+  </div>
+
+  <div class="card">
     <div class="card-title"><span>🏭</span>Active Batches</div>
     <div class="search-bar"><span>🔍</span><input placeholder="Search batch / product..." oninput="filterTbl(this,'prod-tbl')"></div>
     <div class="tbl-wrap"><table id="prod-tbl">
-      <thead><tr><th>Batch #</th><th>Product</th><th>Grade</th><th>NFG Code</th><th>CB</th><th>Start</th><th>Stage</th><th>Progress</th><th>Operator</th><th>Status</th><th>Action</th></tr></thead>
+      <thead><tr><th>Batch #</th><th>Product</th><th>Grade</th><th>CB Exp.</th><th>CB</th><th>Start</th><th>Stage</th><th>Progress</th><th>pH; Moist</th><th>Status</th><th>Action</th></tr></thead>
       <tbody id="prod-tbody"></tbody>
+    </table></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span>📥</span>Finished Goods — Batch Level</div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Batch #</th><th>Product</th><th>End Date</th><th>Qty (KG)</th><th>FG Exp.</th><th>pH</th><th>Carbon</th><th>Dry Wt</th><th>QC</th><th>Status</th><th>Customer PO</th></tr></thead>
+      <tbody id="fg-tbody-prod"></tbody>
     </table></div>
   </div>
 
@@ -578,6 +596,13 @@ tr:hover td{background:rgba(255,255,255,.03);}
       </table></div>
     </div>
     <div id="inv-drilldown-area"></div>
+    <div class="card">
+      <div class="card-title"><span>📥</span>Finished Goods — Batch Level (QC-gated)</div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Batch #</th><th>Product</th><th>End Date</th><th>Qty (KG)</th><th>FG Exp.</th><th>pH</th><th>Carbon</th><th>Dry Wt</th><th>QC</th><th>Status</th><th>Customer PO</th></tr></thead>
+        <tbody id="fg-tbody-inv"></tbody>
+      </table></div>
+    </div>
   </div>
 
   <!-- RECEIVE STOCK (GRN) -->
@@ -1246,6 +1271,13 @@ tr:hover td{background:rgba(255,255,255,.03);}
     </div>
   </div>
   <div id="sales-refresh-status" style="font-size:.78rem;color:var(--muted);margin-bottom:12px"></div>
+  <div class="card">
+    <div class="card-title"><span>📄</span>Customer PO Register <button class="btn btn-primary btn-sm" style="float:right" onclick="openModal('modal-cpo')">+ New Customer PO</button></div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>PO #</th><th>Customer</th><th>Grade</th><th>Ordered</th><th>Delivery</th><th>Progress</th><th>Linked Batches</th><th>Share</th></tr></thead>
+      <tbody id="cpo-tbody"></tbody>
+    </table></div>
+  </div>
   <div class="kpi-grid">
     <div class="kpi green"><div class="label">Orders This Month</div><div class="value">24</div></div>
     <div class="kpi accent"><div class="label">Revenue</div><div class="value">₹18.4L</div></div>
@@ -1413,6 +1445,13 @@ tr:hover td{background:rgba(255,255,255,.03);}
           <button class="btn btn-ghost btn-sm" onclick="attemptSyncNow(); refreshSyncDetail();">🔄 Retry Sync Now</button>
         </div>
       </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span>📜</span>Audit Trail — Who Did What, When</div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>When</th><th>Action</th><th>Detail</th></tr></thead>
+        <tbody id="audit-tbody"></tbody>
+      </table></div>
     </div>
     <div class="card">
       <div class="card-title"><span>👥</span>User Roles</div>
@@ -1727,6 +1766,13 @@ tr:hover td{background:rgba(255,255,255,.03);}
     <div><div class="entry-title" id="egs-title">Stage</div><div class="entry-sub" id="egs-batch-label"></div></div>
   </div>
   <div class="entry-body">
+    <div class="form-section" id="egs-output-section" style="display:none">
+      <div class="form-section-title">Final Output (declares FG candidate)</div>
+      <div class="form-row2">
+        <div class="form-label2">Dry Output Quantity</div>
+        <div class="input-suffix-wrap"><input type="number" class="form-input2" id="egs-output" placeholder="0.00" step="0.01"><span class="input-suffix">Kg</span></div>
+      </div>
+    </div>
     <div class="form-section">
       <div class="form-section-title">Observations</div>
       <div class="form-row2"><textarea class="form-textarea2" id="egs-obs" placeholder="Any observations during this stage…"></textarea></div>
@@ -1736,6 +1782,46 @@ tr:hover td{background:rgba(255,255,255,.03);}
   <div class="entry-footer">
     <button class="btn btn-ghost" onclick="backToBatchHub('entry-genstage')">Cancel</button>
     <button class="btn btn-primary" onclick="submitEntryGenStage()">Mark Complete ✓</button>
+  </div>
+</div>
+
+<!-- ══════════════ CENTRIFUGE (from factory log sheet V1.2, redesigned for ERP) ══════════════ -->
+<div class="entry-screen" id="entry-centrifuge">
+  <div class="entry-header">
+    <button class="entry-back" onclick="backToBatchHub('entry-centrifuge')">‹</button>
+    <div><div class="entry-title">Centrifuge</div><div class="entry-sub" id="ecf-batch-label"></div></div>
+  </div>
+  <div class="entry-body">
+    <div class="form-section">
+      <div class="form-section-title">Commencement</div>
+      <div class="form-row2"><input type="time" class="form-input2" id="ecf-commence"></div>
+    </div>
+    <div class="form-section">
+      <div class="form-section-title">Runs — Tank / Times / Weight</div>
+      <div id="ecf-runs"></div>
+      <button class="btn btn-ghost btn-sm" onclick="ecfAddRun()">+ Add Run</button>
+    </div>
+    <div class="form-section">
+      <div class="form-section-title">Samples — Moisture / pH / RPM <span id="ecf-avg" style="float:right;color:var(--accent2);font-weight:700"></span></div>
+      <div id="ecf-samples"></div>
+      <button class="btn btn-ghost btn-sm" onclick="ecfAddSample()">+ Add Sample</button>
+    </div>
+    <div class="form-section">
+      <div class="form-section-title">Machine Check</div>
+      <div class="form-row2">
+        <div class="form-label2">Oil Temp at Process End</div>
+        <div class="input-suffix-wrap"><input type="number" class="form-input2" id="ecf-oiltemp" placeholder="000"><span class="input-suffix">°C</span></div>
+      </div>
+      <div id="ecf-checklist" style="display:grid;gap:8px;padding:4px 2px"></div>
+    </div>
+    <div class="form-section">
+      <div class="form-section-title">Remark</div>
+      <div class="form-row2"><textarea class="form-textarea2" id="ecf-remark" placeholder="Remark…"></textarea></div>
+    </div>
+  </div>
+  <div class="entry-footer">
+    <button class="btn btn-ghost" onclick="submitEntryCentrifuge(true)">Save Draft</button>
+    <button class="btn btn-primary" onclick="submitEntryCentrifuge(false)">Submit ✓</button>
   </div>
 </div>
 
@@ -1970,10 +2056,62 @@ tr:hover td{background:rgba(255,255,255,.03);}
       <div class="field"><label>Planned Date</label><input id="planline-date" type="date"></div>
       <div class="field"><label>CB Assigned</label><select id="planline-cb"></select></div>
       <div class="field"><label>Batch Number (optional — assign now or later)</label><input id="planline-batch" placeholder="e.g. BTH-2607-001"></div>
+      <div class="field"><label>Customer PO (optional — links batch to this order)</label><select id="planline-cpo"></select></div>
     </div>
     <div class="btn-row">
       <button class="btn btn-primary" onclick="savePlanLine()">Save Line</button>
       <button class="btn btn-ghost" onclick="closeModal('modal-planline')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- FG Batch QC (provisional — fed by Drying/QC forms to be defined) -->
+<div class="modal-bg" id="modal-fgqc">
+  <div class="modal">
+    <h3>🔬 Batch QC — Finished Goods Gate</h3>
+    <p style="font-size:.8rem;color:var(--muted);margin-bottom:10px" id="fgqc-label"></p>
+    <div class="form-grid">
+      <div class="field"><label>FG Expansion (CC)</label><input id="fgqc-exp" type="number" step="0.1"></div>
+      <div class="field"><label>pH</label><input id="fgqc-ph" type="number" step="0.01"></div>
+      <div class="field"><label>Carbon %</label><input id="fgqc-carbon" type="number" step="0.01"></div>
+      <div class="field"><label>Dry Weight (Kg)</label><input id="fgqc-drywt" type="number" step="0.01"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-success" onclick="submitFGQC(true)">✓ Pass — Declare FG</button>
+      <button class="btn btn-ghost" onclick="submitFGQC(false)" style="color:var(--danger)">✗ Fail</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-fgqc')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Link FG batch to Customer PO -->
+<div class="modal-bg" id="modal-linkpo">
+  <div class="modal">
+    <h3>🔗 Link Batch to Customer PO</h3>
+    <div class="field"><label>Customer PO</label><select id="linkpo-select"></select></div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="confirmLinkFGToPO()">Link ✓</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-linkpo')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Customer PO -->
+<div class="modal-bg" id="modal-cpo">
+  <div class="modal">
+    <h3>📄 New Customer PO</h3>
+    <div class="form-grid">
+      <div class="field"><label>PO Number (customer's)</label><input id="cpo-num"></div>
+      <div class="field"><label>Customer</label><input id="cpo-customer"></div>
+      <div class="field"><label>Grade / Product Code</label><input id="cpo-grade" placeholder="e.g. 85200150"></div>
+      <div class="field"><label>Qty (KG)</label><input id="cpo-qty" type="number"></div>
+      <div class="field"><label>Rate</label><input id="cpo-rate" type="number" step="0.01"></div>
+      <div class="field"><label>Currency</label><select id="cpo-currency"><option>INR</option><option>USD</option><option>EUR</option></select></div>
+      <div class="field"><label>Delivery Date</label><input id="cpo-delivery" type="date"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveCustomerPO()">Save PO</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-cpo')">Cancel</button>
     </div>
   </div>
 </div>
@@ -2258,7 +2396,7 @@ const BACKEND = {
   INVPUR_GAS_URL:     localStorage.getItem('erp_url_invpur')     || 'https://script.google.com/macros/s/AKfycbwc4mJQsxg51wYUKM5m-m1A_e_FhtX82lwx4lOdyIDjf8UFbJofnJmOC1UlSr_f6iK6/exec',
   PLAN_GAS_URL:       localStorage.getItem('erp_url_plan')       || 'https://script.google.com/macros/s/AKfycby3WP1d9rH44tuFUF7-hZJ3q9Jf0TBGafactgrBZxPFjBvKxYlTRCombLPebK_ISRhvBQ/exec',
   FINANCE_GAS_URL:    localStorage.getItem('erp_url_finance')    || 'https://script.google.com/macros/s/AKfycbzuuGfUT0ASs0jsCxixLTxGs6fr2lQWzOrsG1j7wfKI39HlOAzUjgtiAJJaYi8Rvo7Aag/exec',
-  SALESDISP_GAS_URL:  localStorage.getItem('erp_url_salesdisp')  || 'https://script.google.com/a/macros/unitycpl.com/s/AKfycbxIKM1BwmxpdoOqkVbFO2quvYzhtbD9ewcWeaEEGiyrNRVAnOsiAblPKi5JYRA9Lnr4LA/exec',
+  SALESDISP_GAS_URL:  localStorage.getItem('erp_url_salesdisp')  || 'https://script.google.com/macros/s/AKfycbylC99rRuWwdMioVB-fWyJIiAnwGchuD52nbY7xgOprwdGcrT8D3t1ibpnECwn4Jbi36A/exec',
 };
 const FACE_MODEL_CDN = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
 const FACE_MODEL_FALLBACK = 'https://justadudewhohacks.github.io/face-api.js/models';
@@ -2394,6 +2532,9 @@ const DB = {
   planLines: JSON.parse(localStorage.getItem('erp_planLines') || '[]'),
   deviations: JSON.parse(localStorage.getItem('erp_deviations') || '[]'),
   cbMaster:  JSON.parse(localStorage.getItem('erp_cbMaster')  || '[]'),
+  fgBatches: JSON.parse(localStorage.getItem('erp_fgBatches') || '[]'),
+  customerPOs: JSON.parse(localStorage.getItem('erp_customerPOs') || '[]'),
+  audit:     JSON.parse(localStorage.getItem('erp_audit')     || '[]'),
 };
 function save(key){ localStorage.setItem('erp_'+key, JSON.stringify(DB[key])); }
 let camStream = null;
@@ -2531,15 +2672,15 @@ function showPage(id){
   if(id==='dashboard') renderDashboard();
   if(id==='production') renderProduction();
   if(id==='plan') renderPlan();
-  if(id==='inventory') renderInventory();
+  if(id==='inventory'){ renderInventory(); renderFGBatches(); }
   if(id==='dispatch') renderDispatch();
   if(id==='quality') renderQC();
   if(id==='employees') renderEmployees();
   if(id==='finance') renderFinance();
   if(id==='purchase') renderPO();
-  if(id==='sales') renderSO();
+  if(id==='sales'){ renderSO(); renderCustomerPOs(); }
   if(id==='documents') renderDocs();
-  if(id==='settings') loadSettingsPage();
+  if(id==='settings'){ loadSettingsPage(); renderAuditTrail(); }
 }
 
 function toggleSidebar(){
@@ -2580,37 +2721,113 @@ function nextNum(prefix){
 // ─────────────────────────────────────────────────────
 // DASHBOARD
 // ─────────────────────────────────────────────────────
+function batchCycleDays(b){
+  if(!b.stageTimestamps || !b.stageTimestamps['NFG']) return null;
+  const endTs = b.status==='Complete' ? Math.max(...Object.values(b.stageTimestamps).map(t=>+new Date(t))) : Date.now();
+  return (endTs - new Date(b.stageTimestamps['NFG'])) / 864e5;
+}
+
+function renderMgmtCards(){
+  const el = document.getElementById('mgmt-cards');
+  if(!el) return;
+  const done = DB.batches.filter(b=>b.status==='Complete');
+  const cycles = done.map(batchCycleDays).filter(v=>v!==null);
+  const avgCycle = cycles.length? (cycles.reduce((a,b)=>a+b,0)/cycles.length).toFixed(1) : '—';
+  // Per-stage avg duration (bottleneck finder)
+  const stageDur = {};
+  DB.batches.forEach(b=>{
+    if(!b.stageTimestamps) return;
+    const entries = STAGE_FLOW.map(s=>({s, t:b.stageTimestamps[s]?+new Date(b.stageTimestamps[s]):null})).filter(x=>x.t);
+    for(let i=1;i<entries.length;i++){
+      const hrs = (entries[i].t-entries[i-1].t)/36e5;
+      (stageDur[entries[i].s]=stageDur[entries[i].s]||[]).push(hrs);
+    }
+  });
+  let bottleneck='—', worst=0;
+  Object.entries(stageDur).forEach(([s,arr])=>{
+    const avg=arr.reduce((a,b)=>a+b,0)/arr.length;
+    if(avg>worst){worst=avg;bottleneck=`${s} (${avg.toFixed(1)}h)`;}
+  });
+  // Plan vs actual (this week)
+  const wkStart = new Date(); wkStart.setDate(wkStart.getDate()-7);
+  const planned = (DB.planLines||[]).filter(l=>new Date(l.date)>=wkStart).reduce((s,l)=>s+(l.qty||0),0);
+  const actual = DB.fgBatches.filter(f=>new Date(f.endDate)>=wkStart).reduce((s,f)=>s+(parseFloat(f.qty)||0),0);
+  // QC pass rate
+  const judged = DB.fgBatches.filter(f=>f.qcStatus!=='Pending');
+  const passRate = judged.length? Math.round(judged.filter(f=>f.qcStatus==='Passed').length/judged.length*100)+'%' : '—';
+  // CB utilization (batches per active CB, last 7 days)
+  const activeCBs = (DB.cbMaster||[]).filter(c=>c.active==='Y').length||2;
+  const recentBatches = DB.batches.filter(b=>new Date(b.start)>=wkStart).length;
+  // Operator allocation
+  const ops = {};
+  DB.batches.filter(b=>b.status!=='Complete').forEach(b=>{ if(b.operator) ops[b.operator]=(ops[b.operator]||0)+1; });
+  const opsHtml = Object.entries(ops).map(([o,c])=>`${o}: ${c}`).join(' · ')||'—';
+  el.innerHTML = `
+    <div class="kpi accent"><div class="label">Avg Batch Cycle</div><div class="value">${avgCycle}<small style="font-size:.5em"> days</small></div></div>
+    <div class="kpi warn"><div class="label">Slowest Stage</div><div class="value" style="font-size:1rem">${bottleneck}</div></div>
+    <div class="kpi green"><div class="label">Plan vs Actual (7d)</div><div class="value">${actual}<small style="font-size:.5em">/${planned} Kg</small></div></div>
+    <div class="kpi accent"><div class="label">QC Pass Rate</div><div class="value">${passRate}</div></div>
+    <div class="kpi green"><div class="label">Batches/CB (7d)</div><div class="value">${(recentBatches/activeCBs).toFixed(1)}</div></div>
+    <div class="kpi accent"><div class="label">Operator Load (open batches)</div><div class="value" style="font-size:.85rem">${opsHtml}</div></div>`;
+}
+
+function shareDailyDigest(){
+  const t = today();
+  const started = DB.batches.filter(b=>b.start===t).length;
+  const inProc = DB.batches.filter(b=>b.status==='In Process'||b.status==='Near Complete').length;
+  const fgToday = DB.fgBatches.filter(f=>f.endDate===t);
+  const qcPend = DB.fgBatches.filter(f=>f.qcStatus==='Pending').length;
+  const crit = DB.inventory.filter(i=>getItemStatus(i)==='Critical').map(i=>i.desc);
+  const devPend = (DB.deviations||[]).filter(d=>d.approvalStatus==='Pending').length;
+  const text = `📋 *INNOTEK DAILY DIGEST — ${fmtDate(t)}*\n\n🏭 Batches started today: ${started}\n⚙️ In process: ${inProc}\n📥 Completed drying today: ${fgToday.length} (${fgToday.reduce((s,f)=>s+(parseFloat(f.qty)||0),0)} Kg)\n🔬 Awaiting batch QC: ${qcPend}\n⚠️ Deviations pending approval: ${devPend}\n🔴 Critical stock: ${crit.length?crit.join(', '):'None'}\n\n_Innotek ERP — auto summary_`;
+  window.open('https://wa.me/?text='+encodeURIComponent(text), '_blank');
+}
+
 function renderDashboard(){
   document.getElementById('kpi-present').textContent = DB.attendance.filter(a=>a.date===today()&&a.type==='Present').length || 18;
   document.getElementById('kpi-orders').textContent = DB.so.filter(s=>s.status!=='Delivered').length || 12;
   document.getElementById('kpi-lowstock').textContent = DB.inventory.filter(i=>i.stock <= i.reorder).length || 7;
   document.getElementById('kpi-dispatch').textContent = DB.dispatch.filter(d=>d.date===today()).length || 3;
 
-  // Mini prod chart
-  const vals = [3.2,4.1,2.8,4.5,3.9,3.5];
-  const max = Math.max(...vals);
-  document.getElementById('prod-chart').innerHTML = vals.map(v=>`<div class="mini-bar" style="height:${(v/max*100)}%;background:var(--accent);" title="${v} MT"></div>`).join('');
+  // Last-7-day completed output (real, from FG batches)
+  const days = [...Array(7)].map((_,i)=>{ const d=new Date(); d.setDate(d.getDate()-(6-i)); return d.toISOString().split('T')[0]; });
+  const vals = days.map(d=>DB.fgBatches.filter(f=>f.endDate===d).reduce((s,f)=>s+(parseFloat(f.qty)||0),0));
+  const max = Math.max(...vals,1);
+  document.getElementById('prod-chart').innerHTML = vals.map((v,i)=>`<div class="mini-bar" style="height:${Math.max(v/max*100,3)}%;background:var(--accent);" title="${days[i]}: ${v} Kg"></div>`).join('');
 
-  // Cash chart
-  const cvals = [210000,380000,290000,450000,310000,420000];
-  const cmax = Math.max(...cvals);
-  document.getElementById('cash-chart').innerHTML = cvals.map((v,i)=>`<div class="mini-bar" style="height:${(v/cmax*100)}%;background:${i%2?'var(--accent2)':'var(--accent)'};" title="₹${(v/100000).toFixed(1)}L"></div>`).join('');
+  // Cash chart from real ledger (last 6 entries running balance)
+  const cvals = DB.finance.slice(-6).map(f=>f.balance||0);
+  const cmax = Math.max(...cvals.map(Math.abs),1);
+  document.getElementById('cash-chart').innerHTML = (cvals.length?cvals:[0]).map((v,i)=>`<div class="mini-bar" style="height:${Math.max(Math.abs(v)/cmax*100,3)}%;background:${i%2?'var(--accent2)':'var(--accent)'};" title="₹${(v/100000).toFixed(1)}L"></div>`).join('');
 
-  // Alerts
-  const alerts = [
-    {time:'08:30',text:'Low stock: HCl Acid below reorder level',sub:'Reorder required',color:'var(--danger)'},
-    {time:'09:15',text:'Batch BTH-2406-003 nearing completion',sub:'Packaging stage - 90%',color:'var(--accent2)'},
-    {time:'10:00',text:'Dispatch DO-2406-001 in transit',sub:'ETA: '+fmtDate(nextDate(3)),color:'var(--accent)'},
-    {time:'11:30',text:'QC passed: BTH-2406-001 Fixed Carbon 95.8%',sub:'Ready for dispatch',color:'var(--accent2)'},
-  ];
-  document.getElementById('alert-timeline').innerHTML = alerts.map(a=>`
+  // ── EXCEPTION-FIRST alerts: only what needs a decision ──
+  const alerts = [];
+  const DELAY_DAYS = 7;
+  DB.batches.filter(b=>b.status!=='Complete' && b.stageTimestamps && b.stageTimestamps['NFG']).forEach(b=>{
+    const ageDays = (Date.now()-new Date(b.stageTimestamps['NFG']))/(864e5);
+    if(ageDays > DELAY_DAYS) alerts.push({text:`⏱️ ${b.num} running ${Math.floor(ageDays)} days — over ${DELAY_DAYS}-day standard`, sub:`Currently at ${b.stage}`, color:'var(--danger)'});
+  });
+  DB.fgBatches.filter(f=>f.qcStatus==='Pending').forEach(f=>
+    alerts.push({text:`🔬 ${f.batchNum} awaiting batch QC`, sub:`${f.qty} Kg blocked from FG stock`, color:'var(--warn)'}));
+  const pendApr = (DB.planLines||[]).filter(l=>l.approvalStatus==='Pending').length;
+  if(pendApr) alerts.push({text:`✅ ${pendApr} plan change(s) awaiting your approval`, sub:'Production Planning → Pending Approval', color:'var(--warn)'});
+  const critItems = DB.inventory.filter(i=>getItemStatus(i)==='Critical');
+  critItems.slice(0,3).forEach(i=>alerts.push({text:`🔴 Critical stock: ${i.desc}`, sub:`${getItemTotalStock(i)} ${i.uom} left`, color:'var(--danger)'}));
+  DB.customerPOs.filter(p=>p.status==='Open' && new Date(p.deliveryDate) < new Date(Date.now()+7*864e5)).forEach(p=>{
+    const alloc = DB.fgBatches.filter(f=>f.customerPoId===p.id).reduce((s,f)=>s+(parseFloat(f.qty)||0),0);
+    if(alloc < p.qty) alerts.push({text:`📦 ${p.poNumber} (${p.customer}) delivery ≤7 days, ${p.qty-alloc} Kg short`, sub:`Allocated ${alloc}/${p.qty} Kg`, color:'var(--danger)'});
+  });
+  document.getElementById('alert-timeline').innerHTML = alerts.length ? alerts.slice(0,8).map(a=>`
     <div class="tl-item">
-      <div class="tl-time">${a.time}</div>
+      <div class="tl-time">●</div>
       <div>
         <div class="tl-body" style="color:${a.color}">${a.text}</div>
         <div class="tl-sub">${a.sub}</div>
       </div>
-    </div>`).join('');
+    </div>`).join('') : '<p style="color:var(--accent2);font-size:.85rem;padding:10px">✅ Nothing needs your decision right now</p>';
+
+  // Cycle time + operator allocation + digest
+  renderMgmtCards();
 
   // Dispatch preview
   const rows = DB.dispatch.slice(0,4).map(d=>`<tr>
@@ -2636,7 +2853,20 @@ const PRODUCT_TO_NFG = {
   '9050300':'NFG-905','9450300':'NFG-945','9450120':'NFG-945','9080180':'NFG-908',
 };
 let STAGE_FLOW = JSON.parse(localStorage.getItem('erp_stageFlow') || 'null') ||
-  ['Ore Receipt','Pre-Mix','CB','Decant','Tank Wash','RDS','Centrifuge','Drying','Packaging'];
+  ['NFG','Pre-Mix','CB','Decant','Tank Wash','RDS','Centrifuge','Drying','Packaging'];
+// Migration: 'Ore Receipt' never existed at Innotek — rename to 'NFG' in any stored flow/batches
+if(STAGE_FLOW.includes('Ore Receipt')){
+  STAGE_FLOW = STAGE_FLOW.map(s=>s==='Ore Receipt'?'NFG':s);
+  localStorage.setItem('erp_stageFlow', JSON.stringify(STAGE_FLOW));
+}
+DB.batches.forEach(b=>{ if(b.stage==='Ore Receipt'){ b.stage='NFG'; } });
+
+// ── AUDIT TRAIL ──
+function audit(action, detail){
+  DB.audit.unshift({ts:new Date().toISOString(), user:'Admin', action, detail});
+  if(DB.audit.length>500) DB.audit.length = 500;
+  save('audit');
+}
 
 async function refreshStagesFromPlanSheet(){
   const statusEl = document.getElementById('qcqa-refresh-status');
@@ -2812,6 +3042,13 @@ function savePlanHeader(){
   closeModal('modal-newplan'); toast('Plan created ✓'); renderPlan();
 }
 
+function populatePlanCpoSelect(sel_id, val){
+  const sel = document.getElementById(sel_id);
+  if(!sel) return;
+  sel.innerHTML = '<option value="">— None —</option>' +
+    (DB.customerPOs||[]).filter(p=>p.status==='Open').map(p=>`<option value="${p.id}" ${p.id===val?'selected':''}>${p.poNumber} — ${p.customer}</option>`).join('');
+}
+
 function openNewPlanLine(planId){
   document.getElementById('planline-modal-title').textContent = '+ Add Batch Line';
   document.getElementById('planline-edit-key').value = '';
@@ -2820,6 +3057,7 @@ function openNewPlanLine(planId){
   document.getElementById('planline-qty').value = '';
   document.getElementById('planline-date').value = today();
   document.getElementById('planline-batch').value = '';
+  populatePlanCpoSelect('planline-cpo','');
   populatePlanCBSelect();
   openModal('modal-planline');
 }
@@ -2834,6 +3072,7 @@ function openEditPlanLine(planId, lineNum){
   document.getElementById('planline-qty').value = line.qty;
   document.getElementById('planline-date').value = line.date;
   document.getElementById('planline-batch').value = line.batchNumber||'';
+  populatePlanCpoSelect('planline-cpo', line.customerPoId||'');
   populatePlanCBSelect();
   document.getElementById('planline-cb').value = line.cb;
   openModal('modal-planline');
@@ -2874,6 +3113,7 @@ function savePlanLine(){
     if(line.date !== date) recordDeviation(planId, editKey, 'Date', line.date, date);
     if(line.cb !== cb) recordDeviation(planId, editKey, 'CB', line.cb, cb);
     line.grade=grade; line.qty=qty; line.date=date; line.cb=cb; line.batchNumber=batchNumber;
+    line.customerPoId = document.getElementById('planline-cpo').value;
     line.hasDeviation = true; line.approvalStatus = 'Pending';
     save('planLines');
     queueWrite(BACKEND.PLAN_GAS_URL, {sheet:'PlanLines', action:'upsert', keyField:'LineNum', data:{
@@ -2883,7 +3123,7 @@ function savePlanLine(){
     toast('Line updated — change recorded as deviation, pending your approval ✓');
   } else {
     const lineNum = ((DB.planLines||[]).filter(l=>l.planId===planId).length)+1;
-    const line = { planId, lineNum, grade, qty, date, cb, batchNumber, approvalStatus:'Approved', hasDeviation:false };
+    const line = { planId, lineNum, grade, qty, date, cb, batchNumber, customerPoId:document.getElementById('planline-cpo').value, approvalStatus:'Approved', hasDeviation:false };
     DB.planLines.push(line); save('planLines');
     queueWrite(BACKEND.PLAN_GAS_URL, {sheet:'PlanLines', action:'append', data:{
       PlanID:planId, LineNum:lineNum, GradeProductCode:grade, PlannedQty:qty, PlannedDate:date,
@@ -2973,6 +3213,7 @@ function activateBatchFromPlanLine(planId, lineNum){
   // Open the QCQA-style New Batch screen, pre-filled from the approved plan line
   showPage('production');
   openEntryNewBatch();
+  pendingBatchCpoId = line.customerPoId||'';
   document.getElementById('eb-date').value = line.date || today();
   document.getElementById('eb-product').value = line.grade;
   ebProductChange();
@@ -3102,7 +3343,7 @@ async function refreshBatchesFromQCQA(){
         notes: qb.obs,
         operator: existing?existing.operator:'',
         source: 'QCQA Sheet',
-        stage: existing?existing.stage:(cbStage?'CB':'Ore Receipt'),
+        stage: existing?existing.stage:(cbStage?'CB':'NFG'),
         progress: existing?existing.progress:(cbStage?33:0),
         status: existing?existing.status:'In Process',
         premix: existing?existing.premix:null,
@@ -3139,15 +3380,18 @@ function renderProduction(){
     return `<tr>
       <td><b>${b.num}</b> ${b.source==='QCQA Sheet'?'<span class="badge badge-blue" style="font-size:.6rem">QCQA</span>':''}</td>
       <td>${b.product}</td><td>${b.grade}</td>
-      <td>${b.nfgCode||'—'}</td><td><span class="badge badge-muted">${b.cb||'—'}</span></td>
+      <td>${(b.cbData&&b.cbData.expansion)?b.cbData.expansion+' CC':'—'}</td><td><span class="badge badge-muted">${b.cb||'—'}</span></td>
       <td>${fmtDate(b.start)}</td>
       <td><span class="badge badge-blue">${b.stage}</span></td>
       <td><div class="progress-bar"><div class="progress-fill ${bc}" style="width:${pct}%"></div></div><small>${pct}%</small></td>
-      <td>${b.operator||'—'}</td>
+      <td>${(b.centAvgPh||b.centAvgMoist)?`(${b.centAvgPh||'—'}; ${b.centAvgMoist||'—'}%)`:'—'}</td>
       <td><span class="badge ${b.status==='Near Complete'?'badge-green':b.status==='In Process'?'badge-blue':'badge-muted'}">${b.status}</span></td>
       <td><button class="btn btn-primary btn-sm" onclick="openBatchDetail('${b.num}')">Open Batch</button></td>
     </tr>`;
   }).join('') || '<tr><td colspan="11" style="text-align:center;color:var(--muted)">No batches. Create one, or 🔄 Refresh from QCQA</td></tr>';
+
+  renderUpcomingBatches();
+  renderFGBatches();
 
   // GRN registers
   document.getElementById('nfg-tbody').innerHTML = DB.nfgGrns.map(g=>`<tr>
@@ -3176,7 +3420,7 @@ function saveBatch(){
     l1Grn: document.getElementById('b-l1-grn').value,
     cb: selectedCB,
     notes: document.getElementById('b-notes').value,
-    stage:'Ore Receipt', progress:0,
+    stage:'NFG', progress:0,
     operator: document.getElementById('b-op').value,
     status:'Planned', source:'ERP',
     premix:null, cbData:null, decant:null,
@@ -3202,6 +3446,7 @@ function saveBatch(){
 // form-sections, auto-fill, cb-pills, fixed footer actions.
 // ═══════════════════════════════════════════════════════════
 let ebSelectedCB = '';
+let pendingBatchCpoId = '';
 
 function openEntryScreen(id){
   document.getElementById(id).classList.add('open');
@@ -3213,6 +3458,7 @@ function closeEntryScreen(id){
 }
 
 function openEntryNewBatch(){
+  pendingBatchCpoId='';
   // Defaults
   document.getElementById('eb-date').value = today();
   document.getElementById('eb-num').value = nextNum('BTH-2607-');
@@ -3286,10 +3532,34 @@ function submitEntryBatch(){
     cb: ebSelectedCB,
     notes: document.getElementById('eb-obs').value,
     operator: document.getElementById('eb-op').value,
-    stage:'Ore Receipt', progress:0, status:'Planned', source:'ERP',
+    stage:'NFG', progress:0, status:'Planned', source:'ERP',
+    customerPoId: pendingBatchCpoId||'',
     premix:null, cbData:null, decant:null,
   };
+  pendingBatchCpoId='';
   DB.batches.unshift(b); save('batches');
+
+  // ── FULL MATERIAL BALANCE: batch start consumes NFG raw material → creates WIP ──
+  b.stageTimestamps = {'NFG': new Date().toISOString()};
+  const consumeQty = b.qty||0;
+  if(consumeQty>0 && b.nfgGrn){
+    const rmItem = DB.inventory.find(i=>i.cat==='Raw Material' && Array.isArray(i.batches) && i.batches.some(x=>x.ref===b.nfgGrn));
+    if(rmItem){
+      const grnBatch = rmItem.batches.find(x=>x.ref===b.nfgGrn);
+      grnBatch.qty = Math.max(0, grnBatch.qty - consumeQty);
+      rmItem.updated = today();
+    } else {
+      const anyRM = DB.inventory.find(i=>i.cat==='Raw Material');
+      if(anyRM && anyRM.batchTracked!=='Y'){ anyRM.stock = Math.max(0,(anyRM.stock||0)-consumeQty); }
+    }
+  }
+  DB.inventory.unshift({
+    code:'WIP-'+b.num, desc:`WIP — Batch ${b.num} (${b.product})`, cat:'WIP', subCat:'Batch',
+    uom:'KG', location:'WIP Bay', stock:consumeQty, reorder:0, critical:0, cost:0,
+    batchTracked:'N', batches:[], status:'Active', updated:today(),
+  });
+  save('inventory'); save('batches');
+  audit('Batch Created', `${b.num} · ${b.product} · ${consumeQty}Kg → WIP · NFG GRN ${b.nfgGrn||'—'} consumed`);
 
   // Write to QCQA's real BATCHES sheet — exact QCQA field names
   qcqaApi({sheet:'BATCHES', action:'append', data:{
@@ -3365,7 +3635,7 @@ function submitEntryCB(){
 // BATCH DETAIL HUB — replicates QCQA's "Batch Process" screen.
 // Tap a batch → info chips + stage grid → tap stage to view/enter.
 // ═══════════════════════════════════════════════════════════
-const STAGE_ICONS = {'Ore Receipt':'📦','Pre-Mix':'🥣','CB':'🔬','Decant':'🧴','Tank Wash':'🚿','RDS':'⚗️','Centrifuge':'🌀','Drying':'🌡️','Packaging':'📥'};
+const STAGE_ICONS = {'NFG':'🪨','Pre-Mix':'🥣','CB':'🔬','Decant':'🧴','Tank Wash':'🚿','RDS':'⚗️','Centrifuge':'🌀','Drying':'🌡️','Packaging':'📥'};
 let activeBatchDetail = null;
 
 function stageHasData(b, stage){
@@ -3434,6 +3704,7 @@ function openBatchStage(num, stage){
   if(stage==='Pre-Mix'){ openEntryPremix(num); }
   else if(stage==='CB'){ openEntryCB(num); }
   else if(stage==='Decant'){ openEntryDecant(num); }
+  else if(stage==='Centrifuge'){ openEntryCentrifuge(num); }
   else { openEntryGenStage(num, stage); }
 }
 
@@ -3448,6 +3719,8 @@ function markStageComplete(num, stageName, patch){
   const b = DB.batches.find(x=>x.num===num);
   if(!b) return;
   if(patch) Object.assign(b, patch);
+  if(!b.stageTimestamps) b.stageTimestamps = {};
+  b.stageTimestamps[stageName] = new Date().toISOString();
   const i = STAGE_FLOW.indexOf(stageName);
   const cur = STAGE_FLOW.indexOf(b.stage);
   if(i >= cur){
@@ -3455,6 +3728,23 @@ function markStageComplete(num, stageName, patch){
     else { b.stage = stageName; }
     b.progress = Math.round(Math.min((i+1)/STAGE_FLOW.length,1)*100);
     b.status = b.progress>=100?'Complete':b.progress>=80?'Near Complete':'In Process';
+  }
+  audit('Stage Completed', `${num} · ${stageName}`);
+  // ── FG GATE: Drying done → batch becomes an FG candidate, pending batch-level QC ──
+  if(stageName==='Drying' && !DB.fgBatches.some(f=>f.batchNum===num)){
+    const outQty = parseFloat(b.dryingOutput)||parseFloat(b.decant&&b.decant.p2)||b.qty||0;
+    DB.fgBatches.unshift({
+      batchNum:num, product:b.product, grade:b.grade||b.product, qty:outQty,
+      endDate:today(), qcStatus:'Pending',
+      fgExp:'', ph:'', carbon:'', dryWeight:'',  // fetched from Drying/QC forms — to be defined later
+      status:'', customerPoId:b.customerPoId||'', allocated:false,
+    });
+    save('fgBatches');
+    queueWrite(BACKEND.SALESDISP_GAS_URL, {sheet:'FGBatches', action:'upsert', keyField:'BatchNum', data:{
+      BatchNum:num, Product:b.product, Qty:outQty, EndDate:today(), QCStatus:'Pending', Status:'',
+    }});
+    audit('FG Candidate', `${num} · ${outQty}Kg awaiting batch-level QC`);
+    toast(`${num} completed Drying — awaiting batch QC to become Finished Goods`);
   }
   save('batches'); renderProduction();
 }
@@ -3551,6 +3841,9 @@ function openEntryGenStage(num, stage){
   document.getElementById('egs-title').textContent = stage;
   document.getElementById('egs-batch-label').textContent = `${b.num} · ${b.product||''}`;
   document.getElementById('egs-obs').value = (b.stageData && b.stageData[stage] && b.stageData[stage].obs)||'';
+  const isDrying = stage==='Drying';
+  document.getElementById('egs-output-section').style.display = isDrying?'':'none';
+  if(isDrying) document.getElementById('egs-output').value = b.dryingOutput||'';
   openEntryScreen('entry-genstage');
 }
 
@@ -3559,6 +3852,12 @@ function submitEntryGenStage(){
   const b = DB.batches.find(x=>x.num===num);
   if(!b) return;
   const obs = document.getElementById('egs-obs').value;
+  const patch = {};
+  if(activeGenStage==='Drying'){
+    const out = parseFloat(document.getElementById('egs-output').value)||0;
+    if(!out){ toast('Enter Dry Output Quantity — this declares the FG candidate'); return; }
+    patch.dryingOutput = out;
+  }
   if(!b.stageData) b.stageData = {};
   b.stageData[activeGenStage] = {obs, completedAt: new Date().toISOString()};
   save('batches');
@@ -3566,9 +3865,318 @@ function submitEntryGenStage(){
     batchNumber:num, stage:activeGenStage, obs, draft:'no',
   }});
   closeEntryScreen('entry-genstage');
-  markStageComplete(num, activeGenStage);
+  markStageComplete(num, activeGenStage, patch);
   toast(`${activeGenStage} marked complete ✓`);
   openBatchDetail(num);
+}
+
+// ── CENTRIFUGE (log sheet essence: runs + samples + machine check) ──
+const ECF_CHECKS = ['Outside machine cleanliness','Inside drum cleanliness','Water for cleaning / cooling','Inlet pipe choke clear','Output collection bags / tanks ready','Water for processing'];
+let ecfRuns = [], ecfSamples = [];
+
+function openEntryCentrifuge(num){
+  const b = DB.batches.find(x=>x.num===num);
+  if(!b) return;
+  document.getElementById('ecf-batch-label').textContent = `${b.num} · ${b.product||''}`;
+  const c = b.centrifuge||{};
+  document.getElementById('ecf-commence').value = c.commence||'';
+  document.getElementById('ecf-oiltemp').value = c.oilTemp||'';
+  document.getElementById('ecf-remark').value = c.remark||'';
+  ecfRuns = (c.runs&&c.runs.length)?JSON.parse(JSON.stringify(c.runs)):[{}];
+  ecfSamples = (c.samples&&c.samples.length)?JSON.parse(JSON.stringify(c.samples)):[{}];
+  document.getElementById('ecf-checklist').innerHTML = ECF_CHECKS.map((label,i)=>`
+    <label style="display:flex;align-items:center;gap:10px;font-size:.85rem;cursor:pointer">
+      <input type="checkbox" id="ecf-chk-${i}" ${c.checklist&&c.checklist[label]?'checked':''}> ${label}
+    </label>`).join('');
+  ecfRenderRuns(); ecfRenderSamples();
+  openEntryScreen('entry-centrifuge');
+}
+
+function ecfRenderRuns(){
+  document.getElementById('ecf-runs').innerHTML = ecfRuns.map((r,i)=>`
+    <div class="blender-block">
+      <div class="blender-title">Run ${i+1} ${ecfRuns.length>1?`<button class="btn btn-ghost btn-sm" style="float:right" onclick="ecfRuns.splice(${i},1);ecfRenderRuns()">🗑️</button>`:''}</div>
+      <div class="round-row">
+        <div><div class="form-label2">Tank</div><input class="form-input2" value="${r.tank||''}" onchange="ecfRuns[${i}].tank=this.value"></div>
+        <div><div class="form-label2">Start</div><input type="time" class="form-input2" value="${r.start||''}" onchange="ecfRuns[${i}].start=this.value"></div>
+        <div><div class="form-label2">End</div><input type="time" class="form-input2" value="${r.end||''}" onchange="ecfRuns[${i}].end=this.value"></div>
+      </div>
+      <div class="round-row">
+        <div style="grid-column:1/3"><div class="form-label2">Output Weight (Kg)</div><input type="number" step="0.01" class="form-input2" value="${r.weight||''}" onchange="ecfRuns[${i}].weight=this.value"></div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:.8rem;cursor:pointer;padding-bottom:8px"><input type="checkbox" ${r.drumClean?'checked':''} onchange="ecfRuns[${i}].drumClean=this.checked"> Drum Clean</label>
+      </div>
+    </div>`).join('');
+}
+function ecfAddRun(){ ecfRuns.push({}); ecfRenderRuns(); }
+
+function ecfRenderSamples(){
+  document.getElementById('ecf-samples').innerHTML = ecfSamples.map((s,i)=>`
+    <div class="blender-block">
+      <div class="blender-title">Sample ${i+1} ${ecfSamples.length>1?`<button class="btn btn-ghost btn-sm" style="float:right" onclick="ecfSamples.splice(${i},1);ecfRenderSamples();ecfUpdateAvg()">🗑️</button>`:''}</div>
+      <div class="round-row">
+        <div><div class="form-label2">Time</div><input type="time" class="form-input2" value="${s.time||''}" onchange="ecfSamples[${i}].time=this.value"></div>
+        <div><div class="form-label2">Moisture %</div><input type="number" step="0.01" class="form-input2" value="${s.moisture||''}" onchange="ecfSamples[${i}].moisture=this.value;ecfUpdateAvg()"></div>
+        <div><div class="form-label2">pH</div><input type="number" step="0.01" class="form-input2" value="${s.ph||''}" onchange="ecfSamples[${i}].ph=this.value;ecfUpdateAvg()"></div>
+      </div>
+      <div class="round-row">
+        <div><div class="form-label2">Pusher RPM</div><input type="number" class="form-input2" value="${s.pusherRpm||''}" onchange="ecfSamples[${i}].pusherRpm=this.value"></div>
+        <div><div class="form-label2">Rotor RPM</div><input type="number" class="form-input2" value="${s.rotorRpm||''}" onchange="ecfSamples[${i}].rotorRpm=this.value"></div>
+        <div></div>
+      </div>
+    </div>`).join('');
+  ecfUpdateAvg();
+}
+function ecfAddSample(){ ecfSamples.push({}); ecfRenderSamples(); }
+
+function ecfAverages(samples){
+  const phs = samples.map(s=>parseFloat(s.ph)).filter(v=>!isNaN(v));
+  const ms = samples.map(s=>parseFloat(s.moisture)).filter(v=>!isNaN(v));
+  return {
+    ph: phs.length? (phs.reduce((a,b)=>a+b,0)/phs.length) : null,
+    moisture: ms.length? (ms.reduce((a,b)=>a+b,0)/ms.length) : null,
+  };
+}
+function ecfUpdateAvg(){
+  const a = ecfAverages(ecfSamples);
+  document.getElementById('ecf-avg').textContent =
+    (a.ph!==null||a.moisture!==null) ? `Avg: ${a.ph!==null?a.ph.toFixed(2):'—'}; ${a.moisture!==null?a.moisture.toFixed(1)+'%':'—'}` : '';
+}
+
+function submitEntryCentrifuge(saveOnly){
+  const num = activeBatchForStage;
+  const b = DB.batches.find(x=>x.num===num);
+  if(!b) return;
+  const checklist = {};
+  ECF_CHECKS.forEach((label,i)=>{ checklist[label] = document.getElementById('ecf-chk-'+i).checked; });
+  b.centrifuge = {
+    commence: document.getElementById('ecf-commence').value,
+    runs: ecfRuns, samples: ecfSamples, checklist,
+    oilTemp: document.getElementById('ecf-oiltemp').value,
+    remark: document.getElementById('ecf-remark').value,
+  };
+  const a = ecfAverages(ecfSamples);
+  b.centAvgPh = a.ph!==null? a.ph.toFixed(2) : '';
+  b.centAvgMoist = a.moisture!==null? a.moisture.toFixed(1) : '';
+  save('batches');
+  qcqaApi({sheet:'BATCH_PROCESS', action:'append', data:{
+    batchNumber:num, stage:'Centrifuge', obs:(b.centrifuge.remark||'')+` | AvgpH:${b.centAvgPh||'—'} AvgMoist:${b.centAvgMoist||'—'}%`, draft:saveOnly?'yes':'no',
+  }});
+  closeEntryScreen('entry-centrifuge');
+  if(saveOnly){ toast('Centrifuge saved as draft ✓'); }
+  else { markStageComplete(num, 'Centrifuge'); toast('Centrifuge submitted ✓'); }
+  openBatchDetail(num);
+}
+
+// ═══════════════════════════════════════════════════════════
+// FINISHED GOODS — batch level (QC-gated), Customer PO linking
+// ═══════════════════════════════════════════════════════════
+function renderUpcomingBatches(){
+  const area = document.getElementById('upcoming-batches-area');
+  if(!area) return;
+  const now = new Date(); const wk = new Date(); wk.setDate(wk.getDate()+7);
+  const upcoming = (DB.planLines||[]).filter(l=>{
+    if(l.batchNumber && DB.batches.some(b=>b.num===l.batchNumber)) return false; // already started
+    const d = new Date(l.date);
+    return d>=new Date(now.toDateString()) && d<=wk;
+  }).sort((a,b)=>new Date(a.date)-new Date(b.date));
+  area.innerHTML = upcoming.length ? `<div class="tbl-wrap"><table>
+    <thead><tr><th>Planned Date</th><th>Grade</th><th>Qty (KG)</th><th>CB</th><th>Approval</th><th></th></tr></thead>
+    <tbody>${upcoming.map(l=>`<tr>
+      <td><b>${fmtDate(l.date)}</b></td><td>${l.grade}</td><td>${l.qty}</td>
+      <td><span class="badge badge-muted">${l.cb||'—'}</span></td>
+      <td><span class="badge ${l.approvalStatus==='Approved'?'badge-green':'badge-warn'}">${l.approvalStatus}</span></td>
+      <td>${l.approvalStatus==='Approved'?`<button class="btn btn-primary btn-sm" onclick="activateBatchFromPlanLine('${l.planId}','${l.lineNum}')">▶ Start</button>`:''}</td>
+    </tr>`).join('')}</tbody></table></div>`
+    : '<p style="color:var(--muted);font-size:.82rem;text-align:center;padding:10px">No batches planned in the next 7 days — add lines in Production Planning</p>';
+}
+
+function fgRow(f){
+  const qcBadge = f.qcStatus==='Passed'?'badge-green':f.qcStatus==='Failed'?'badge-danger':'badge-warn';
+  const po = DB.customerPOs.find(p=>p.id===f.customerPoId);
+  return `<tr>
+    <td><b>${f.batchNum}</b></td><td>${f.product}</td><td>${fmtDate(f.endDate)}</td>
+    <td>${f.qty} KG</td>
+    <td>${f.fgExp||'—'}</td><td>${f.ph||'—'}</td><td>${f.carbon||'—'}</td><td>${f.dryWeight||'—'}</td>
+    <td>${f.qcStatus==='Pending'?`<button class="btn btn-primary btn-sm" onclick="openFGQC('${f.batchNum}')">Enter QC</button>`:`<span class="badge ${qcBadge}">${f.qcStatus}</span>`}</td>
+    <td><select onchange="setFGStatus('${f.batchNum}',this.value)" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:4px 8px;font-size:.78rem">
+      <option value="" ${!f.status?'selected':''}>—</option>
+      <option ${f.status==='OK'?'selected':''}>OK</option>
+      <option ${f.status==='Re-process'?'selected':''}>Re-process</option>
+      <option ${f.status==='Not OK'?'selected':''}>Not OK</option>
+    </select></td>
+    <td>${po ? `<span class="badge badge-blue">${po.poNumber}</span> <button class="btn btn-ghost btn-sm" onclick="releaseFGFromPO('${f.batchNum}')">Release</button>`
+             : (f.qcStatus==='Passed' ? `<button class="btn btn-ghost btn-sm" onclick="openLinkFGToPO('${f.batchNum}')">Link PO</button>` : '—')}</td>
+  </tr>`;
+}
+
+function renderFGBatches(){
+  const html = (DB.fgBatches||[]).map(fgRow).join('') ||
+    '<tr><td colspan="11" style="text-align:center;color:var(--muted)">No finished goods yet — batches appear here after Drying, and count as FG stock once QC passes</td></tr>';
+  const p = document.getElementById('fg-tbody-prod'); if(p) p.innerHTML = html;
+  const v = document.getElementById('fg-tbody-inv'); if(v) v.innerHTML = html;
+}
+
+function setFGStatus(batchNum, status){
+  const f = DB.fgBatches.find(x=>x.batchNum===batchNum);
+  if(!f) return;
+  f.status = status; save('fgBatches');
+  audit('FG Status', `${batchNum} → ${status}`);
+  queueWrite(BACKEND.SALESDISP_GAS_URL, {sheet:'FGBatches', action:'upsert', keyField:'BatchNum', data:{BatchNum:batchNum, Status:status}});
+}
+
+// Provisional batch-level QC entry (fields per your spec: FG Exp, pH, Carbon, Dry Weight).
+// Will be replaced/fed by the Drying & QC forms you'll define later.
+let activeFGQC = null;
+function openFGQC(batchNum){
+  activeFGQC = batchNum;
+  const f = DB.fgBatches.find(x=>x.batchNum===batchNum);
+  if(!f) return;
+  document.getElementById('fgqc-label').textContent = `${f.batchNum} · ${f.product} · ${f.qty} KG`;
+  document.getElementById('fgqc-exp').value = f.fgExp||'';
+  document.getElementById('fgqc-ph').value = f.ph||'';
+  document.getElementById('fgqc-carbon').value = f.carbon||'';
+  document.getElementById('fgqc-drywt').value = f.dryWeight||'';
+  openModal('modal-fgqc');
+}
+
+function submitFGQC(pass){
+  const f = DB.fgBatches.find(x=>x.batchNum===activeFGQC);
+  if(!f) return;
+  f.fgExp = document.getElementById('fgqc-exp').value;
+  f.ph = document.getElementById('fgqc-ph').value;
+  f.carbon = document.getElementById('fgqc-carbon').value;
+  f.dryWeight = document.getElementById('fgqc-drywt').value;
+  f.qcStatus = pass?'Passed':'Failed';
+  save('fgBatches');
+  const wip = DB.inventory.find(i=>i.code==='WIP-'+f.batchNum);
+  if(pass){
+    // QC gate opens: WIP → FG stock (batch-tracked under the product's FG item)
+    if(wip){ DB.inventory = DB.inventory.filter(i=>i.code!=='WIP-'+f.batchNum); }
+    let fgItem = DB.inventory.find(i=>i.cat==='Finished Goods' && i.subCat===f.product);
+    if(!fgItem){
+      fgItem = {code:'FG-'+f.product, desc:`FG — ${f.product}`, cat:'Finished Goods', subCat:f.product,
+        uom:'KG', location:'FG Bay', stock:0, reorder:0, critical:0, cost:0,
+        batchTracked:'Y', batches:[], status:'Active', updated:today()};
+      DB.inventory.unshift(fgItem);
+    }
+    fgItem.batches.push({ref:f.batchNum, date:f.endDate, qty:f.qty, rate:0, bay:'FG Bay'});
+    fgItem.updated = today();
+    audit('FG QC Passed', `${f.batchNum} · ${f.qty}Kg → FG stock`);
+    toast(`QC passed ✓ — ${f.batchNum} is now Finished Goods stock`);
+  } else {
+    if(wip){ wip.cat='Rejected/Quarantine'; wip.updated=today(); }
+    audit('FG QC Failed', `${f.batchNum} → Rejected/Quarantine`);
+    toast(`QC failed — ${f.batchNum} moved to Rejected/Quarantine`);
+  }
+  save('inventory');
+  queueWrite(BACKEND.SALESDISP_GAS_URL, {sheet:'FGBatches', action:'upsert', keyField:'BatchNum', data:{
+    BatchNum:f.batchNum, QCStatus:f.qcStatus, FGExp:f.fgExp, PH:f.ph, Carbon:f.carbon, DryWeight:f.dryWeight,
+  }});
+  closeModal('modal-fgqc');
+  renderFGBatches(); if(typeof renderInventory==='function') renderInventory();
+}
+
+// ── CUSTOMER PO REGISTER (separate from Sales Orders, per your instruction) ──
+function renderCustomerPOs(){
+  const tb = document.getElementById('cpo-tbody');
+  if(!tb) return;
+  tb.innerHTML = (DB.customerPOs||[]).map(p=>{
+    const linked = DB.fgBatches.filter(f=>f.customerPoId===p.id);
+    const allocQty = linked.reduce((s,f)=>s+(parseFloat(f.qty)||0),0);
+    const pct = p.qty>0 ? Math.min(100, Math.round(allocQty/p.qty*100)) : 0;
+    return `<tr>
+      <td><b>${p.poNumber}</b></td><td>${p.customer}</td><td>${p.grade}</td>
+      <td>${p.qty} KG</td><td>${fmtDate(p.deliveryDate)}</td>
+      <td><div class="progress-bar"><div class="progress-fill ${pct>=100?'green':''}" style="width:${pct}%"></div></div><small>${allocQty}/${p.qty} KG (${pct}%)</small></td>
+      <td>${linked.map(f=>`<span class="badge badge-muted">${f.batchNum}</span>`).join(' ')||'—'}</td>
+      <td>
+        <button class="btn btn-ghost btn-sm" onclick="shareCustomerPOSummary('${p.id}','board')">📊 Board</button>
+        <button class="btn btn-ghost btn-sm" onclick="shareCustomerPOSummary('${p.id}','customer')">📱 Customer</button>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--muted)">No customer POs — add one to start linking FG batches</td></tr>';
+}
+
+function saveCustomerPO(){
+  const p = {
+    id: nextNum('CPO-'),
+    poNumber: document.getElementById('cpo-num').value,
+    customer: document.getElementById('cpo-customer').value,
+    grade: document.getElementById('cpo-grade').value,
+    qty: parseFloat(document.getElementById('cpo-qty').value)||0,
+    rate: parseFloat(document.getElementById('cpo-rate').value)||0,
+    currency: document.getElementById('cpo-currency').value,
+    deliveryDate: document.getElementById('cpo-delivery').value,
+    date: today(), status:'Open',
+  };
+  if(!p.poNumber || !p.customer){ toast('PO number and customer required'); return; }
+  DB.customerPOs.unshift(p); save('customerPOs');
+  queueWrite(BACKEND.SALESDISP_GAS_URL, {sheet:'CustomerPOs', action:'upsert', keyField:'CPOId', data:{
+    CPOId:p.id, PONumber:p.poNumber, Customer:p.customer, Grade:p.grade, Qty:p.qty, Rate:p.rate,
+    Currency:p.currency, DeliveryDate:p.deliveryDate, Date:p.date, Status:p.status,
+  }});
+  audit('Customer PO Added', `${p.poNumber} · ${p.customer} · ${p.qty}Kg`);
+  closeModal('modal-cpo'); toast('Customer PO added ✓'); renderCustomerPOs();
+}
+
+let activeLinkFG = null;
+function openLinkFGToPO(batchNum){
+  activeLinkFG = batchNum;
+  const sel = document.getElementById('linkpo-select');
+  sel.innerHTML = '<option value="">Select customer PO…</option>' +
+    DB.customerPOs.filter(p=>p.status==='Open').map(p=>`<option value="${p.id}">${p.poNumber} — ${p.customer} (${p.grade}, ${p.qty}KG)</option>`).join('');
+  openModal('modal-linkpo');
+}
+
+function confirmLinkFGToPO(){
+  const poId = document.getElementById('linkpo-select').value;
+  if(!poId){ toast('Select a PO'); return; }
+  const f = DB.fgBatches.find(x=>x.batchNum===activeLinkFG);
+  if(!f) return;
+  f.customerPoId = poId; f.allocated = true;
+  save('fgBatches');
+  const po = DB.customerPOs.find(p=>p.id===poId);
+  audit('FG→PO Linked', `${f.batchNum} → ${po?po.poNumber:poId}`);
+  queueWrite(BACKEND.SALESDISP_GAS_URL, {sheet:'FGBatches', action:'upsert', keyField:'BatchNum', data:{BatchNum:f.batchNum, CustomerPO:po?po.poNumber:poId}});
+  closeModal('modal-linkpo'); toast('Batch linked to PO ✓');
+  renderFGBatches(); renderCustomerPOs();
+}
+
+// "Reject to continue / sell to another customer": release frees the batch for any other PO
+function releaseFGFromPO(batchNum){
+  const f = DB.fgBatches.find(x=>x.batchNum===batchNum);
+  if(!f) return;
+  const po = DB.customerPOs.find(p=>p.id===f.customerPoId);
+  if(!confirm(`Release ${batchNum} from ${po?po.poNumber:'its PO'}? It becomes free to sell to another customer, and you can link a different batch to this PO.`)) return;
+  audit('FG Released from PO', `${batchNum} ← ${po?po.poNumber:'—'}`);
+  f.customerPoId=''; f.allocated=false; save('fgBatches');
+  toast('Batch released — available for another customer ✓');
+  renderFGBatches(); renderCustomerPOs();
+}
+
+function shareCustomerPOSummary(poId, audience){
+  const p = DB.customerPOs.find(x=>x.id===poId);
+  if(!p) return;
+  const linked = DB.fgBatches.filter(f=>f.customerPoId===poId);
+  const allocQty = linked.reduce((s,f)=>s+(parseFloat(f.qty)||0),0);
+  const pct = p.qty>0?Math.round(allocQty/p.qty*100):0;
+  let text;
+  if(audience==='board'){
+    text = `📊 *PO STATUS — BOARD SUMMARY*\n${p.poNumber} · ${p.customer}\nGrade: ${p.grade} · Ordered: ${p.qty} KG\nAllocated: ${allocQty} KG (${pct}%)\nDelivery: ${fmtDate(p.deliveryDate)}\nBatches: ${linked.map(f=>`${f.batchNum} (${f.qty}KG, QC:${f.qcStatus})`).join(', ')||'none yet'}\n\n_Innotek Products — Production_`;
+  } else {
+    text = `Dear ${p.customer} team,\n\nUpdate on your PO ${p.poNumber} (${p.grade}, ${p.qty} KG):\nProduction progress: ${pct}% allocated\nPlanned delivery: ${fmtDate(p.deliveryDate)}\n\nRegards,\nInnotek Products`;
+  }
+  window.open('https://wa.me/?text='+encodeURIComponent(text), '_blank');
+}
+
+// ── AUDIT VIEWER ──
+function renderAuditTrail(){
+  const tb = document.getElementById('audit-tbody');
+  if(!tb) return;
+  tb.innerHTML = (DB.audit||[]).slice(0,80).map(a=>`<tr>
+    <td>${new Date(a.ts).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</td>
+    <td><span class="badge badge-muted">${a.action}</span></td><td>${a.detail}</td>
+  </tr>`).join('') || '<tr><td colspan="3" style="text-align:center;color:var(--muted)">No activity yet</td></tr>';
 }
 
 function openStageEntry(num){
