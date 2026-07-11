@@ -183,6 +183,52 @@ tr:hover td{background:rgba(255,255,255,.03);}
   border-bottom:2px solid transparent;transition:color .15s;
 }
 .tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+/* ── QCQA-STYLE FULL-SCREEN ENTRY VIEWS (Production data entry) ── */
+.entry-screen{display:none;position:fixed;inset:0;background:var(--bg);z-index:300;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.entry-screen.open{display:block;}
+.info-bar2{display:flex;gap:8px;flex-wrap:wrap;padding:12px 16px;max-width:560px;margin:0 auto;}
+.info-chip2{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:.78rem;color:var(--muted);}
+.info-chip2 b{color:var(--text);}
+.process-grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:8px 16px 90px;max-width:560px;margin:0 auto;}
+.process-btn2{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:border-color .15s;}
+.process-btn2:active{border-color:var(--accent);}
+.process-btn2 .pb-icon{font-size:1.6rem;}
+.process-btn2 .pb-label{font-weight:700;font-size:.92rem;}
+.process-btn2 .pb-status{font-size:.7rem;color:var(--muted);margin-top:2px;}
+.process-btn2.done{border-color:var(--accent2);}
+.process-btn2.done .pb-status{color:var(--accent2);}
+.process-btn2.current{border-color:var(--accent);}
+.process-btn2.current .pb-status{color:var(--accent);}
+.blender-block{background:var(--surface);border-radius:10px;padding:12px;margin-bottom:10px;}
+.blender-title{font-weight:700;font-size:.85rem;margin-bottom:8px;color:var(--accent);}
+.round-row{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:8px;margin-bottom:8px;align-items:end;}
+.entry-header{position:sticky;top:0;background:var(--bg);padding:14px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);z-index:5;}
+.entry-back{background:var(--surface);border:1px solid var(--border);color:var(--text);width:38px;height:38px;border-radius:10px;font-size:20px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.entry-title{font-size:1.05rem;font-weight:700;}
+.entry-sub{font-size:.72rem;color:var(--muted);margin-top:1px;}
+.entry-body{padding:14px 16px calc(90px + env(safe-area-inset-bottom,0px));max-width:560px;margin:0 auto;}
+.form-section{background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:12px;overflow:hidden;}
+.form-section-title{font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:11px 13px 8px;border-bottom:1px solid var(--border);}
+.form-row2{padding:11px 13px;border-bottom:1px solid var(--border);}
+.form-row2:last-child{border-bottom:none;}
+.form-label2{font-size:.75rem;color:var(--muted);margin-bottom:6px;font-weight:500;}
+.form-input2{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:16px;padding:11px 12px;font-family:inherit;outline:none;appearance:none;-webkit-appearance:none;}
+.form-input2:focus{border-color:var(--accent);}
+.form-input2[readonly]{color:var(--accent2);background:var(--surface);}
+.two-col2{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.input-suffix-wrap{position:relative;display:flex;align-items:center;}
+.input-suffix-wrap .form-input2{padding-right:44px;}
+.input-suffix{position:absolute;right:12px;font-size:.72rem;font-weight:700;color:var(--accent2);pointer-events:none;}
+.cb-scroll-row{display:flex;gap:9px;padding:12px 13px;overflow-x:auto;scrollbar-width:none;}
+.cb-scroll-row::-webkit-scrollbar{display:none;}
+.cb-pill{flex-shrink:0;padding:10px 22px;border-radius:50px;border:1.5px solid var(--border);font-size:.9rem;font-weight:600;cursor:pointer;background:var(--bg);color:var(--muted);transition:all .15s;}
+.cb-pill.selected{background:var(--accent);color:#03121e;border-color:var(--accent);}
+.cb-pill.disabled{opacity:.35;pointer-events:none;}
+.entry-footer{position:fixed;bottom:0;left:0;right:0;background:var(--bg);border-top:1px solid var(--border);padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;z-index:6;}
+.entry-footer .btn{flex:1;padding:14px;font-size:1rem;}
+.entry-screen .form-textarea2{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:inherit;outline:none;resize:none;min-height:80px;line-height:1.5;}
+
 /* ── MODAL ── */
 .modal-bg{
   display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);
@@ -296,6 +342,7 @@ tr:hover td{background:rgba(255,255,255,.03);}
 
   <div class="nav-section">Operations</div>
   <button class="nav-item" onclick="showPage('production')"><span class="ico">🏭</span>Production</button>
+  <button class="nav-item" onclick="showPage('plan')"><span class="ico">📅</span>Production Planning</button>
   <button class="nav-item" onclick="showPage('inventory')"><span class="ico">📦</span>Inventory</button>
   <button class="nav-item" onclick="showPage('dispatch')"><span class="ico">🚚</span>Dispatch</button>
   <button class="nav-item" onclick="showPage('quality')"><span class="ico">🔬</span>Quality / QC</button>
@@ -388,7 +435,7 @@ tr:hover td{background:rgba(255,255,255,.03);}
     <div><h2>Production Control</h2><div class="meta">Batch management & progress tracking (QCQA workflow)</div></div>
     <div class="btn-row" style="margin:0">
       <button class="btn btn-success btn-sm" onclick="refreshBatchesFromQCQA()">🔄 Refresh from QCQA</button>
-      <button class="btn btn-primary btn-sm" onclick="openModal('modal-newbatch')">+ New Batch</button>
+      <button class="btn btn-primary btn-sm" onclick="openEntryNewBatch()">+ New Batch</button>
       <button class="btn btn-ghost btn-sm" onclick="openModal('modal-nfg-grn')">+ NFG GRN</button>
       <button class="btn btn-ghost btn-sm" onclick="openModal('modal-l1-grn')">+ L1 GRN</button>
       <button class="btn btn-ghost btn-sm" onclick="openManageStagesModal()">⚙️ Manage Stages</button>
@@ -414,11 +461,6 @@ tr:hover td{background:rgba(255,255,255,.03);}
     </table></div>
   </div>
 
-  <div class="card">
-    <div class="card-title"><span>📋</span>Stage-wise Process Log</div>
-    <div id="stage-log"></div>
-  </div>
-
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
     <div class="card">
       <div class="card-title"><span>🪨</span>NFG GRN Register</div>
@@ -438,16 +480,69 @@ tr:hover td{background:rgba(255,255,255,.03);}
 </div>
 
 <!-- ══════════════════════════════════════════════
+     PRODUCTION PLANNING
+══════════════════════════════════════════════ -->
+<div class="page" id="page-plan">
+  <div class="page-hdr">
+    <div><h2>Production Planning</h2><div class="meta">Weekly/monthly plan · CB assignment · deviation tracking</div></div>
+    <div class="btn-row" style="margin:0">
+      <button class="btn btn-success btn-sm" onclick="refreshPlanFromSheet()">🔄 Refresh from Sheet</button>
+      <button class="btn btn-primary btn-sm" onclick="openNewPlanModal()">+ New Plan</button>
+    </div>
+  </div>
+  <div id="plan-refresh-status" style="font-size:.78rem;color:var(--muted);margin-bottom:12px"></div>
+
+  <div class="kpi-grid" id="plan-kpi-grid"></div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="planTab(this,'active')">📋 Active Plans</button>
+    <button class="tab" onclick="planTab(this,'approval')">✅ Pending Approval</button>
+    <button class="tab" onclick="planTab(this,'deviations')">⚠️ Deviations</button>
+    <button class="tab" onclick="planTab(this,'cbmaster')">🏭 CB Master</button>
+  </div>
+
+  <div id="plan-active" class="plan-tab">
+    <div id="plan-list-area"></div>
+  </div>
+
+  <div id="plan-approval" class="plan-tab" style="display:none">
+    <div class="card">
+      <div class="card-title"><span>✅</span>Plan Line Changes Awaiting Your Approval</div>
+      <div id="plan-approval-area"></div>
+    </div>
+  </div>
+
+  <div id="plan-deviations" class="plan-tab" style="display:none">
+    <div class="card">
+      <div class="card-title"><span>⚠️</span>Deviation Log</div>
+      <div class="tbl-wrap"><table id="deviation-tbl">
+        <thead><tr><th>Date</th><th>Plan</th><th>Line</th><th>Type</th><th>Original</th><th>New</th><th>Recorded By</th><th>Status</th></tr></thead>
+        <tbody id="deviation-tbody"></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <div id="plan-cbmaster" class="plan-tab" style="display:none">
+    <div class="card">
+      <div class="card-title"><span>🏭</span>CB Master — Active/Inactive Toggle</div>
+      <div id="cbmaster-area"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
      INVENTORY
 ══════════════════════════════════════════════ -->
 <div class="page" id="page-inventory">
   <div class="page-hdr">
     <div><h2>Inventory Control</h2><div class="meta">Stock across all bays · batch-tracked · weighted average valuation</div></div>
     <div class="btn-row" style="margin:0">
+      <button class="btn btn-success btn-sm" onclick="refreshInventoryFromSheet()">🔄 Refresh from Sheet</button>
       <button class="btn btn-ghost btn-sm" onclick="exportTblCSV('inv-tbl','Inventory')">CSV</button>
       <button class="btn btn-ghost btn-sm" onclick="exportTblPDF('inv-tbl','Inventory Report')">PDF</button>
     </div>
   </div>
+  <div id="inv-refresh-status" style="font-size:.78rem;color:var(--muted);margin-bottom:12px"></div>
 
   <div class="kpi-grid" id="inv-kpi-grid"></div>
 
@@ -902,11 +997,13 @@ tr:hover td{background:rgba(255,255,255,.03);}
   <div class="page-hdr">
     <div><h2>Financial Management</h2></div>
     <div class="btn-row" style="margin:0">
+      <button class="btn btn-success btn-sm" onclick="refreshFinanceFromSheet()">🔄 Refresh from Sheet</button>
       <button class="btn btn-primary btn-sm" onclick="openModal('modal-newvoucher')">+ Voucher</button>
       <button class="btn btn-ghost btn-sm" onclick="exportTblCSV('fin-tbl','Finance')">CSV</button>
       <button class="btn btn-ghost btn-sm" onclick="exportTblPDF('fin-tbl','Financial Ledger')">PDF</button>
     </div>
   </div>
+  <div id="fin-refresh-status" style="font-size:.78rem;color:var(--muted);margin-bottom:12px"></div>
 
   <div class="tabs">
     <button class="tab active" onclick="finTab(this,'ledger')">Ledger</button>
@@ -1091,11 +1188,13 @@ tr:hover td{background:rgba(255,255,255,.03);}
   <div class="page-hdr">
     <div><h2>Purchase Management</h2><div class="meta">Indent → Approval → PO → GRN → Payment</div></div>
     <div class="btn-row" style="margin:0">
+      <button class="btn btn-success btn-sm" onclick="refreshPOFromSheet()">🔄 Refresh from Sheet</button>
       <button class="btn btn-primary btn-sm" onclick="openNewPOModal()">+ New PO</button>
       <button class="btn btn-ghost btn-sm" onclick="exportTblCSV('po-tbl','Purchase Orders')">CSV</button>
       <button class="btn btn-ghost btn-sm" onclick="exportTblPDF('po-tbl','Purchase Orders')">PDF</button>
     </div>
   </div>
+  <div id="po-refresh-status" style="font-size:.78rem;color:var(--muted);margin-bottom:12px"></div>
 
   <div class="kpi-grid" id="po-kpi-grid"></div>
 
@@ -1140,11 +1239,13 @@ tr:hover td{background:rgba(255,255,255,.03);}
   <div class="page-hdr">
     <div><h2>Sales & Orders</h2></div>
     <div class="btn-row" style="margin:0">
+      <button class="btn btn-success btn-sm" onclick="refreshSalesFromSheet()">🔄 Refresh from Sheet</button>
       <button class="btn btn-primary btn-sm" onclick="openModal('modal-newso')">+ New Order</button>
       <button class="btn btn-ghost btn-sm" onclick="exportTblCSV('so-tbl','Sales Orders')">CSV</button>
       <button class="btn btn-ghost btn-sm" onclick="exportTblPDF('so-tbl','Sales Order Report')">PDF</button>
     </div>
   </div>
+  <div id="sales-refresh-status" style="font-size:.78rem;color:var(--muted);margin-bottom:12px"></div>
   <div class="kpi-grid">
     <div class="kpi green"><div class="label">Orders This Month</div><div class="value">24</div></div>
     <div class="kpi accent"><div class="label">Revenue</div><div class="value">₹18.4L</div></div>
@@ -1358,6 +1459,286 @@ tr:hover td{background:rgba(255,255,255,.03);}
      MODALS
 ══════════════════════════════════════════════ -->
 
+<!-- ══════════════ QCQA-STYLE FULL-SCREEN: NEW BATCH ══════════════ -->
+<div class="entry-screen" id="entry-newbatch">
+  <div class="entry-header">
+    <button class="entry-back" onclick="closeEntryScreen('entry-newbatch')">‹</button>
+    <div><div class="entry-title">New Batch</div><div class="entry-sub">Basic data entry</div></div>
+  </div>
+  <div class="entry-body">
+
+    <div class="form-section">
+      <div class="form-section-title">Date</div>
+      <div class="form-row2"><input type="date" class="form-input2" id="eb-date"></div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">Batch Number</div>
+      <div class="form-row2"><input type="text" class="form-input2" id="eb-num" placeholder="Enter batch number"></div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">Product Code</div>
+      <div class="form-row2">
+        <select class="form-input2" id="eb-product" onchange="ebProductChange()">
+          <option value="">Select product code</option>
+          <option>85200150</option><option>9080230</option><option>8550280</option>
+          <option>9650280</option><option>9980200</option><option>9950280</option>
+          <option>9980180</option><option>9680200</option><option>9650300</option>
+          <option>9050300</option><option>9450300</option><option>9450120</option><option>9080180</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">NFG — Natural Flake Graphite</div>
+      <div class="form-row2">
+        <div class="form-label2">NFG Code (auto from product)</div>
+        <input type="text" class="form-input2" id="eb-nfg-code" readonly placeholder="Select product code above">
+      </div>
+      <div class="form-row2">
+        <div class="form-label2">Bag 1 — Select GRN</div>
+        <select class="form-input2" id="eb-grn-1"><option value="">Select GRN</option></select>
+      </div>
+      <div class="form-row2">
+        <div class="form-label2">Bag 2 — Select GRN (optional)</div>
+        <select class="form-input2" id="eb-grn-2"><option value="">Select GRN</option></select>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">L1 — Select GRN</div>
+      <div class="form-row2">
+        <select class="form-input2" id="eb-l1-grn" onchange="ebL1Change()"><option value="">Select L1 GRN (latest first)</option></select>
+      </div>
+      <div class="form-row2">
+        <div class="two-col2">
+          <div>
+            <div class="form-label2">Concentration</div>
+            <div class="input-suffix-wrap"><input type="text" class="form-input2" id="eb-l1-conc" readonly placeholder="Auto"><span class="input-suffix">%</span></div>
+          </div>
+          <div>
+            <div class="form-label2">Density</div>
+            <input type="text" class="form-input2" id="eb-l1-density" readonly placeholder="Auto">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">Planned Qty & Operator</div>
+      <div class="form-row2">
+        <div class="two-col2">
+          <div>
+            <div class="form-label2">Planned Qty</div>
+            <div class="input-suffix-wrap"><input type="number" class="form-input2" id="eb-qty" placeholder="0.00" step="0.01"><span class="input-suffix">Kg</span></div>
+          </div>
+          <div>
+            <div class="form-label2">Operator</div>
+            <input type="text" class="form-input2" id="eb-op" placeholder="Name">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">Observations</div>
+      <div class="form-row2"><textarea class="form-textarea2" id="eb-obs" placeholder="Enter any batch-specific observations…"></textarea></div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">Select CB</div>
+      <div class="cb-scroll-row" id="eb-cb-row"></div>
+    </div>
+
+  </div>
+  <div class="entry-footer">
+    <button class="btn btn-ghost" onclick="closeEntryScreen('entry-newbatch')">Cancel</button>
+    <button class="btn btn-primary" onclick="submitEntryBatch()">Create Batch ✓</button>
+  </div>
+</div>
+
+<!-- ══════════════ QCQA-STYLE FULL-SCREEN: CB STAGE ══════════════ -->
+<div class="entry-screen" id="entry-cb">
+  <div class="entry-header">
+    <button class="entry-back" onclick="backToBatchHub('entry-cb')">‹</button>
+    <div><div class="entry-title">CB Stage</div><div class="entry-sub" id="ecb-batch-label">Quantities, temps & times</div></div>
+  </div>
+  <div class="entry-body">
+
+    <div class="form-section">
+      <div class="form-section-title">Quantities</div>
+      <div class="form-row2">
+        <div class="two-col2">
+          <div>
+            <div class="form-label2">L1 Quantity</div>
+            <div class="input-suffix-wrap"><input type="number" class="form-input2" id="ecb-l1-qty" placeholder="0.00" step="0.01"><span class="input-suffix">Kg</span></div>
+          </div>
+          <div>
+            <div class="form-label2">L3 Quantity</div>
+            <div class="input-suffix-wrap"><input type="number" class="form-input2" id="ecb-l3-qty" placeholder="0.00" step="0.01"><span class="input-suffix">Kg</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">Time & Temperature</div>
+      <div class="form-row2">
+        <div class="two-col2">
+          <div>
+            <div class="form-label2">Start Time</div>
+            <input type="time" class="form-input2" id="ecb-start-time">
+          </div>
+          <div>
+            <div class="form-label2">Start Temp</div>
+            <div class="input-suffix-wrap"><input type="number" class="form-input2" id="ecb-start-temp" placeholder="000"><span class="input-suffix">°C</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="form-row2">
+        <div class="two-col2">
+          <div>
+            <div class="form-label2">L3 Add Time</div>
+            <input type="time" class="form-input2" id="ecb-l3-time">
+          </div>
+          <div>
+            <div class="form-label2">L3 Add Temp</div>
+            <div class="input-suffix-wrap"><input type="number" class="form-input2" id="ecb-l3-temp" placeholder="000"><span class="input-suffix">°C</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="form-row2">
+        <div class="two-col2">
+          <div>
+            <div class="form-label2">End Time</div>
+            <input type="time" class="form-input2" id="ecb-end-time">
+          </div>
+          <div>
+            <div class="form-label2">End Temp</div>
+            <div class="input-suffix-wrap"><input type="number" class="form-input2" id="ecb-end-temp" placeholder="000"><span class="input-suffix">°C</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="form-row2">
+        <div class="two-col2">
+          <div>
+            <div class="form-label2">Unload Time</div>
+            <input type="time" class="form-input2" id="ecb-unload-time">
+          </div>
+          <div>
+            <div class="form-label2">Unload Temp</div>
+            <div class="input-suffix-wrap"><input type="number" class="form-input2" id="ecb-unload-temp" placeholder="000"><span class="input-suffix">°C</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">Expansion (CC) — links to QCQA</div>
+      <div class="form-row2">
+        <div class="input-suffix-wrap"><input type="number" class="form-input2" id="ecb-expansion" placeholder="0" step="1"><span class="input-suffix">CC</span></div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">Observations</div>
+      <div class="form-row2"><textarea class="form-textarea2" id="ecb-obs" placeholder="Any observations during CB…"></textarea></div>
+    </div>
+
+  </div>
+  <div class="entry-footer">
+    <button class="btn btn-ghost" onclick="backToBatchHub('entry-cb')">Cancel</button>
+    <button class="btn btn-primary" onclick="submitEntryCB()">Submit ✓</button>
+  </div>
+</div>
+
+<!-- ══════════════ BATCH DETAIL HUB (QCQA "Batch Process" pattern) ══════════════ -->
+<div class="entry-screen" id="entry-batchdetail">
+  <div class="entry-header">
+    <button class="entry-back" onclick="closeEntryScreen('entry-batchdetail')">‹</button>
+    <div><div class="entry-title" id="bd-title">Batch</div><div class="entry-sub">Tap a stage to view or enter data</div></div>
+  </div>
+  <div class="info-bar2" id="bd-info-bar"></div>
+  <div class="process-grid2" id="bd-process-grid"></div>
+</div>
+
+<!-- ══════════════ PRE-MIX (QCQA blender A/B × 3 rounds) ══════════════ -->
+<div class="entry-screen" id="entry-premix">
+  <div class="entry-header">
+    <button class="entry-back" onclick="backToBatchHub('entry-premix')">‹</button>
+    <div><div class="entry-title">Pre-Mix</div><div class="entry-sub" id="epm-batch-label">Ribbon Blender data</div></div>
+  </div>
+  <div class="entry-body">
+    <div class="form-section">
+      <div class="form-section-title">Totals</div>
+      <div class="form-row2">
+        <div class="two-col2">
+          <div>
+            <div class="form-label2">Total P1</div>
+            <div class="input-suffix-wrap"><input type="number" class="form-input2" id="epm-total-p1" placeholder="0.00" step="0.01"><span class="input-suffix">Kg</span></div>
+          </div>
+          <div>
+            <div class="form-label2">Total L2</div>
+            <div class="input-suffix-wrap"><input type="number" class="form-input2" id="epm-total-l2" placeholder="0.00" step="0.01"><span class="input-suffix">Kg</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="form-row2">
+        <div class="form-label2">NFG Total Weight</div>
+        <div class="input-suffix-wrap"><input type="number" class="form-input2" id="epm-nfg-wt" placeholder="0.00" step="0.01"><span class="input-suffix">Kg</span></div>
+      </div>
+    </div>
+    <div class="form-section">
+      <div class="form-section-title">Blender Rounds</div>
+      <div id="epm-blenders"></div>
+    </div>
+  </div>
+  <div class="entry-footer">
+    <button class="btn btn-ghost" onclick="submitEntryPremix(true)">Save Draft</button>
+    <button class="btn btn-primary" onclick="submitEntryPremix(false)">Submit ✓</button>
+  </div>
+</div>
+
+<!-- ══════════════ DECANT ══════════════ -->
+<div class="entry-screen" id="entry-decant">
+  <div class="entry-header">
+    <button class="entry-back" onclick="backToBatchHub('entry-decant')">‹</button>
+    <div><div class="entry-title">Decant</div><div class="entry-sub" id="edc-batch-label">P2 quantity</div></div>
+  </div>
+  <div class="entry-body">
+    <div class="form-section">
+      <div class="form-section-title">Total P2 Quantity</div>
+      <div class="form-row2">
+        <div class="input-suffix-wrap"><input type="number" class="form-input2" id="edc-p2" placeholder="0.00" step="0.01"><span class="input-suffix">Kg</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="entry-footer">
+    <button class="btn btn-ghost" onclick="submitEntryDecant(true)">Save Draft</button>
+    <button class="btn btn-primary" onclick="submitEntryDecant(false)">Submit ✓</button>
+  </div>
+</div>
+
+<!-- ══════════════ GENERIC STAGE (Tank Wash / RDS / Centrifuge / Drying / Packaging / custom) ══════════════ -->
+<div class="entry-screen" id="entry-genstage">
+  <div class="entry-header">
+    <button class="entry-back" onclick="backToBatchHub('entry-genstage')">‹</button>
+    <div><div class="entry-title" id="egs-title">Stage</div><div class="entry-sub" id="egs-batch-label"></div></div>
+  </div>
+  <div class="entry-body">
+    <div class="form-section">
+      <div class="form-section-title">Observations</div>
+      <div class="form-row2"><textarea class="form-textarea2" id="egs-obs" placeholder="Any observations during this stage…"></textarea></div>
+      <p style="font-size:.72rem;color:var(--muted);padding:0 2px">Detailed data fields for this stage can be added — tell me which readings you record here and I'll build them in.</p>
+    </div>
+  </div>
+  <div class="entry-footer">
+    <button class="btn btn-ghost" onclick="backToBatchHub('entry-genstage')">Cancel</button>
+    <button class="btn btn-primary" onclick="submitEntryGenStage()">Mark Complete ✓</button>
+  </div>
+</div>
+
 <!-- New Batch -->
 <div class="modal-bg" id="modal-newbatch">
   <div class="modal">
@@ -1548,6 +1929,51 @@ tr:hover td{background:rgba(255,255,255,.03);}
     <div class="btn-row">
       <button class="btn btn-ghost btn-sm" onclick="refreshStagesFromPlanSheet()">🔄 Refresh from Sheet</button>
       <button class="btn btn-ghost" onclick="closeModal('modal-managestages')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Plan Header -->
+<div class="modal-bg" id="modal-newplan">
+  <div class="modal">
+    <h3>📅 New Production Plan</h3>
+    <div class="form-grid">
+      <div class="field"><label>Plan Type</label><select id="plan-type"><option>Weekly</option><option>Monthly</option></select></div>
+      <div class="field"><label>Period Start</label><input id="plan-start" type="date"></div>
+      <div class="field"><label>Period End</label><input id="plan-end" type="date"></div>
+      <div class="field"><label>Created By</label><input id="plan-createdby" placeholder="Your name"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="savePlanHeader()">Create Plan</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-newplan')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- New/Edit Plan Line -->
+<div class="modal-bg" id="modal-planline">
+  <div class="modal">
+    <h3 id="planline-modal-title">+ Add Plan Line</h3>
+    <input type="hidden" id="planline-edit-key" value="">
+    <input type="hidden" id="planline-plan-id" value="">
+    <div class="form-grid">
+      <div class="field"><label>Grade / Product Code</label>
+        <select id="planline-grade">
+          <option value="">Select product code</option>
+          <option>85200150</option><option>9080230</option><option>8550280</option>
+          <option>9650280</option><option>9980200</option><option>9950280</option>
+          <option>9980180</option><option>9680200</option><option>9650300</option>
+          <option>9050300</option><option>9450300</option><option>9450120</option><option>9080180</option>
+        </select>
+      </div>
+      <div class="field"><label>Planned Qty (Kg)</label><input id="planline-qty" type="number" step="0.01"></div>
+      <div class="field"><label>Planned Date</label><input id="planline-date" type="date"></div>
+      <div class="field"><label>CB Assigned</label><select id="planline-cb"></select></div>
+      <div class="field"><label>Batch Number (optional — assign now or later)</label><input id="planline-batch" placeholder="e.g. BTH-2607-001"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="savePlanLine()">Save Line</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-planline')">Cancel</button>
     </div>
   </div>
 </div>
@@ -1964,6 +2390,10 @@ const DB = {
   tools:     JSON.parse(localStorage.getItem('erp_tools')     || '[]'),
   stockCounts:JSON.parse(localStorage.getItem('erp_stockCounts')|| '[]'),
   indents:   JSON.parse(localStorage.getItem('erp_indents')   || '[]'),
+  planHeaders: JSON.parse(localStorage.getItem('erp_planHeaders') || '[]'),
+  planLines: JSON.parse(localStorage.getItem('erp_planLines') || '[]'),
+  deviations: JSON.parse(localStorage.getItem('erp_deviations') || '[]'),
+  cbMaster:  JSON.parse(localStorage.getItem('erp_cbMaster')  || '[]'),
 };
 function save(key){ localStorage.setItem('erp_'+key, JSON.stringify(DB[key])); }
 let camStream = null;
@@ -2100,6 +2530,7 @@ function showPage(id){
   if(id==='attendance'){ populateEmpSelects(); setDefaults(); }
   if(id==='dashboard') renderDashboard();
   if(id==='production') renderProduction();
+  if(id==='plan') renderPlan();
   if(id==='inventory') renderInventory();
   if(id==='dispatch') renderDispatch();
   if(id==='quality') renderQC();
@@ -2283,6 +2714,323 @@ function persistStages(){
     });
   }
 }
+
+// ═══════════════════════════════════════════════════════════
+// PRODUCTION PLANNING MODULE
+// ═══════════════════════════════════════════════════════════
+let currentPlanTab = 'active';
+
+function planTab(el, tab){
+  document.querySelectorAll('#page-plan .tab').forEach(t=>t.classList.remove('active')); el.classList.add('active');
+  document.querySelectorAll('.plan-tab').forEach(t=>t.style.display='none');
+  document.getElementById('plan-'+tab).style.display='';
+  currentPlanTab = tab;
+  if(tab==='approval') renderPlanApprovals();
+  if(tab==='deviations') renderDeviations();
+  if(tab==='cbmaster') renderCBMaster();
+}
+
+function renderPlan(){
+  populatePlanCBSelect();
+  const kpiGrid = document.getElementById('plan-kpi-grid');
+  const activePlans = (DB.planHeaders||[]).filter(p=>p.status!=='Closed');
+  const totalLines = (DB.planLines||[]).length;
+  const pendingApprovals = (DB.planLines||[]).filter(l=>l.approvalStatus==='Pending').length;
+  const deviationCt = (DB.deviations||[]).length;
+  kpiGrid.innerHTML = `
+    <div class="kpi accent"><div class="label">Active Plans</div><div class="value">${activePlans.length}</div></div>
+    <div class="kpi green"><div class="label">Total Plan Lines</div><div class="value">${totalLines}</div></div>
+    <div class="kpi warn"><div class="label">Pending Approval</div><div class="value">${pendingApprovals}</div></div>
+    <div class="kpi danger"><div class="label">Deviations Logged</div><div class="value">${deviationCt}</div></div>`;
+
+  const area = document.getElementById('plan-list-area');
+  if(!DB.planHeaders || DB.planHeaders.length===0){
+    area.innerHTML = '<div class="card"><p style="text-align:center;color:var(--muted);padding:20px">No plans yet — click + New Plan to start, or 🔄 Refresh from Sheet if plans already exist there.</p></div>';
+    return;
+  }
+  area.innerHTML = DB.planHeaders.map(plan=>{
+    const lines = (DB.planLines||[]).filter(l=>l.planId===plan.id);
+    const lineRows = lines.map(l=>{
+      const devBadge = l.hasDeviation ? '<span class="badge badge-warn">⚠️ Deviated</span>' : '';
+      const apprBadge = l.approvalStatus==='Pending' ? '<span class="badge badge-warn">Pending Approval</span>' :
+                         l.approvalStatus==='Approved' ? '<span class="badge badge-green">Approved</span>' : '';
+      return `<tr>
+        <td>${l.grade}</td><td>${l.qty} Kg</td><td>${fmtDate(l.date)}</td>
+        <td><span class="badge badge-muted">${l.cb}</span></td>
+        <td>${l.batchNumber||'—'}</td>
+        <td>${devBadge} ${apprBadge}</td>
+        <td>
+          <button class="btn btn-ghost btn-sm" onclick="openEditPlanLine('${plan.id}','${l.lineNum}')">✏️</button>
+          ${l.batchNumber ? '' : `<button class="btn btn-ghost btn-sm" onclick="activateBatchFromPlanLine('${plan.id}','${l.lineNum}')">▶ Start Batch</button>`}
+        </td>
+      </tr>`;
+    }).join('');
+    return `<div class="card" style="margin-bottom:12px">
+      <div class="card-title"><span>📅</span>${plan.type} Plan — ${fmtDate(plan.start)} to ${fmtDate(plan.end)} · <span class="badge badge-muted">${plan.status}</span></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Grade</th><th>Qty</th><th>Date</th><th>CB</th><th>Batch#</th><th>Status</th><th></th></tr></thead>
+        <tbody>${lineRows || '<tr><td colspan="7" style="text-align:center;color:var(--muted)">No lines yet</td></tr>'}</tbody>
+      </table></div>
+      <div class="btn-row"><button class="btn btn-ghost btn-sm" onclick="openNewPlanLine('${plan.id}')">+ Add Batch Line</button></div>
+    </div>`;
+  }).join('');
+}
+
+function populatePlanCBSelect(){
+  const sel = document.getElementById('planline-cb');
+  if(!sel) return;
+  const cbs = (DB.cbMaster && DB.cbMaster.length) ? DB.cbMaster : [
+    {code:'CB1',name:'Reactor CB1',active:'N'}, {code:'CB2',name:'Reactor CB2',active:'Y'},
+    {code:'CB3',name:'Reactor CB3',active:'Y'}, {code:'CB4',name:'Reactor CB4',active:'N'},
+  ];
+  sel.innerHTML = cbs.filter(c=>c.active==='Y').map(c=>`<option value="${c.code}">${c.code} — ${c.name}</option>`).join('') ||
+    '<option value="">No active CBs — check CB Master tab</option>';
+}
+
+function openNewPlanModal(){
+  document.getElementById('plan-start').value = today();
+  document.getElementById('plan-end').value = nextDate(7);
+  document.getElementById('plan-createdby').value = '';
+  openModal('modal-newplan');
+}
+
+function savePlanHeader(){
+  const plan = {
+    id: nextNum('PLAN-'),
+    type: document.getElementById('plan-type').value,
+    start: document.getElementById('plan-start').value,
+    end: document.getElementById('plan-end').value,
+    createdBy: document.getElementById('plan-createdby').value,
+    status: 'Active',
+  };
+  if(!DB.planHeaders) DB.planHeaders=[];
+  DB.planHeaders.unshift(plan); save('planHeaders');
+  queueWrite(BACKEND.PLAN_GAS_URL, {sheet:'PlanHeader', action:'upsert', keyField:'PlanID', data:{
+    PlanID:plan.id, PlanType:plan.type, PeriodStart:plan.start, PeriodEnd:plan.end,
+    CreatedBy:plan.createdBy, Status:plan.status,
+  }});
+  closeModal('modal-newplan'); toast('Plan created ✓'); renderPlan();
+}
+
+function openNewPlanLine(planId){
+  document.getElementById('planline-modal-title').textContent = '+ Add Batch Line';
+  document.getElementById('planline-edit-key').value = '';
+  document.getElementById('planline-plan-id').value = planId;
+  document.getElementById('planline-grade').value = '';
+  document.getElementById('planline-qty').value = '';
+  document.getElementById('planline-date').value = today();
+  document.getElementById('planline-batch').value = '';
+  populatePlanCBSelect();
+  openModal('modal-planline');
+}
+
+function openEditPlanLine(planId, lineNum){
+  const line = (DB.planLines||[]).find(l=>l.planId===planId && String(l.lineNum)===String(lineNum));
+  if(!line) return;
+  document.getElementById('planline-modal-title').textContent = `✏️ Edit Line ${lineNum}`;
+  document.getElementById('planline-edit-key').value = lineNum;
+  document.getElementById('planline-plan-id').value = planId;
+  document.getElementById('planline-grade').value = line.grade;
+  document.getElementById('planline-qty').value = line.qty;
+  document.getElementById('planline-date').value = line.date;
+  document.getElementById('planline-batch').value = line.batchNumber||'';
+  populatePlanCBSelect();
+  document.getElementById('planline-cb').value = line.cb;
+  openModal('modal-planline');
+}
+
+function recordDeviation(planId, lineNum, type, originalValue, newValue){
+  const dev = {
+    id: nextNum('DEV-'), planId, lineNum, type,
+    originalValue: String(originalValue), newValue: String(newValue),
+    date: today(), recordedBy: 'ERP User', approvalStatus: 'Pending',
+  };
+  if(!DB.deviations) DB.deviations=[];
+  DB.deviations.unshift(dev); save('deviations');
+  queueWrite(BACKEND.PLAN_GAS_URL, {sheet:'Deviations', action:'append', data:{
+    DeviationID:dev.id, PlanID:dev.planId, LineNum:dev.lineNum, DeviationType:dev.type,
+    OriginalValue:dev.originalValue, NewValue:dev.newValue, Date:dev.date,
+    RecordedBy:dev.recordedBy, ApprovalStatus:dev.approvalStatus,
+  }});
+}
+
+function savePlanLine(){
+  const planId = document.getElementById('planline-plan-id').value;
+  const editKey = document.getElementById('planline-edit-key').value;
+  const grade = document.getElementById('planline-grade').value;
+  const qty = parseFloat(document.getElementById('planline-qty').value)||0;
+  const date = document.getElementById('planline-date').value;
+  const cb = document.getElementById('planline-cb').value;
+  const batchNumber = document.getElementById('planline-batch').value;
+  if(!grade){ toast('Select a grade/product code'); return; }
+  if(!DB.planLines) DB.planLines=[];
+
+  if(editKey){
+    const line = DB.planLines.find(l=>l.planId===planId && String(l.lineNum)===String(editKey));
+    if(!line){ toast('Line not found'); return; }
+    // Track deviations for any changed field — every edit requires approval
+    if(line.grade !== grade) recordDeviation(planId, editKey, 'Grade', line.grade, grade);
+    if(line.qty !== qty) recordDeviation(planId, editKey, 'Qty', line.qty, qty);
+    if(line.date !== date) recordDeviation(planId, editKey, 'Date', line.date, date);
+    if(line.cb !== cb) recordDeviation(planId, editKey, 'CB', line.cb, cb);
+    line.grade=grade; line.qty=qty; line.date=date; line.cb=cb; line.batchNumber=batchNumber;
+    line.hasDeviation = true; line.approvalStatus = 'Pending';
+    save('planLines');
+    queueWrite(BACKEND.PLAN_GAS_URL, {sheet:'PlanLines', action:'upsert', keyField:'LineNum', data:{
+      PlanID:planId, LineNum:editKey, GradeProductCode:grade, PlannedQty:qty, PlannedDate:date,
+      CBAssigned:cb, BatchNumber:batchNumber, Status:'Pending Approval',
+    }});
+    toast('Line updated — change recorded as deviation, pending your approval ✓');
+  } else {
+    const lineNum = ((DB.planLines||[]).filter(l=>l.planId===planId).length)+1;
+    const line = { planId, lineNum, grade, qty, date, cb, batchNumber, approvalStatus:'Approved', hasDeviation:false };
+    DB.planLines.push(line); save('planLines');
+    queueWrite(BACKEND.PLAN_GAS_URL, {sheet:'PlanLines', action:'append', data:{
+      PlanID:planId, LineNum:lineNum, GradeProductCode:grade, PlannedQty:qty, PlannedDate:date,
+      CBAssigned:cb, BatchNumber:batchNumber, Status:'Planned',
+    }});
+    toast('Plan line added ✓');
+  }
+  closeModal('modal-planline'); renderPlan();
+}
+
+function renderPlanApprovals(){
+  const pending = (DB.planLines||[]).filter(l=>l.approvalStatus==='Pending');
+  const area = document.getElementById('plan-approval-area');
+  if(pending.length===0){ area.innerHTML = '<p style="color:var(--muted);text-align:center;padding:20px">No changes pending approval</p>'; return; }
+  area.innerHTML = pending.map(l=>{
+    const devs = (DB.deviations||[]).filter(d=>d.planId===l.planId && String(d.lineNum)===String(l.lineNum) && d.approvalStatus==='Pending');
+    const devRows = devs.map(d=>`<div style="font-size:.78rem;color:var(--warn)">${d.type}: ${d.originalValue} → ${d.newValue}</div>`).join('');
+    return `<div class="card" style="margin-bottom:8px">
+      <div style="font-weight:700">${l.grade} — ${l.qty} Kg — ${fmtDate(l.date)} — ${l.cb}</div>
+      ${devRows}
+      <div class="btn-row">
+        <button class="btn btn-success btn-sm" onclick="approvePlanLine('${l.planId}','${l.lineNum}')">✓ Approve</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function approvePlanLine(planId, lineNum){
+  const line = (DB.planLines||[]).find(l=>l.planId===planId && String(l.lineNum)===String(lineNum));
+  if(!line) return;
+  line.approvalStatus = 'Approved';
+  save('planLines');
+  (DB.deviations||[]).forEach(d=>{
+    if(d.planId===planId && String(d.lineNum)===String(lineNum) && d.approvalStatus==='Pending') d.approvalStatus='Approved';
+  });
+  save('deviations');
+  queueWrite(BACKEND.PLAN_GAS_URL, {sheet:'PlanLines', action:'upsert', keyField:'LineNum', data:{
+    PlanID:planId, LineNum:lineNum, Status:'Approved',
+  }});
+  toast('Approved ✓'); renderPlanApprovals(); renderPlan();
+}
+
+function renderDeviations(){
+  document.getElementById('deviation-tbody').innerHTML = (DB.deviations||[]).map(d=>`<tr>
+    <td>${fmtDate(d.date)}</td><td>${d.planId}</td><td>${d.lineNum}</td><td>${d.type}</td>
+    <td>${d.originalValue}</td><td>${d.newValue}</td><td>${d.recordedBy}</td>
+    <td><span class="badge ${d.approvalStatus==='Approved'?'badge-green':'badge-warn'}">${d.approvalStatus}</span></td>
+  </tr>`).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--muted)">No deviations recorded</td></tr>';
+}
+
+function renderCBMaster(){
+  if(!DB.cbMaster || DB.cbMaster.length===0){
+    DB.cbMaster = [
+      {code:'CB1',name:'Reactor CB1',active:'N',maxPerDay:2},
+      {code:'CB2',name:'Reactor CB2',active:'Y',maxPerDay:2},
+      {code:'CB3',name:'Reactor CB3',active:'Y',maxPerDay:2},
+      {code:'CB4',name:'Reactor CB4',active:'N',maxPerDay:2},
+    ];
+    save('cbMaster');
+  }
+  document.getElementById('cbmaster-area').innerHTML = DB.cbMaster.map(cb=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:var(--surface);border-radius:8px;margin-bottom:6px">
+      <div><b>${cb.code}</b> — ${cb.name} <span style="color:var(--muted);font-size:.75rem">(max ${cb.maxPerDay}/day)</span></div>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+        <input type="checkbox" ${cb.active==='Y'?'checked':''} onchange="toggleCBActive('${cb.code}',this.checked)">
+        <span style="font-size:.8rem">${cb.active==='Y'?'Active':'Inactive'}</span>
+      </label>
+    </div>`).join('');
+}
+
+function toggleCBActive(code, checked){
+  const cb = DB.cbMaster.find(c=>c.code===code);
+  if(!cb) return;
+  cb.active = checked ? 'Y' : 'N';
+  save('cbMaster');
+  queueWrite(BACKEND.PLAN_GAS_URL, {sheet:'CBMaster', action:'upsert', keyField:'CBCode', data:{
+    CBCode:cb.code, CBName:cb.name, Active:cb.active, MaxBatchesPerDay:cb.maxPerDay,
+  }});
+  toast(`${code} ${checked?'activated':'deactivated'} ✓`);
+  renderCBMaster();
+}
+
+function activateBatchFromPlanLine(planId, lineNum){
+  const line = (DB.planLines||[]).find(l=>l.planId===planId && String(l.lineNum)===String(lineNum));
+  if(!line) return;
+  if(line.approvalStatus!=='Approved'){ toast('This line needs approval before starting a batch'); return; }
+  // Open the QCQA-style New Batch screen, pre-filled from the approved plan line
+  showPage('production');
+  openEntryNewBatch();
+  document.getElementById('eb-date').value = line.date || today();
+  document.getElementById('eb-product').value = line.grade;
+  ebProductChange();
+  document.getElementById('eb-qty').value = line.qty;
+  // Pre-select the planned CB pill if it's active
+  document.querySelectorAll('#eb-cb-row .cb-pill').forEach(p=>{
+    if(p.textContent.trim()===line.cb && !p.disabled){ p.click(); }
+  });
+  line.batchNumber = document.getElementById('eb-num').value;
+  save('planLines');
+}
+
+// Fetch existing plan data from the Production Plan Google Sheet
+async function refreshPlanFromSheet(){
+  const statusEl = document.getElementById('plan-refresh-status');
+  if(!BACKEND.PLAN_GAS_URL){ statusEl.textContent='⚠️ Production Plan backend URL not configured (Settings > Backend Connections)'; statusEl.style.color='var(--warn)'; return; }
+  statusEl.textContent = '⏳ Fetching from Production Plan sheet...';
+  statusEl.style.color = 'var(--muted)';
+  try{
+    const [headers, lines, devs, cbs] = await Promise.all([
+      genericSheetGet(BACKEND.PLAN_GAS_URL, 'PlanHeader'),
+      genericSheetGet(BACKEND.PLAN_GAS_URL, 'PlanLines'),
+      genericSheetGet(BACKEND.PLAN_GAS_URL, 'Deviations'),
+      genericSheetGet(BACKEND.PLAN_GAS_URL, 'CBMaster'),
+    ]);
+    DB.planHeaders = headers.map(h=>({id:h.PlanID, type:h.PlanType, start:h.PeriodStart, end:h.PeriodEnd, createdBy:h.CreatedBy, status:h.Status}));
+    DB.planLines = lines.map(l=>({planId:l.PlanID, lineNum:l.LineNum, grade:l.GradeProductCode, qty:parseFloat(l.PlannedQty)||0, date:l.PlannedDate, cb:l.CBAssigned, batchNumber:l.BatchNumber, approvalStatus: l.Status==='Approved'?'Approved':(l.Status==='Pending Approval'?'Pending':'Approved'), hasDeviation:false}));
+    DB.deviations = devs.map(d=>({id:d.DeviationID, planId:d.PlanID, lineNum:d.LineNum, type:d.DeviationType, originalValue:d.OriginalValue, newValue:d.NewValue, date:d.Date, recordedBy:d.RecordedBy, approvalStatus:d.ApprovalStatus}));
+    if(cbs.length) DB.cbMaster = cbs.map(c=>({code:c.CBCode, name:c.CBName, active:c.Active, maxPerDay:c.MaxBatchesPerDay}));
+    save('planHeaders'); save('planLines'); save('deviations'); save('cbMaster');
+    statusEl.textContent = `✅ Synced: ${headers.length} plan(s), ${lines.length} line(s), ${devs.length} deviation(s)`;
+    statusEl.style.color = 'var(--accent2)';
+    toast('Production Plan refreshed from sheet ✓');
+    renderPlan();
+  }catch(err){
+    statusEl.textContent = '⚠️ Could not reach Production Plan sheet: '+err.message;
+    statusEl.style.color = 'var(--warn)';
+  }
+}
+
+// Generic JSONP GET helper — used by any module's "Refresh from Sheet" button
+function genericSheetGet(baseUrl, sheetName){
+  return new Promise((resolve,reject)=>{
+    const cbName = 'gcb_'+Date.now()+'_'+Math.floor(Math.random()*10000);
+    const timeout = setTimeout(()=>{ cleanup(); reject(new Error('Timeout')); }, 12000);
+    function cleanup(){ clearTimeout(timeout); delete window[cbName]; script.remove(); }
+    window[cbName] = (json)=>{
+      cleanup();
+      if(json && json.status==='success') resolve(json.data||[]);
+      else reject(new Error((json&&json.message)||'Fetch failed'));
+    };
+    const script = document.createElement('script');
+    script.onerror = ()=>{ cleanup(); reject(new Error('Network error')); };
+    script.src = baseUrl+'?action=getAll&sheet='+encodeURIComponent(sheetName)+'&callback='+cbName;
+    document.head.appendChild(script);
+  });
+}
+
 let selectedCB = 'CB1';
 let activeBatchForStage = null;
 
@@ -2397,19 +3145,9 @@ function renderProduction(){
       <td><div class="progress-bar"><div class="progress-fill ${bc}" style="width:${pct}%"></div></div><small>${pct}%</small></td>
       <td>${b.operator||'—'}</td>
       <td><span class="badge ${b.status==='Near Complete'?'badge-green':b.status==='In Process'?'badge-blue':'badge-muted'}">${b.status}</span></td>
-      <td><button class="btn btn-ghost btn-sm" onclick="openStageEntry('${b.num}')">${b.source==='QCQA Sheet'?'Open Batch':'Enter Stage Data'}</button></td>
+      <td><button class="btn btn-primary btn-sm" onclick="openBatchDetail('${b.num}')">Open Batch</button></td>
     </tr>`;
   }).join('') || '<tr><td colspan="11" style="text-align:center;color:var(--muted)">No batches. Create one, or 🔄 Refresh from QCQA</td></tr>';
-
-  // Stage log
-  document.getElementById('stage-log').innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap;">` +
-    STAGE_FLOW.map((s,i)=>`<div style="
-      background:${i<5?'rgba(0,194,255,.15)':'var(--surface)'};
-      border:1px solid ${i<5?'var(--accent)':'var(--border)'};
-      border-radius:6px;padding:8px 14px;font-size:.8rem;
-      color:${i<5?'var(--accent)':'var(--muted)'};">
-      ${i<5?'✅':'⬜'} ${s}
-    </div>`).join('') + `</div>`;
 
   // GRN registers
   document.getElementById('nfg-tbody').innerHTML = DB.nfgGrns.map(g=>`<tr>
@@ -2458,6 +3196,381 @@ function saveBatch(){
   renderProduction();
 }
 
+// ═══════════════════════════════════════════════════════════
+// QCQA-STYLE FULL-SCREEN ENTRY (New Batch + CB Stage)
+// Replicates the QCQA app's screen-based entry pattern:
+// form-sections, auto-fill, cb-pills, fixed footer actions.
+// ═══════════════════════════════════════════════════════════
+let ebSelectedCB = '';
+
+function openEntryScreen(id){
+  document.getElementById(id).classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeEntryScreen(id){
+  document.getElementById(id).classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function openEntryNewBatch(){
+  // Defaults
+  document.getElementById('eb-date').value = today();
+  document.getElementById('eb-num').value = nextNum('BTH-2607-');
+  document.getElementById('eb-product').value = '';
+  document.getElementById('eb-nfg-code').value = '';
+  document.getElementById('eb-qty').value = '';
+  document.getElementById('eb-op').value = '';
+  document.getElementById('eb-obs').value = '';
+  document.getElementById('eb-l1-conc').value = '';
+  document.getElementById('eb-l1-density').value = '';
+  // NFG GRN dropdowns (both bags share same source list, like QCQA)
+  const grnOpts = '<option value="">Select GRN</option>' +
+    DB.nfgGrns.map(g=>`<option value="${g.grn}">${g.grn} (${g.weight}Kg)</option>`).join('');
+  document.getElementById('eb-grn-1').innerHTML = grnOpts;
+  document.getElementById('eb-grn-2').innerHTML = grnOpts;
+  // L1 GRN dropdown (latest first, like QCQA)
+  document.getElementById('eb-l1-grn').innerHTML = '<option value="">Select L1 GRN (latest first)</option>' +
+    [...DB.l1Grns].reverse().map(g=>`<option value="${g.grn}">${g.grn}</option>`).join('');
+  renderEbCbPills();
+  openEntryScreen('entry-newbatch');
+}
+
+function ebProductChange(){
+  const code = document.getElementById('eb-product').value;
+  document.getElementById('eb-nfg-code').value = PRODUCT_TO_NFG[code] || '';
+}
+
+function ebL1Change(){
+  const g = DB.l1Grns.find(x=>x.grn===document.getElementById('eb-l1-grn').value);
+  document.getElementById('eb-l1-conc').value = g ? g.conc : '';
+  document.getElementById('eb-l1-density').value = g ? g.density : '';
+}
+
+function renderEbCbPills(){
+  const row = document.getElementById('eb-cb-row');
+  const cbs = (DB.cbMaster && DB.cbMaster.length) ? DB.cbMaster : [
+    {code:'CB1',active:'N'},{code:'CB2',active:'Y'},{code:'CB3',active:'Y'},{code:'CB4',active:'N'},
+  ];
+  ebSelectedCB = '';
+  row.innerHTML = cbs.map(cb=>{
+    const disabled = cb.active!=='Y';
+    return `<button class="cb-pill${disabled?' disabled':''}" ${disabled?'disabled':''}
+      onclick="ebPickCB(this,'${cb.code}')">${cb.code}${disabled?' (off)':''}</button>`;
+  }).join('');
+}
+
+function ebPickCB(el, code){
+  document.querySelectorAll('#eb-cb-row .cb-pill').forEach(p=>p.classList.remove('selected'));
+  el.classList.add('selected');
+  ebSelectedCB = code;
+}
+
+function submitEntryBatch(){
+  const num = document.getElementById('eb-num').value.trim();
+  const product = document.getElementById('eb-product').value;
+  const date = document.getElementById('eb-date').value;
+  if(!num){ toast('Enter batch number'); return; }
+  if(!product){ toast('Select product code'); return; }
+  if(!date){ toast('Select date'); return; }
+  if(!ebSelectedCB){ toast('Select a CB'); return; }
+  if(DB.batches.some(b=>b.num===num)){ toast('Batch number already exists'); return; }
+
+  const b = {
+    num, product,
+    nfgCode: document.getElementById('eb-nfg-code').value,
+    grade: product, qty: parseFloat(document.getElementById('eb-qty').value)||0,
+    start: date,
+    nfgGrn: document.getElementById('eb-grn-1').value,
+    nfgGrn2: document.getElementById('eb-grn-2').value,
+    l1Grn: document.getElementById('eb-l1-grn').value,
+    cb: ebSelectedCB,
+    notes: document.getElementById('eb-obs').value,
+    operator: document.getElementById('eb-op').value,
+    stage:'Ore Receipt', progress:0, status:'Planned', source:'ERP',
+    premix:null, cbData:null, decant:null,
+  };
+  DB.batches.unshift(b); save('batches');
+
+  // Write to QCQA's real BATCHES sheet — exact QCQA field names
+  qcqaApi({sheet:'BATCHES', action:'append', data:{
+    batchNumber: b.num, date: b.start, product: b.product, nfgCode: b.nfgCode,
+    grn1: b.nfgGrn, bag1:'', weight1:'',
+    grn2: b.nfgGrn2||'', bag2:'', weight2:'',
+    l1GRN: b.l1Grn,
+    l1Conc: document.getElementById('eb-l1-conc').value,
+    l1Density: document.getElementById('eb-l1-density').value,
+    obs: b.notes, cb: b.cb,
+  }});
+
+  closeEntryScreen('entry-newbatch');
+  toast('Batch created ✓ — synced to QCQA sheet');
+  renderProduction();
+}
+
+function openEntryCB(num){
+  activeBatchForStage = num;
+  const b = DB.batches.find(x=>x.num===num);
+  if(!b) return;
+  document.getElementById('ecb-batch-label').textContent =
+    `${b.num} · ${b.product} · ${b.cb||'—'} · ${fmtDate(b.start)}`;
+  // Reset fields (or pre-fill from existing cbData if editing)
+  const d = b.cbData||{};
+  document.getElementById('ecb-l1-qty').value = d.l1Qty||'';
+  document.getElementById('ecb-l3-qty').value = d.l3Qty||'';
+  document.getElementById('ecb-start-time').value = d.startTime||'';
+  document.getElementById('ecb-start-temp').value = d.startTemp||'';
+  document.getElementById('ecb-l3-time').value = d.l3Time||'';
+  document.getElementById('ecb-l3-temp').value = d.l3Temp||'';
+  document.getElementById('ecb-end-time').value = d.endTime||'';
+  document.getElementById('ecb-end-temp').value = d.endTemp||'';
+  document.getElementById('ecb-unload-time').value = d.unloadTime||'';
+  document.getElementById('ecb-unload-temp').value = d.unloadTemp||'';
+  document.getElementById('ecb-expansion').value = d.expansion||'';
+  document.getElementById('ecb-obs').value = d.obs||'';
+  openEntryScreen('entry-cb');
+}
+
+function submitEntryCB(){
+  const data = {
+    l1Qty: parseFloat(document.getElementById('ecb-l1-qty').value)||0,
+    l3Qty: parseFloat(document.getElementById('ecb-l3-qty').value)||0,
+    startTime: document.getElementById('ecb-start-time').value,
+    startTemp: document.getElementById('ecb-start-temp').value,
+    l3Time: document.getElementById('ecb-l3-time').value,
+    l3Temp: document.getElementById('ecb-l3-temp').value,
+    endTime: document.getElementById('ecb-end-time').value,
+    endTemp: document.getElementById('ecb-end-temp').value,
+    unloadTime: document.getElementById('ecb-unload-time').value,
+    unloadTemp: document.getElementById('ecb-unload-temp').value,
+    expansion: document.getElementById('ecb-expansion').value,
+    obs: document.getElementById('ecb-obs').value,
+  };
+  // Exact QCQA BATCH_PROCESS field names — Expansion links back to QCQA
+  qcqaApi({sheet:'BATCH_PROCESS', action:'append', data:{
+    batchNumber: activeBatchForStage, stage:'CB',
+    l1Qty:data.l1Qty, l3Qty:data.l3Qty,
+    startTime:data.startTime, startTemp:data.startTemp,
+    endTime:data.endTime, endTemp:data.endTemp,
+    l3AddTime:data.l3Time, l3AddTemp:data.l3Temp,
+    unloadTime:data.unloadTime, unloadTemp:data.unloadTemp,
+    obs:data.obs, expansion:data.expansion, draft:'no',
+  }});
+  closeEntryScreen('entry-cb');
+  markStageComplete(activeBatchForStage, 'CB', {cbData:data});
+  toast('CB stage recorded ✓ — Expansion synced to QCQA');
+  openBatchDetail(activeBatchForStage);
+}
+
+// ═══════════════════════════════════════════════════════════
+// BATCH DETAIL HUB — replicates QCQA's "Batch Process" screen.
+// Tap a batch → info chips + stage grid → tap stage to view/enter.
+// ═══════════════════════════════════════════════════════════
+const STAGE_ICONS = {'Ore Receipt':'📦','Pre-Mix':'🥣','CB':'🔬','Decant':'🧴','Tank Wash':'🚿','RDS':'⚗️','Centrifuge':'🌀','Drying':'🌡️','Packaging':'📥'};
+let activeBatchDetail = null;
+
+function stageHasData(b, stage){
+  if(stage==='Pre-Mix') return !!b.premix;
+  if(stage==='CB') return !!b.cbData;
+  if(stage==='Decant') return !!b.decant;
+  return !!(b.stageData && b.stageData[stage]);
+}
+
+function openBatchDetail(num){
+  const b = DB.batches.find(x=>x.num===num);
+  if(!b) return;
+  activeBatchDetail = num;
+  document.getElementById('bd-title').textContent = b.num;
+  document.getElementById('bd-info-bar').innerHTML = `
+    <div class="info-chip2">Product: <b>${b.product||'—'}</b></div>
+    <div class="info-chip2">NFG: <b>${b.nfgCode||'—'}</b></div>
+    <div class="info-chip2">CB: <b>${b.cb||'—'}</b></div>
+    <div class="info-chip2">Date: <b>${fmtDate(b.start)}</b></div>
+    ${b.source==='QCQA Sheet'?'<div class="info-chip2" style="color:var(--accent)">QCQA linked</div>':''}`;
+  renderBatchDetailGrid(b);
+  openEntryScreen('entry-batchdetail');
+
+  // QCQA-synced batch: lazily pull Pre-Mix and Decant data from the QCQA sheet
+  if(b.source==='QCQA Sheet' && BACKEND.QCQA_GAS_URL){
+    qcqaApiGet('getPremix',{batchNumber:num}).then(r=>{
+      if(r.data && r.data.length){
+        const rows = r.data;
+        const rounds = {};
+        rows.forEach(row=>{
+          const bl = (row.blender||'').includes('B') && !(row.blender||'').includes('A') ? 'b' : 'a';
+          rounds[bl+'-'+row.round] = {p1:row.p1, l2:row.l2, dt:row.dateTime};
+        });
+        b.premix = {totalP1:rows[0].totalP1, totalL2:rows[0].totalL2, nfgTotalWt:rows[0].nfgTotalWt, rounds};
+        save('batches');
+        if(activeBatchDetail===num) renderBatchDetailGrid(b);
+      }
+    }).catch(()=>{});
+    qcqaApiGet('getDecant',{batchNumber:num}).then(r=>{
+      if(r.data && r.data.length){
+        b.decant = {p2: r.data[r.data.length-1].p2Qty};
+        save('batches');
+        if(activeBatchDetail===num) renderBatchDetailGrid(b);
+      }
+    }).catch(()=>{});
+  }
+}
+
+function renderBatchDetailGrid(b){
+  const curIdx = STAGE_FLOW.indexOf(b.stage);
+  document.getElementById('bd-process-grid').innerHTML = STAGE_FLOW.map((s,i)=>{
+    const done = stageHasData(b,s) || i < curIdx;
+    const current = i === curIdx && !done;
+    const cls = done?'done':current?'current':'';
+    const status = done?'✓ Completed — tap to view':current?'▶ Current — tap to enter':'Pending';
+    return `<div class="process-btn2 ${cls}" onclick="openBatchStage('${b.num}','${s.replace(/'/g,"\\'")}')">
+      <div class="pb-icon">${STAGE_ICONS[s]||'⚙️'}</div>
+      <div><div class="pb-label">${s}</div><div class="pb-status">${status}</div></div>
+    </div>`;
+  }).join('');
+}
+
+function openBatchStage(num, stage){
+  activeBatchForStage = num;
+  closeEntryScreen('entry-batchdetail'); // stage screens replace the hub; every exit path returns to it
+  if(stage==='Pre-Mix'){ openEntryPremix(num); }
+  else if(stage==='CB'){ openEntryCB(num); }
+  else if(stage==='Decant'){ openEntryDecant(num); }
+  else { openEntryGenStage(num, stage); }
+}
+
+function backToBatchHub(fromId){
+  closeEntryScreen(fromId);
+  if(activeBatchDetail) openBatchDetail(activeBatchDetail);
+}
+
+// Forward-only stage completion: editing an already-completed earlier stage
+// never moves the batch backwards or double-advances it.
+function markStageComplete(num, stageName, patch){
+  const b = DB.batches.find(x=>x.num===num);
+  if(!b) return;
+  if(patch) Object.assign(b, patch);
+  const i = STAGE_FLOW.indexOf(stageName);
+  const cur = STAGE_FLOW.indexOf(b.stage);
+  if(i >= cur){
+    if(i < STAGE_FLOW.length-1){ b.stage = STAGE_FLOW[i+1]; }
+    else { b.stage = stageName; }
+    b.progress = Math.round(Math.min((i+1)/STAGE_FLOW.length,1)*100);
+    b.status = b.progress>=100?'Complete':b.progress>=80?'Near Complete':'In Process';
+  }
+  save('batches'); renderProduction();
+}
+
+// ── PRE-MIX (QCQA: Blender A/B × 3 rounds, exact PREMIX sheet fields) ──
+function openEntryPremix(num){
+  const b = DB.batches.find(x=>x.num===num);
+  if(!b) return;
+  document.getElementById('epm-batch-label').textContent = `${b.num} · ${b.product||''}`;
+  const pm = b.premix||{};
+  document.getElementById('epm-total-p1').value = pm.totalP1||'';
+  document.getElementById('epm-total-l2').value = pm.totalL2||'';
+  document.getElementById('epm-nfg-wt').value = pm.nfgTotalWt||'';
+  const rounds = pm.rounds||{};
+  document.getElementById('epm-blenders').innerHTML = ['a','b'].map(bl=>`
+    <div class="blender-block">
+      <div class="blender-title">Ribbon Blender ${bl.toUpperCase()}</div>
+      ${[1,2,3].map(i=>{
+        const r = rounds[bl+'-'+i]||{};
+        return `<div class="round-row">
+          <div><div class="form-label2">R${i} — P1</div><input type="number" class="form-input2" id="epm-${bl}-p1-${i}" value="${r.p1||''}" placeholder="Kg" step="0.01"></div>
+          <div><div class="form-label2">R${i} — L2</div><input type="number" class="form-input2" id="epm-${bl}-l2-${i}" value="${r.l2||''}" placeholder="Kg" step="0.01"></div>
+          <div><div class="form-label2">Date/Time</div><input type="datetime-local" class="form-input2" id="epm-${bl}-dt-${i}" value="${r.dt||''}"></div>
+        </div>`;
+      }).join('')}
+    </div>`).join('');
+  openEntryScreen('entry-premix');
+}
+
+function submitEntryPremix(saveOnly){
+  const num = activeBatchForStage;
+  const b = DB.batches.find(x=>x.num===num);
+  if(!b) return;
+  const tp1 = document.getElementById('epm-total-p1').value;
+  const tl2 = document.getElementById('epm-total-l2').value;
+  if(!saveOnly && (!tp1 || !tl2)){ toast('Total P1 and Total L2 are required'); return; }
+  const nfgWt = document.getElementById('epm-nfg-wt').value;
+  const rounds = {};
+  const qcqaRows = [];
+  ['a','b'].forEach(bl=>{
+    for(let i=1;i<=3;i++){
+      const p1 = document.getElementById(`epm-${bl}-p1-${i}`).value;
+      const l2 = document.getElementById(`epm-${bl}-l2-${i}`).value;
+      const dt = document.getElementById(`epm-${bl}-dt-${i}`).value;
+      rounds[bl+'-'+i] = {p1, l2, dt};
+      qcqaRows.push({
+        batchNumber: num, blender: 'Blender '+bl.toUpperCase(), round: i,
+        nfgCode: b.nfgCode||'—', p1, l2, dateTime: dt,
+        totalP1: tp1, totalL2: tl2, nfgTotalWt: nfgWt,
+        draft: saveOnly?'yes':'no',
+      });
+    }
+  });
+  b.premix = {totalP1:tp1, totalL2:tl2, nfgTotalWt:nfgWt, rounds};
+  save('batches');
+  // Exact QCQA PREMIX sheet write — same appendBatch pattern as the QCQA app itself
+  qcqaApi({sheet:'PREMIX', action:'appendBatch', data:qcqaRows});
+  closeEntryScreen('entry-premix');
+  if(saveOnly){ toast('Pre-Mix saved as draft ✓'); }
+  else { markStageComplete(num, 'Pre-Mix'); toast('Pre-Mix submitted ✓ — synced to QCQA'); }
+  openBatchDetail(num);
+}
+
+// ── DECANT (QCQA: {batchNumber, p2Qty, draft}) ──
+function openEntryDecant(num){
+  const b = DB.batches.find(x=>x.num===num);
+  if(!b) return;
+  document.getElementById('edc-batch-label').textContent = `${b.num} · ${b.product||''}`;
+  document.getElementById('edc-p2').value = (b.decant&&b.decant.p2)||'';
+  openEntryScreen('entry-decant');
+}
+
+function submitEntryDecant(saveOnly){
+  const num = activeBatchForStage;
+  const b = DB.batches.find(x=>x.num===num);
+  if(!b) return;
+  const p2 = document.getElementById('edc-p2').value;
+  if(!saveOnly && !p2){ toast('Enter P2 quantity'); return; }
+  b.decant = {p2};
+  save('batches');
+  qcqaApi({sheet:'DECANT', action:'append', data:{batchNumber:num, p2Qty:p2, draft:saveOnly?'yes':'no'}});
+  closeEntryScreen('entry-decant');
+  if(saveOnly){ toast('Decant saved as draft ✓'); }
+  else { markStageComplete(num, 'Decant'); toast('Decant submitted ✓ — synced to QCQA'); }
+  openBatchDetail(num);
+}
+
+// ── GENERIC STAGE (Tank Wash / RDS / Centrifuge / Drying / Packaging / custom) ──
+let activeGenStage = '';
+function openEntryGenStage(num, stage){
+  const b = DB.batches.find(x=>x.num===num);
+  if(!b) return;
+  activeGenStage = stage;
+  document.getElementById('egs-title').textContent = stage;
+  document.getElementById('egs-batch-label').textContent = `${b.num} · ${b.product||''}`;
+  document.getElementById('egs-obs').value = (b.stageData && b.stageData[stage] && b.stageData[stage].obs)||'';
+  openEntryScreen('entry-genstage');
+}
+
+function submitEntryGenStage(){
+  const num = activeBatchForStage;
+  const b = DB.batches.find(x=>x.num===num);
+  if(!b) return;
+  const obs = document.getElementById('egs-obs').value;
+  if(!b.stageData) b.stageData = {};
+  b.stageData[activeGenStage] = {obs, completedAt: new Date().toISOString()};
+  save('batches');
+  qcqaApi({sheet:'BATCH_PROCESS', action:'append', data:{
+    batchNumber:num, stage:activeGenStage, obs, draft:'no',
+  }});
+  closeEntryScreen('entry-genstage');
+  markStageComplete(num, activeGenStage);
+  toast(`${activeGenStage} marked complete ✓`);
+  openBatchDetail(num);
+}
+
 function openStageEntry(num){
   activeBatchForStage = num;
   const b = DB.batches.find(x=>x.num===num);
@@ -2472,8 +3585,7 @@ function openStageEntry(num){
     document.getElementById('premix-batch-label').textContent = label;
     openModal('modal-premix');
   } else if(nextStage==='CB'){
-    document.getElementById('cb-batch-label').textContent = label;
-    openModal('modal-cb');
+    openEntryCB(num);
   } else if(nextStage==='Decant'){
     document.getElementById('decant-batch-label').textContent = label;
     openModal('modal-decant');
@@ -2673,6 +3785,47 @@ function getItemStatus(item){
   if(stock <= critical) return 'Critical';
   if(stock <= item.reorder) return 'Low';
   return 'OK';
+}
+
+// Sheet is the source of truth per your instruction — this OVERWRITES local
+// inventory data with whatever is in the Inventory & Purchase sheet's StockItems tab.
+async function refreshInventoryFromSheet(){
+  const statusEl = document.getElementById('inv-refresh-status');
+  if(!BACKEND.INVPUR_GAS_URL){ statusEl.textContent='⚠️ Inventory & Purchase backend URL not configured (Settings > Backend Connections)'; statusEl.style.color='var(--warn)'; return; }
+  statusEl.textContent = '⏳ Fetching from Inventory & Purchase sheet...';
+  statusEl.style.color = 'var(--muted)';
+  try{
+    const rows = await genericSheetGet(BACKEND.INVPUR_GAS_URL, 'StockItems');
+    if(rows.length===0){ statusEl.textContent='⚠️ No items found in sheet — add rows to StockItems tab first'; statusEl.style.color='var(--warn)'; return; }
+    let added=0, updated=0;
+    rows.forEach(row=>{
+      if(row.Status==='Deleted') return; // soft-deleted items don't come back
+      const mapped = {
+        code: row.ItemCode, desc: row.Description, cat: row.Category, subCat: row.SubCategory,
+        uom: row.UOM, location: row.BayLocation, stock: parseFloat(row.Stock)||0,
+        reorder: parseFloat(row.ReorderLevel)||0, critical: parseFloat(row.CriticalLevel)||0,
+        maxStock: parseFloat(row.MaxStockLevel)||0, vendor1: row.PreferredVendor1, vendor2: row.PreferredVendor2,
+        cost: parseFloat(row.UnitCost)||0, valuation: row.ValuationMethod, batchTracked: row.BatchTracked,
+        status: row.Status||'Active', updated: row.LastUpdated||today(),
+      };
+      const existing = DB.inventory.find(i=>i.code===mapped.code);
+      if(existing){
+        mapped.batches = existing.batches||[]; // batch history stays local — Sheet only tracks the running total
+        Object.assign(existing, mapped); updated++;
+      } else {
+        mapped.batches = [];
+        DB.inventory.push(mapped); added++;
+      }
+    });
+    save('inventory');
+    statusEl.textContent = `✅ Synced from Sheet: ${added} new, ${updated} updated (Sheet is source of truth)`;
+    statusEl.style.color = 'var(--accent2)';
+    toast('Inventory refreshed from sheet ✓');
+    renderInventory();
+  }catch(err){
+    statusEl.textContent = '⚠️ Could not reach Inventory & Purchase sheet: '+err.message;
+    statusEl.style.color = 'var(--warn)';
+  }
 }
 
 function renderInventory(){
@@ -3892,6 +5045,30 @@ function captureAndRecognize(){
 // ─────────────────────────────────────────────────────
 // FINANCE
 // ─────────────────────────────────────────────────────
+async function refreshFinanceFromSheet(){
+  const statusEl = document.getElementById('fin-refresh-status');
+  if(!BACKEND.FINANCE_GAS_URL){ statusEl.textContent='⚠️ Finance Ledger backend URL not configured (Settings > Backend Connections)'; statusEl.style.color='var(--warn)'; return; }
+  statusEl.textContent = '⏳ Fetching from Finance Ledger sheet...';
+  statusEl.style.color = 'var(--muted)';
+  try{
+    const rows = await genericSheetGet(BACKEND.FINANCE_GAS_URL, 'LedgerEntries');
+    if(rows.length===0){ statusEl.textContent='⚠️ No ledger entries found in sheet'; statusEl.style.color='var(--warn)'; return; }
+    DB.finance = rows.map(row=>({
+      date: row.Date, voucher: row.VoucherNum, type: row.Type, party: row.Party,
+      narration: row.Narration, debit: parseFloat(row.Debit)||0, credit: parseFloat(row.Credit)||0,
+      balance: parseFloat(row.Balance)||0,
+    }));
+    save('finance');
+    statusEl.textContent = `✅ Synced ${DB.finance.length} ledger entries from Sheet (Sheet is source of truth)`;
+    statusEl.style.color = 'var(--accent2)';
+    toast('Finance ledger refreshed from sheet ✓');
+    renderFinance();
+  }catch(err){
+    statusEl.textContent = '⚠️ Could not reach Finance Ledger sheet: '+err.message;
+    statusEl.style.color = 'var(--warn)';
+  }
+}
+
 function renderFinance(){
   document.getElementById('fin-tbody').innerHTML = DB.finance.map(f=>`<tr>
     <td>${fmtDate(f.date)}</td><td>${f.voucher}</td>
@@ -4253,6 +5430,39 @@ function openNewPOModal(){
   openModal('modal-newpo');
 }
 
+async function refreshPOFromSheet(){
+  const statusEl = document.getElementById('po-refresh-status');
+  if(!BACKEND.INVPUR_GAS_URL){ statusEl.textContent='⚠️ Inventory & Purchase backend URL not configured (Settings > Backend Connections)'; statusEl.style.color='var(--warn)'; return; }
+  statusEl.textContent = '⏳ Fetching from Inventory & Purchase sheet...';
+  statusEl.style.color = 'var(--muted)';
+  try{
+    const rows = await genericSheetGet(BACKEND.INVPUR_GAS_URL, 'PurchaseOrders');
+    if(rows.length===0){ statusEl.textContent='⚠️ No POs found in sheet'; statusEl.style.color='var(--warn)'; return; }
+    let added=0, updated=0;
+    rows.forEach(row=>{
+      const mapped = {
+        num: row.PONum, date: row.Date, vendor: row.Vendor, item: row.Item, itemCode: row.ItemCode,
+        qty: parseFloat(row.Qty)||0, uom: row.UOM, rate: parseFloat(row.Rate)||0, amount: parseFloat(row.Amount)||0,
+        eta: row.ETA, advancePct: parseFloat(row.AdvancePct)||0, advanceAmt: parseFloat(row.AdvanceAmt)||0,
+        advancePaid: row.AdvancePaid==='Y', balancePaid: row.BalancePaid==='Y',
+        receivedQty: parseFloat(row.ReceivedQty)||0, status: row.Status||'Draft',
+      };
+      const existing = DB.po.find(p=>p.num===mapped.num);
+      if(existing){ Object.assign(existing, mapped); updated++; }
+      else { DB.po.push(mapped); added++; }
+      if(mapped.vendor && !DB.suppliers.includes(mapped.vendor)) DB.suppliers.push(mapped.vendor);
+    });
+    save('po'); save('suppliers');
+    statusEl.textContent = `✅ Synced from Sheet: ${added} new, ${updated} updated (Sheet is source of truth)`;
+    statusEl.style.color = 'var(--accent2)';
+    toast('Purchase Orders refreshed from sheet ✓');
+    renderPO();
+  }catch(err){
+    statusEl.textContent = '⚠️ Could not reach Inventory & Purchase sheet: '+err.message;
+    statusEl.style.color = 'var(--warn)';
+  }
+}
+
 function renderPO(){
   const kpiGrid = document.getElementById('po-kpi-grid');
   const pendingCt = DB.po.filter(p=>p.status!=='Closed'&&p.status!=='Received').length;
@@ -4478,6 +5688,36 @@ function markPoBalancePaid(num){
   save('finance');
   toast('Balance marked paid — linked to Finance ledger ✓');
   renderPoPayments(); renderPO();
+}
+
+async function refreshSalesFromSheet(){
+  const statusEl = document.getElementById('sales-refresh-status');
+  if(!BACKEND.SALESDISP_GAS_URL){ statusEl.textContent='⚠️ Sales & Dispatch backend URL not configured (Settings > Backend Connections)'; statusEl.style.color='var(--warn)'; return; }
+  statusEl.textContent = '⏳ Fetching from Sales & Dispatch sheet...';
+  statusEl.style.color = 'var(--muted)';
+  try{
+    const rows = await genericSheetGet(BACKEND.SALESDISP_GAS_URL, 'SalesOrders');
+    if(rows.length===0){ statusEl.textContent='⚠️ No sales orders found in sheet'; statusEl.style.color='var(--warn)'; return; }
+    let added=0, updated=0;
+    rows.forEach(row=>{
+      const mapped = {
+        num: row.SONum, date: row.Date, customer: row.Customer, product: row.Product, grade: row.Grade,
+        qty: parseFloat(row.Qty)||0, rate: parseFloat(row.Rate)||0, amount: parseFloat(row.Amount)||0,
+        delivery: row.DeliveryDate, status: row.Status||'Confirmed',
+      };
+      const existing = DB.so.find(s=>s.num===mapped.num);
+      if(existing){ Object.assign(existing, mapped); updated++; }
+      else { DB.so.push(mapped); added++; }
+    });
+    save('so');
+    statusEl.textContent = `✅ Synced from Sheet: ${added} new, ${updated} updated (Sheet is source of truth)`;
+    statusEl.style.color = 'var(--accent2)';
+    toast('Sales Orders refreshed from sheet ✓');
+    renderSO();
+  }catch(err){
+    statusEl.textContent = '⚠️ Could not reach Sales & Dispatch sheet: '+err.message;
+    statusEl.style.color = 'var(--warn)';
+  }
 }
 
 function renderSO(){
@@ -5001,7 +6241,7 @@ function init(){
 
   // Deep-link support: erp.html#inventory opens the Inventory page directly
   const hash = window.location.hash.replace('#','');
-  const validPages = ['dashboard','production','inventory','dispatch','quality','attendance',
+  const validPages = ['dashboard','production','plan','inventory','dispatch','quality','attendance',
                        'employees','finance','purchase','sales','documents','reports','settings'];
   if(hash && validPages.includes(hash)){
     showPage(hash);
