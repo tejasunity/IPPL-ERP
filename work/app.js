@@ -65,14 +65,30 @@ function boot(){
   }
 }
 
+function extractFirebaseObject(raw){
+  // Prefer the object that actually follows "firebaseConfig =" — this avoids
+  // being fooled by the import line's own { } (e.g. `import { initializeApp } from ...`)
+  // when the full <script type="module"> block is pasted.
+  const labeled = raw.match(/firebaseConfig\s*=\s*(\{[\s\S]*?\})\s*;/);
+  if(labeled) return labeled[1];
+  // Fallback: bare object paste (no "const firebaseConfig =" wrapper at all) —
+  // use the first-to-last brace, which is safe only when nothing else in the
+  // paste contains braces (true for a bare {...} paste).
+  const firstBrace = raw.indexOf('{');
+  const lastBrace = raw.lastIndexOf('}');
+  if(firstBrace===-1 || lastBrace===-1 || lastBrace<firstBrace) return null;
+  return raw.slice(firstBrace, lastBrace+1);
+}
+
 function saveSetup(){
-  let raw = $('setup-config').value.trim();
-  // Accept the JS object form (unquoted keys) from the console as well as pure JSON
-  raw = raw.replace(/^const\s+\w+\s*=\s*/,'').replace(/;\s*$/,'');
+  const raw = $('setup-config').value.trim();
+  // Accepts: the bare {...} object, "const firebaseConfig = {...};", or the
+  // full <script type="module"> block with imports/comments — all three work.
+  const isolated = extractFirebaseObject(raw);
+  if(!isolated){ toast('Could not find a { ... } config object in what was pasted'); return; }
   try{
-    // Accept pure JSON or the JS-object form copied straight from the console
-    const cfg = new Function('return ('+raw+')')();
-    if(!cfg || !cfg.apiKey || !cfg.projectId) throw new Error('apiKey/projectId missing');
+    const cfg = new Function('return ('+isolated+')')();
+    if(!cfg || !cfg.apiKey || !cfg.projectId) throw new Error('apiKey/projectId missing from the pasted block');
     localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
     localStorage.setItem(ATT_KEY, $('setup-att').value.trim());
     location.reload();
