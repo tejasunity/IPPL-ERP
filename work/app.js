@@ -37,7 +37,7 @@ function effStatus(t){
   return t.status;
 }
 function statusBadge(s){
-  const cls = {Completed:'b-green','In Progress':'b-blue',Accepted:'b-blue',Pending:'b-warn',
+  const cls = {Completed:'b-green','In Progress':'b-blue',Accepted:'b-blue',Pending:'b-warn','Not Started':'b-muted',
     Overdue:'b-danger',Rejected:'b-danger',Cancelled:'b-muted',Reallocated:'b-warn'}[s]||'b-muted';
   return `<span class="badge ${cls}">${s}</span>`;
 }
@@ -276,15 +276,21 @@ function switchTab(el){
 
 // ── CHAT ──
 function renderChannels(){
-  $('chan-list').innerHTML = CHANNELS.map(c=>`
+  const q = ($('chat-search')?.value||'').trim().toLowerCase();
+  let list = CHANNELS;
+  if(q){
+    const matchingTaskChanIds = new Set(TASKS.filter(t=>t.title.toLowerCase().includes(q)).map(t=>t.channelId));
+    list = CHANNELS.filter(c=> c.name.toLowerCase().includes(q) || (c.lastMsg||'').toLowerCase().includes(q) || matchingTaskChanIds.has(c.id));
+  }
+  $('chan-list').innerHTML = list.map(c=>`
     <div class="chan-row" onclick="openChat('${c.id}')">
-      <div class="chan-ico">${c.taskId?'✅':'💬'}</div>
+      <div class="chan-ico">${c.taskId && c.taskId!=='pending' ? '✅':'💬'}</div>
       <div style="flex:1;min-width:0">
-        <div class="chan-name">${esc(c.name)}</div>
+        <div class="chan-name">${esc(c.name)} ${c.taskId && c.taskId!=='pending' ? '<span class="badge b-blue" style="margin-left:4px">Task</span>':''}</div>
         <div class="chan-last">${esc(c.lastMsg||'No messages yet')}</div>
       </div>
       <div style="font-size:.64rem;color:var(--muted)">${c.lastAt?fmtTs(c.lastAt):''}</div>
-    </div>`).join('') || '<p style="color:var(--muted);text-align:center;padding:20px;font-size:.85rem">No channels — create one above</p>';
+    </div>`).join('') || `<p style="color:var(--muted);text-align:center;padding:20px;font-size:.85rem">${q?'No matches':'No channels — create one above'}</p>`;
 }
 
 async function createChannel(){
@@ -369,12 +375,163 @@ function renderAssigneePicker(){
       <span>${esc(u.name)}</span><span style="color:var(--muted);font-size:.7rem;margin-left:auto">${u.role}</span></label>`).join('');
 }
 
+let ntLinkedChanId = null;
+let ntMode = 'task';
+
+function setTaskMode(mode){
+  ntMode = mode;
+  $('nt-mode-task').classList.toggle('on', mode==='task');
+  $('nt-mode-checklist').classList.toggle('on', mode==='checklist');
+  $('nt-checklist-wrap').style.display = mode==='checklist' ? '' : 'none';
+  $('nt-mode-hint').textContent = mode==='checklist'
+    ? 'Instruction checklist: assignee taps Begin → In Progress → ticks each item → writes a response → Submit Complete. No accept/reject step.'
+    : 'Full task: assignee can Accept / Reject / Reallocate.';
+  $('nt-heading').textContent = mode==='checklist' ? 'New Instruction' : 'New Task';
+  if(mode==='checklist' && !document.querySelectorAll('.ck-item-in').length) addChecklistItemField();
+}
+
+function addChecklistItemField(){
+  const wrap = $('nt-checklist-items');
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:6px;margin-bottom:6px';
+  row.innerHTML = `<input class="ck-item-in" placeholder="e.g. Check tank 2 pressure"><button type="button" class="btn btn-ghost btn-sm" onclick="this.parentElement.remove()">✕</button>`;
+  wrap.appendChild(row);
+}
+
 function openNewTask(){
+  ntLinkedChanId = null;
+  pendingErpCard = null;
+  $('nt-linked-chat-note').style.display='none';
   $('nt-title').value=''; $('nt-desc').value=''; $('nt-est').value=''; $('nt-attach').value='';
   $('nt-start').value = new Date().toISOString().slice(0,10);
   $('nt-due').value=''; $('nt-warnings').innerHTML='';
+  $('nt-checklist-items').innerHTML='';
+  setTaskMode('task');
   renderAssigneePicker();
   show('scr-newtask');
+}
+
+// Opened from inside a chat's ✅＋ button — the new task's discussion IS this channel,
+// no separate thread gets created.
+// ═══════════════════════════════════════════════════════════
+// ERP ACTION DETECTION — parks the full auto-draft bridge for later
+// (per your decision). For now: recognize common ERP-style instructions
+// (PO, dispatch, stock allocation) in a task's title/description and
+// offer a clean, structured, shareable data card — accounts/warehouse
+// staff read it and act on it in the ERP themselves. Nothing is written
+// to the ERP automatically; this is a communication aid, not a bridge.
+// ═══════════════════════════════════════════════════════════
+function detectErpAction(text){
+  const t = (text||'').toLowerCase();
+  // PO: "PO to Vendor A for XYZ 10kg at 75" / "purchase order ... 10 kg ... rs 75" / "@75" / "₹75"
+  if(/\bpo\b|purchase\s*order/.test(t)){
+    const vendor = text.match(/(?:to|from)\s+([A-Z][\w&.\- ]{2,30}?)(?:\s+for|\s+material|\s*,|$)/i);
+    const material = text.match(/for\s+([A-Za-z0-9\-\/ ]{2,30}?)\s+[\d.]+\s*(?:kg|kgs|units|nos)/i);
+    const qty = text.match(/([\d.]+)\s*(kg|kgs|units|nos)\b/i);
+    const rate = text.match(/(?:rs\.?|₹|inr|at)\s*\.?\s*([\d.]+)|@\s*([\d.]+)/i);
+    return {
+      type:'Purchase Order', icon:'📄',
+      fields:{
+        Vendor: vendor ? vendor[1].trim() : '(not detected — check instruction)',
+        Material: material ? material[1].trim() : '(not detected — check instruction)',
+        Quantity: qty ? qty[1]+' '+qty[2] : '(not detected)',
+        Rate: rate ? '₹'+(rate[1]||rate[2]) : '(not detected)',
+      },
+      note:'Draft this PO in ERP → Purchase → New PO using the details above, then route for approval.',
+    };
+  }
+  if(/dispatch|delivery|shipment/.test(t)){
+    return {type:'Dispatch Action', icon:'🚚', fields:{Instruction:text}, note:'Create/update in ERP → Dispatch based on the instruction above.'};
+  }
+  if(/allocat|stock\s*(transfer|issue|reserve)/.test(t)){
+    return {type:'Stock Allocation', icon:'📦', fields:{Instruction:text}, note:'Action in ERP → Inventory based on the instruction above.'};
+  }
+  return null;
+}
+
+let pendingErpCard = null;
+function checkErpActionHint(){
+  const combined = ($('nt-title').value||'') + ' ' + ($('nt-desc').value||'');
+  const detected = detectErpAction(combined);
+  const box = $('nt-erp-hint');
+  if(!box) return;
+  if(detected){
+    pendingErpCard = detected;
+    box.style.display='';
+    box.innerHTML = `<div class="warnbox" style="border-color:var(--accent);color:var(--text)">
+      ${detected.icon} Looks like a <b>${detected.type}</b> instruction — a structured data card will be attached for easy WhatsApp sharing to accounts/warehouse.
+      <label style="margin-top:6px"><input type="checkbox" id="nt-attach-erp-card" checked> Attach shareable ${detected.type} card</label></div>`;
+  } else {
+    pendingErpCard = null;
+    box.style.display='none'; box.innerHTML='';
+  }
+}
+
+function erpCardText(card, taskTitle){
+  let text = `${card.icon} *${card.type.toUpperCase()} — DATA CARD*\nFrom task: ${taskTitle}\n\n`;
+  Object.entries(card.fields).forEach(([k,v])=>{ text += `*${k}:* ${v}\n`; });
+  text += `\n📝 ${card.note}\n\n_Innotek Work — generated from instruction, please verify before acting_`;
+  return text;
+}
+
+function shareErpCard(){
+  const t = TASKS.find(x=>x.id===activeTask);
+  if(!t || !t.erpCard) return;
+  window.open('https://wa.me/?text='+encodeURIComponent(erpCardText(t.erpCard, t.title)),'_blank');
+}
+
+function openNewTaskFromChat(){
+  if(!activeChan) return;
+  openNewTask();
+  ntLinkedChanId = activeChan;
+  const c = CHANNELS.find(x=>x.id===activeChan);
+  $('nt-linked-chat-note').style.display='';
+  $('nt-linked-chat-note').innerHTML = `💬 This task's discussion will be <b>${esc(c?c.name:'this chat')}</b> — no new thread is created.`;
+}
+
+async function createTask(){
+  const title = $('nt-title').value.trim();
+  const picked = [...document.querySelectorAll('.nt-a:checked')];
+  if(!title){ toast('Title required'); return; }
+  if(!picked.length){ toast('Select at least one assignee'); return; }
+  if(!$('nt-due').value){ toast('Due date required'); return; }
+  const assignees = picked.map(p=>p.value);
+  const assigneeNames = picked.map(p=>p.dataset.name);
+
+  let channelId = ntLinkedChanId;
+  if(!channelId){
+    const chanRef = await db.collection('channels').add({
+      name:'✅ '+title, taskId:'pending', createdBy:me.uid,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+      lastAt:firebase.firestore.FieldValue.serverTimestamp(), lastMsg:'Task discussion opened',
+    });
+    channelId = chanRef.id;
+  }
+
+  const items = ntMode==='checklist'
+    ? [...document.querySelectorAll('.ck-item-in')].map(i=>i.value.trim()).filter(Boolean).map(text=>({text, done:false}))
+    : [];
+  if(ntMode==='checklist' && !items.length){ toast('Add at least one instruction item'); return; }
+
+  const attachErpCard = pendingErpCard && document.getElementById('nt-attach-erp-card') && document.getElementById('nt-attach-erp-card').checked;
+  const t = {
+    title, desc:$('nt-desc').value, priority:$('nt-priority').value,
+    taskMode: ntMode, checklist: items,
+    startDate:$('nt-start').value, dueDate:$('nt-due').value,
+    estHours:parseFloat($('nt-est').value)||0, attachment:$('nt-attach').value||'',
+    createdBy:me.uid, createdByName:myDoc.name,
+    assignees, assigneeNames,
+    status: ntMode==='checklist' ? 'Not Started' : 'Pending',
+    channelId,
+    erpCard: attachErpCard ? pendingErpCard : null,
+    createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
+  };
+  const ref = await db.collection('tasks').add(t);
+  await db.collection('channels').doc(channelId).update({taskId:ref.id, name: ntLinkedChanId ? undefined : undefined});
+  await logAudit(ref.id, 'Created & Assigned', `to ${assigneeNames.join(', ')} · due ${t.dueDate}${ntLinkedChanId?' · linked to existing chat':''}`);
+  hide('scr-newtask');
+  toast((ntMode==='checklist'?'Instruction':'Task')+' assigned ✓');
 }
 
 // ── WORKLOAD + LEAVE CHECK (links to the ERP's attendance backend) ──
@@ -424,36 +581,6 @@ async function checkWorkload(){
   if(warns.length) box.innerHTML = `<div class="warnbox">${warns.join('<br>')}<br><small>You can still assign — this is a warning, not a block.</small></div>`;
 }
 
-async function createTask(){
-  const title = $('nt-title').value.trim();
-  const picked = [...document.querySelectorAll('.nt-a:checked')];
-  if(!title){ toast('Title required'); return; }
-  if(!picked.length){ toast('Select at least one assignee'); return; }
-  if(!$('nt-due').value){ toast('Due date required'); return; }
-  const assignees = picked.map(p=>p.value);
-  const assigneeNames = picked.map(p=>p.dataset.name);
-  // Task discussion thread channel, auto-created and linked
-  const chanRef = await db.collection('channels').add({
-    name:'✅ '+title, taskId:'pending', createdBy:me.uid,
-    createdAt:firebase.firestore.FieldValue.serverTimestamp(),
-    lastAt:firebase.firestore.FieldValue.serverTimestamp(), lastMsg:'Task discussion opened',
-  });
-  const t = {
-    title, desc:$('nt-desc').value, priority:$('nt-priority').value,
-    startDate:$('nt-start').value, dueDate:$('nt-due').value,
-    estHours:parseFloat($('nt-est').value)||0, attachment:$('nt-attach').value||'',
-    createdBy:me.uid, createdByName:myDoc.name,
-    assignees, assigneeNames, status:'Pending', channelId:chanRef.id,
-    createdAt:firebase.firestore.FieldValue.serverTimestamp(),
-    updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
-  };
-  const ref = await db.collection('tasks').add(t);
-  await chanRef.update({taskId:ref.id});
-  await logAudit(ref.id, 'Created & Assigned', `to ${assigneeNames.join(', ')} · due ${t.dueDate}`);
-  hide('scr-newtask');
-  toast('Task assigned ✓ — assignees will see it instantly');
-}
-
 // ── TASK DETAIL + LIFECYCLE ──
 function openTask(id){
   activeTask = id;
@@ -469,6 +596,7 @@ function fillTaskDetail(t){
   $('td-status').outerHTML = statusBadge(effStatus(t)).replace('class="badge','id="td-status" class="badge');
   $('td-desc').textContent = t.desc||'';
   $('td-kv').innerHTML = `
+    <div class="kv"><span class="k">Type</span><b>${t.taskMode==='checklist'?'Instruction Checklist':'Full Task'}</b></div>
     <div class="kv"><span class="k">Priority</span><b>${t.priority}</b></div>
     <div class="kv"><span class="k">Assigned to</span><b>${esc(t.assigneeNames.join(', '))}</b></div>
     <div class="kv"><span class="k">Created by</span><b>${esc(t.createdByName)}</b></div>
@@ -478,7 +606,20 @@ function fillTaskDetail(t){
     ${t.attachment?`<div class="kv"><span class="k">Attachment</span><a href="${esc(t.attachment)}" target="_blank" style="color:var(--accent)">Open link</a></div>`:''}
     ${t.rejectReason?`<div class="kv"><span class="k">Reject reason</span><b style="color:var(--danger)">${esc(t.rejectReason)}</b></div>`:''}
     ${t.reallocRequest?`<div class="kv"><span class="k">Reallocation requested</span><b style="color:var(--warn)">${esc(t.reallocRequest)}</b></div>`:''}`;
+  if(t.taskMode==='checklist'){
+    $('td-kv').innerHTML += `<div style="margin-top:10px">${(t.checklist||[]).map((item,i)=>`
+      <label class="checkline"><input type="checkbox" ${item.done?'checked':''} ${t.assignees.includes(me.uid)&&t.status==='In Progress'?'':'disabled'} onchange="toggleChecklistItem(${i},this.checked)">
+        <span style="${item.done?'text-decoration:line-through;color:var(--muted)':''}">${esc(item.text)}</span></label>`).join('')}</div>
+      ${t.response?`<div class="kv" style="margin-top:8px"><span class="k">Response</span><b>${esc(t.response)}</b></div>`:''}`;
+  }
   renderTaskActions(t);
+}
+
+async function toggleChecklistItem(idx, checked){
+  const t = TASKS.find(x=>x.id===activeTask);
+  if(!t) return;
+  const cl = [...t.checklist]; cl[idx] = {...cl[idx], done:checked};
+  await db.collection('tasks').doc(t.id).update({checklist:cl, updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
 }
 
 function renderTaskActions(t){
@@ -486,6 +627,19 @@ function renderTaskActions(t){
   const isAssignee = t.assignees.includes(me.uid);
   const isOwner = t.createdBy===me.uid || (myDoc&&myDoc.role==='admin');
   let html = `<button class="btn btn-ghost btn-sm" onclick="openChat('${t.channelId}')">💬 Thread</button>`;
+  if(t.erpCard) html += `<button class="btn btn-ghost btn-sm" onclick="shareErpCard()">${t.erpCard.icon} Share ${t.erpCard.type} Card</button>`;
+
+  if(t.taskMode==='checklist'){
+    if(isAssignee && t.status==='Not Started') html += `<button class="btn btn-primary btn-sm" onclick="taskAction('begin')">▶ Begin</button>`;
+    if(isAssignee && t.status==='In Progress'){
+      const allDone = (t.checklist||[]).every(i=>i.done);
+      html += `<button class="btn btn-success btn-sm" ${allDone?'':'disabled title="Tick all items first"'} onclick="taskAction('submitChecklist')">✓ Submit Complete</button>`;
+    }
+    if(isOwner && !['Completed','Cancelled'].includes(t.status)) html += `<button class="btn btn-danger btn-sm" onclick="taskAction('cancel')">Cancel</button>`;
+    el.innerHTML = html;
+    return;
+  }
+
   if(isAssignee && t.status==='Pending'){
     html += `<button class="btn btn-success btn-sm" onclick="taskAction('accept')">✓ Accept</button>
       <button class="btn btn-danger btn-sm" onclick="taskAction('reject')">✗ Reject</button>
@@ -507,6 +661,12 @@ async function taskAction(kind){
   const ref = db.collection('tasks').doc(t.id);
   const upd = {updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
   if(kind==='accept'){ upd.status='Accepted'; await logAudit(t.id,'Accepted',`by ${myDoc.name}`); }
+  if(kind==='begin'){ upd.status='In Progress'; await logAudit(t.id,'Begun',`by ${myDoc.name}`); }
+  if(kind==='submitChecklist'){
+    const response = prompt('Your response / observation for this instruction:')||'';
+    upd.status='Completed'; upd.response=response; upd.completedAt=firebase.firestore.FieldValue.serverTimestamp();
+    await logAudit(t.id,'Instruction Completed',`by ${myDoc.name}${response?': '+response:''}`);
+  }
   if(kind==='start'){ upd.status='In Progress'; await logAudit(t.id,'Started',`by ${myDoc.name}`); }
   if(kind==='complete'){ upd.status='Completed'; upd.completedAt=firebase.firestore.FieldValue.serverTimestamp(); await logAudit(t.id,'Completed',`by ${myDoc.name}`); }
   if(kind==='reject'){
@@ -553,15 +713,17 @@ function logAudit(taskId, action, detail){
   });
 }
 
+let activeTaskComments = []; // cached structured data for export/share — HTML rendering derives from this
+
 function listenComments(id){
   if(unsubComments) unsubComments();
   unsubComments = db.collection('tasks').doc(id).collection('comments').orderBy('ts','asc')
     .onSnapshot(s=>{
-      $('td-comments').innerHTML = s.docs.map(d=>{
-        const c=d.data();
-        return `<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:.82rem">
-          <b style="color:var(--accent);font-size:.72rem">${esc(c.name)}</b> <span style="color:var(--muted);font-size:.64rem">${fmtTs(c.ts)}</span><br>${esc(c.text)}</div>`;
-      }).join('') || '<p style="color:var(--muted);font-size:.78rem;padding:6px 0">No comments yet</p>';
+      activeTaskComments = s.docs.map(d=>d.data());
+      $('td-comments').innerHTML = activeTaskComments.map(c=>
+        `<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:.82rem">
+          <b style="color:var(--accent);font-size:.72rem">${esc(c.name)}</b> <span style="color:var(--muted);font-size:.64rem">${fmtTs(c.ts)}</span><br>${esc(c.text)}</div>`
+      ).join('') || '<p style="color:var(--muted);font-size:.78rem;padding:6px 0">No comments yet</p>';
       $('td-comments').scrollTop = $('td-comments').scrollHeight;
     });
 }
@@ -586,6 +748,50 @@ async function addComment(){
 }
 
 // ── DASHBOARD ──
+function setDashSub(sub){
+  $('dash-sub-overview').classList.toggle('on', sub==='overview');
+  $('dash-sub-schedule').classList.toggle('on', sub==='schedule');
+  $('dash-overview-section').style.display = sub==='overview' ? '' : 'none';
+  $('dash-schedule-section').style.display = sub==='schedule' ? '' : 'none';
+  if(sub==='schedule') renderSchedule();
+}
+
+// Jump straight into the Tasks tab pre-filtered — used by clickable KPIs
+function jumpToTasks(filterKey){
+  document.querySelectorAll('.tabbtn').forEach(b=>b.classList.remove('on'));
+  document.querySelector('.tabbtn[data-v="tasks"]').classList.add('on');
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  show('view-tasks');
+  $('topbar-title').textContent = 'Tasks';
+  document.querySelectorAll('#task-filters .fbtn').forEach(b=>b.classList.toggle('on', b.dataset.f===filterKey));
+  taskFilter = filterKey;
+  $('template-section').style.display='none';
+  $('regular-task-section').style.display='';
+  renderTasks();
+}
+
+function renderSchedule(){
+  const mine = TASKS.filter(t=>t.assignees.includes(me.uid) && t.dueDate && !['Completed','Cancelled'].includes(t.status));
+  const byDate = {};
+  mine.forEach(t=>{
+    const d = (t.dueDate||'').slice(0,10);
+    (byDate[d]=byDate[d]||[]).push(t);
+  });
+  const dates = Object.keys(byDate).sort();
+  const el = $('dash-schedule-section');
+  if(!dates.length){ el.innerHTML = '<p style="color:var(--muted);text-align:center;padding:20px;font-size:.85rem">No upcoming scheduled tasks</p>'; return; }
+  const todayStr = new Date().toISOString().slice(0,10);
+  el.innerHTML = dates.map(d=>{
+    const label = d===todayStr ? 'Today' : new Date(d).toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'short'});
+    const isPast = d < todayStr;
+    return `<div class="card">
+      <b style="font-size:.82rem;color:${isPast?'var(--danger)':'var(--accent)'}">${label}${isPast?' (overdue)':''}</b>
+      ${byDate[d].map(t=>`<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:.82rem;cursor:pointer;display:flex;justify-content:space-between" onclick="openTask('${t.id}')">
+        <span>${esc(t.title)}</span>${statusBadge(effStatus(t))}</div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
 function renderDash(){
   const mine = TASKS.filter(t=>t.assignees.includes(me.uid));
   const today = new Date().toISOString().slice(0,10);
@@ -594,10 +800,10 @@ function renderDash(){
   const awaiting = mine.filter(t=>t.status==='Pending');
   const done = mine.filter(t=>t.status==='Completed');
   $('dash-kpis').innerHTML = `
-    <div class="kpi accent"><div class="n">${dueToday.length}</div><div class="l">Due Today</div></div>
-    <div class="kpi warn"><div class="n">${awaiting.length}</div><div class="l">Awaiting My Response</div></div>
-    <div class="kpi danger"><div class="n">${overdue.length}</div><div class="l">Overdue</div></div>
-    <div class="kpi green"><div class="n">${done.length}</div><div class="l">Completed</div></div>`;
+    <div class="kpi accent" style="cursor:pointer" onclick="jumpToTasks('mine')"><div class="n">${dueToday.length}</div><div class="l">Due Today</div></div>
+    <div class="kpi warn" style="cursor:pointer" onclick="jumpToTasks('awaiting')"><div class="n">${awaiting.length}</div><div class="l">Awaiting My Response</div></div>
+    <div class="kpi danger" style="cursor:pointer" onclick="jumpToTasks('overdue')"><div class="n">${overdue.length}</div><div class="l">Overdue</div></div>
+    <div class="kpi green" style="cursor:pointer" onclick="jumpToTasks('all')"><div class="n">${done.length}</div><div class="l">Completed</div></div>`;
   const li = arr => arr.map(t=>`<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:.82rem;cursor:pointer" onclick="openTask('${t.id}')">${esc(t.title)} <span style="color:var(--muted);font-size:.7rem">· ${fmtDate(t.dueDate)}</span></div>`).join('') || '<p style="color:var(--muted);font-size:.76rem;padding:6px 0">None</p>';
   $('dash-today').innerHTML = li(dueToday);
   $('dash-awaiting').innerHTML = li(awaiting);
@@ -624,11 +830,72 @@ function shareTeamDigest(){
   window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');
 }
 
+function taskSummaryText(t){
+  return `✅ *TASK: ${t.title}*\nPriority: ${t.priority} · Status: ${effStatus(t)}\nAssigned: ${t.assigneeNames.join(', ')}\nDue: ${t.dueDate?new Date(t.dueDate).toLocaleString('en-IN'):'—'}\n${t.desc||''}`;
+}
+
+// Fetches the linked channel's full message thread once (not a live listener) — used for export/share.
+async function fetchThreadMessages(channelId){
+  const snap = await db.collection('channels').doc(channelId).collection('messages').orderBy('ts','asc').get();
+  return snap.docs.map(d=>d.data());
+}
+
+// ── SHARE: task-only vs task+discussion — the person's explicit choice, never automatic ──
 function shareTaskWA(){
   const t = TASKS.find(x=>x.id===activeTask);
   if(!t) return;
-  const text = `✅ *TASK: ${t.title}*\nPriority: ${t.priority} · Status: ${effStatus(t)}\nAssigned: ${t.assigneeNames.join(', ')}\nDue: ${t.dueDate?new Date(t.dueDate).toLocaleString('en-IN'):'—'}\n${t.desc||''}\n\n_Innotek Work_`;
-  window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');
+  const choice = confirm('Include the discussion thread in the WhatsApp share?\n\nOK = Task + Discussion\nCancel = Task summary only');
+  if(!choice){
+    window.open('https://wa.me/?text='+encodeURIComponent(taskSummaryText(t)+'\n\n_Innotek Work_'),'_blank');
+    return;
+  }
+  fetchThreadMessages(t.channelId).then(msgs=>{
+    let text = taskSummaryText(t) + '\n\n💬 *Discussion:*\n';
+    if(!msgs.length) text += '(no messages yet)\n';
+    msgs.forEach(m=>{ text += `${m.name}: ${m.text}\n`; });
+    text += '\n_Innotek Work_';
+    // WhatsApp's own length limits apply to very long threads — trim with a notice if needed
+    if(text.length > 3500) text = text.slice(0,3400) + '\n…(truncated — use PDF/CSV export for the full record)\n\n_Innotek Work_';
+    window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');
+  });
+}
+
+// ── EXPORT DISCUSSION as MOM — CSV or PDF, for records/sharing outside WhatsApp ──
+async function exportDiscussionCSV(){
+  const t = TASKS.find(x=>x.id===activeTask);
+  if(!t) return;
+  const msgs = await fetchThreadMessages(t.channelId);
+  let csv = 'Task,'+t.title.replace(/,/g,';')+'\n\nTime,From,Message\n';
+  msgs.forEach(m=>{
+    const line = [fmtTs(m.ts), m.name, '"'+String(m.text||'').replace(/"/g,'""')+'"'].join(',');
+    csv += line+'\n';
+  });
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${t.title.replace(/[^\w]+/g,'_')}_MOM.csv`;
+  a.click();
+}
+
+async function exportDiscussionPDF(){
+  const t = TASKS.find(x=>x.id===activeTask);
+  if(!t) return;
+  const msgs = await fetchThreadMessages(t.channelId);
+  const w = window.open('', '_blank');
+  const rows = msgs.map(m=>`<tr><td style="padding:6px;border-bottom:1px solid #ddd;font-size:12px;color:#666;white-space:nowrap">${fmtTs(m.ts)}</td><td style="padding:6px;border-bottom:1px solid #ddd;font-size:13px;font-weight:600">${esc(m.name)}</td><td style="padding:6px;border-bottom:1px solid #ddd;font-size:13px">${esc(m.text)}</td></tr>`).join('');
+  w.document.write(`<html><head><title>${esc(t.title)} — MOM</title></head>
+    <body style="font-family:Arial,sans-serif;padding:24px;color:#222">
+      <h2 style="margin-bottom:4px">${esc(t.title)} — Minutes of Discussion</h2>
+      <p style="color:#666;font-size:13px">Priority: ${t.priority} · Status: ${effStatus(t)} · Assigned: ${esc(t.assigneeNames.join(', '))} · Due: ${t.dueDate?new Date(t.dueDate).toLocaleString('en-IN'):'—'}</p>
+      <p style="font-size:13px">${esc(t.desc||'')}</p>
+      <table style="width:100%;border-collapse:collapse;margin-top:16px">
+        <thead><tr><th style="text-align:left;padding:6px;border-bottom:2px solid #333;font-size:12px">Time</th><th style="text-align:left;padding:6px;border-bottom:2px solid #333;font-size:12px">From</th><th style="text-align:left;padding:6px;border-bottom:2px solid #333;font-size:12px">Message</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="3" style="padding:10px;color:#999">No messages</td></tr>'}</tbody>
+      </table>
+      <p style="margin-top:24px;font-size:11px;color:#999">Innotek Work — generated ${new Date().toLocaleString('en-IN')}</p>
+      <script>window.onload=()=>window.print();</` + `script>
+    </body></html>`);
+  w.document.close();
 }
 
 // ── TEAM ──

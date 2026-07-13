@@ -144,6 +144,7 @@ label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacin
       <input id="new-chan-name" placeholder="New channel name…" style="flex:1">
       <button class="btn btn-primary btn-sm" onclick="createChannel()">＋</button>
     </div>
+    <input id="chat-search" placeholder="🔍 Search chats & tasks…" style="margin-bottom:10px" oninput="renderChannels()">
     <div id="chan-list"></div>
   </div>
 
@@ -172,12 +173,19 @@ label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacin
 
   <!-- DASHBOARD -->
   <div class="view" id="view-dash">
-    <div class="kpi-grid" id="dash-kpis"></div>
-    <div class="card"><b style="font-size:.85rem">📅 Due Today</b><div id="dash-today"></div></div>
-    <div class="card"><b style="font-size:.85rem">⏳ Awaiting Acceptance</b><div id="dash-awaiting"></div></div>
-    <div class="card"><b style="font-size:.85rem">🔴 Overdue</b><div id="dash-overdue"></div></div>
-    <div class="card" id="dash-team-card" style="display:none"><b style="font-size:.85rem">👥 Team Workload (admin)</b><div id="dash-team"></div></div>
-    <button class="btn btn-ghost" style="width:100%" onclick="shareTeamDigest()">📱 WhatsApp Team Digest</button>
+    <div class="filter-row">
+      <button class="fbtn on" id="dash-sub-overview" onclick="setDashSub('overview')">Overview</button>
+      <button class="fbtn" id="dash-sub-schedule" onclick="setDashSub('schedule')">📅 Scheduled</button>
+    </div>
+    <div id="dash-overview-section">
+      <div class="kpi-grid" id="dash-kpis"></div>
+      <div class="card"><b style="font-size:.85rem">📅 Due Today</b><div id="dash-today"></div></div>
+      <div class="card"><b style="font-size:.85rem">⏳ Awaiting Acceptance</b><div id="dash-awaiting"></div></div>
+      <div class="card"><b style="font-size:.85rem">🔴 Overdue</b><div id="dash-overdue"></div></div>
+      <div class="card" id="dash-team-card" style="display:none"><b style="font-size:.85rem">👥 Team Workload (admin)</b><div id="dash-team"></div></div>
+      <button class="btn btn-ghost" style="width:100%" onclick="shareTeamDigest()">📱 WhatsApp Team Digest</button>
+    </div>
+    <div id="dash-schedule-section" style="display:none"></div>
   </div>
 
   <!-- TEAM -->
@@ -202,6 +210,7 @@ label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacin
   </div>
   <div id="chat-msgs"></div>
   <div id="chat-input-row">
+    <button class="btn btn-ghost btn-sm" onclick="openNewTaskFromChat()" title="Create a task linked to this chat">✅＋</button>
     <input id="chat-input" placeholder="Type a message…" onkeydown="if(event.key==='Enter')sendMsg()">
     <button class="btn btn-primary" onclick="sendMsg()">➤</button>
   </div>
@@ -209,10 +218,26 @@ label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacin
 
 <!-- ══════ NEW TASK ══════ -->
 <div class="fullscr" id="scr-newtask">
-  <div class="hdr"><button class="backbtn" onclick="hide('scr-newtask')">‹</button><b>New Task</b></div>
+  <div class="hdr"><button class="backbtn" onclick="hide('scr-newtask')">‹</button><b id="nt-heading">New Task</b></div>
   <div class="body">
-    <label>Title</label><input id="nt-title">
-    <label>Description</label><textarea id="nt-desc" rows="3"></textarea>
+    <div id="nt-linked-chat-note" style="display:none" class="warnbox"></div>
+    <label>Type</label>
+    <div class="filter-row">
+      <button type="button" class="fbtn on" id="nt-mode-task" onclick="setTaskMode('task')">Full Task</button>
+      <button type="button" class="fbtn" id="nt-mode-checklist" onclick="setTaskMode('checklist')">Instruction Checklist</button>
+    </div>
+    <p id="nt-mode-hint" style="font-size:.72rem;color:var(--muted);margin:4px 0 8px">Full task: assignee can Accept / Reject / Reallocate.</p>
+
+    <label>Title</label><input id="nt-title" oninput="checkErpActionHint()">
+    <label>Description</label><textarea id="nt-desc" rows="3" oninput="checkErpActionHint()"></textarea>
+    <div id="nt-erp-hint" style="display:none"></div>
+
+    <div id="nt-checklist-wrap" style="display:none">
+      <label>Instruction Items</label>
+      <div id="nt-checklist-items"></div>
+      <button type="button" class="btn btn-ghost btn-sm" style="width:100%;margin-top:6px" onclick="addChecklistItemField()">＋ Add Item</button>
+    </div>
+
     <label>Priority</label>
     <select id="nt-priority"><option>Low</option><option selected>Medium</option><option>High</option><option>Critical</option></select>
     <label>Start Date</label><input id="nt-start" type="date">
@@ -222,7 +247,7 @@ label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacin
     <div id="nt-assignees" class="card" style="padding:4px;max-height:200px;overflow-y:auto"></div>
     <div id="nt-warnings"></div>
     <label>Attachment link (Drive URL, optional)</label><input id="nt-attach" placeholder="https://drive.google.com/…">
-    <div style="margin-top:14px"><button class="btn btn-primary" style="width:100%" onclick="createTask()">Assign Task</button></div>
+    <div style="margin-top:14px"><button class="btn btn-primary" style="width:100%" onclick="createTask()">Assign</button></div>
   </div>
 </div>
 
@@ -268,7 +293,11 @@ label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacin
       <div style="display:flex;gap:8px"><input id="td-comment-in" placeholder="Comment…" onkeydown="if(event.key==='Enter')addComment()"><button class="btn btn-primary btn-sm" onclick="addComment()">➤</button></div>
     </div>
     <div class="card"><b style="font-size:.82rem">📜 Audit Trail (immutable)</b><div id="td-audit"></div></div>
-    <button class="btn btn-ghost" style="width:100%" onclick="shareTaskWA()">📱 Share Task Summary</button>
+    <button class="btn btn-ghost" style="width:100%" onclick="shareTaskWA()">📱 Share on WhatsApp</button>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-ghost btn-sm" style="flex:1" onclick="exportDiscussionCSV()">📄 Export CSV</button>
+      <button class="btn btn-ghost btn-sm" style="flex:1" onclick="exportDiscussionPDF()">🖨️ Export PDF (MOM)</button>
+    </div>
   </div>
 </div>
 
