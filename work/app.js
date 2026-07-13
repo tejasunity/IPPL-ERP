@@ -209,16 +209,21 @@ async function saveTemplate(){
   const recurrence = $('tpl-recurrence').value;
   const weekdays = [...document.querySelectorAll('#tpl-weekdays .fbtn.on')].map(b=>b.dataset.day);
   if(recurrence==='Weekdays' && !weekdays.length){ toast('Pick at least one weekday'); return; }
-  await db.collection('taskTemplates').add({
-    title, desc:$('tpl-desc').value, priority:'Medium',
-    recurrence, weekdays, dueTime:$('tpl-due').value||'18:00',
-    estHours:parseFloat($('tpl-est').value)||0,
-    assignees:picked.map(p=>p.value), assigneeNames:picked.map(p=>p.dataset.name),
-    active:true, createdBy:me.uid, createdByName:myDoc.name,
-    createdAt:firebase.firestore.FieldValue.serverTimestamp(),
-  });
-  hide('scr-newtemplate');
-  toast('Recurring task template saved ✓ — first instance appears next time the app opens');
+  try{
+    await db.collection('taskTemplates').add({
+      title, desc:$('tpl-desc').value, priority:'Medium',
+      recurrence, weekdays, dueTime:$('tpl-due').value||'18:00',
+      estHours:parseFloat($('tpl-est').value)||0,
+      assignees:picked.map(p=>p.value), assigneeNames:picked.map(p=>p.dataset.name),
+      active:true, createdBy:me.uid, createdByName:myDoc.name,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    hide('scr-newtemplate');
+    toast('Recurring task template saved ✓ — first instance appears next time the app opens');
+  }catch(err){
+    toast('⚠️ Could not save template: '+err.message);
+    console.error('saveTemplate failed:', err);
+  }
 }
 function renderTemplates(){
   const el = $('template-list');
@@ -498,40 +503,54 @@ async function createTask(){
   const assignees = picked.map(p=>p.value);
   const assigneeNames = picked.map(p=>p.dataset.name);
 
-  let channelId = ntLinkedChanId;
-  if(!channelId){
-    const chanRef = await db.collection('channels').add({
-      name:'✅ '+title, taskId:'pending', createdBy:me.uid,
-      createdAt:firebase.firestore.FieldValue.serverTimestamp(),
-      lastAt:firebase.firestore.FieldValue.serverTimestamp(), lastMsg:'Task discussion opened',
-    });
-    channelId = chanRef.id;
-  }
-
+  // Checklist item validation happens BEFORE any writes — no point creating
+  // a channel just to bail out on a missing checklist item afterward.
   const items = ntMode==='checklist'
     ? [...document.querySelectorAll('.ck-item-in')].map(i=>i.value.trim()).filter(Boolean).map(text=>({text, done:false}))
     : [];
   if(ntMode==='checklist' && !items.length){ toast('Add at least one instruction item'); return; }
 
-  const attachErpCard = pendingErpCard && document.getElementById('nt-attach-erp-card') && document.getElementById('nt-attach-erp-card').checked;
-  const t = {
-    title, desc:$('nt-desc').value, priority:$('nt-priority').value,
-    taskMode: ntMode, checklist: items,
-    startDate:$('nt-start').value, dueDate:$('nt-due').value,
-    estHours:parseFloat($('nt-est').value)||0, attachment:$('nt-attach').value||'',
-    createdBy:me.uid, createdByName:myDoc.name,
-    assignees, assigneeNames,
-    status: ntMode==='checklist' ? 'Not Started' : 'Pending',
-    channelId,
-    erpCard: attachErpCard ? pendingErpCard : null,
-    createdAt:firebase.firestore.FieldValue.serverTimestamp(),
-    updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
-  };
-  const ref = await db.collection('tasks').add(t);
-  await db.collection('channels').doc(channelId).update({taskId:ref.id, name: ntLinkedChanId ? undefined : undefined});
-  await logAudit(ref.id, 'Created & Assigned', `to ${assigneeNames.join(', ')} · due ${t.dueDate}${ntLinkedChanId?' · linked to existing chat':''}`);
-  hide('scr-newtask');
-  toast((ntMode==='checklist'?'Instruction':'Task')+' assigned ✓');
+  // Entire write sequence (channel creation + task creation + channel link-back
+  // + audit log) is one try/catch now — any failure at any step shows a clear
+  // error instead of leaving the Assign button looking like it did nothing.
+  try{
+    let channelId = ntLinkedChanId;
+    if(!channelId){
+      const chanRef = await db.collection('channels').add({
+        name:'✅ '+title, taskId:'pending', createdBy:me.uid,
+        createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+        lastAt:firebase.firestore.FieldValue.serverTimestamp(), lastMsg:'Task discussion opened',
+      });
+      channelId = chanRef.id;
+    }
+
+    const attachErpCard = pendingErpCard && document.getElementById('nt-attach-erp-card') && document.getElementById('nt-attach-erp-card').checked;
+    const t = {
+      title, desc:$('nt-desc').value, priority:$('nt-priority').value,
+      taskMode: ntMode, checklist: items,
+      startDate:$('nt-start').value, dueDate:$('nt-due').value,
+      estHours:parseFloat($('nt-est').value)||0, attachment:$('nt-attach').value||'',
+      createdBy:me.uid, createdByName:myDoc.name,
+      assignees, assigneeNames,
+      status: ntMode==='checklist' ? 'Not Started' : 'Pending',
+      channelId,
+      erpCard: attachErpCard ? pendingErpCard : null,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
+    };
+    const ref = await db.collection('tasks').add(t);
+    // Bug fix: Firestore rejects `undefined` field values outright — the old code
+    // sent `name: undefined` on every save, which silently threw here and made
+    // the whole Assign button look like it did nothing (the task above HAD
+    // already been created by this point, orphaned without its channel link).
+    await db.collection('channels').doc(channelId).update({taskId:ref.id});
+    await logAudit(ref.id, 'Created & Assigned', `to ${assigneeNames.join(', ')} · due ${t.dueDate}${ntLinkedChanId?' · linked to existing chat':''}`);
+    hide('scr-newtask');
+    toast((ntMode==='checklist'?'Instruction':'Task')+' assigned ✓');
+  }catch(err){
+    toast('⚠️ Could not save task: '+err.message);
+    console.error('createTask failed:', err);
+  }
 }
 
 // ── WORKLOAD + LEAVE CHECK (links to the ERP's attendance backend) ──
@@ -660,6 +679,7 @@ async function taskAction(kind){
   if(!t) return;
   const ref = db.collection('tasks').doc(t.id);
   const upd = {updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
+  try{
   if(kind==='accept'){ upd.status='Accepted'; await logAudit(t.id,'Accepted',`by ${myDoc.name}`); }
   if(kind==='begin'){ upd.status='In Progress'; await logAudit(t.id,'Begun',`by ${myDoc.name}`); }
   if(kind==='submitChecklist'){
@@ -705,6 +725,10 @@ async function taskAction(kind){
   }
   if(kind==='review'){ upd.reviewed=true; await logAudit(t.id,'Reviewed OK',`by ${myDoc.name}`); }
   await ref.update(upd);
+  }catch(err){
+    toast('⚠️ Action failed: '+err.message);
+    console.error('taskAction('+kind+') failed:', err);
+  }
 }
 
 function logAudit(taskId, action, detail){
