@@ -149,15 +149,25 @@ label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacin
 
   <!-- TASKS -->
   <div class="view" id="view-tasks">
-    <button class="btn btn-primary" style="width:100%;margin-bottom:10px" onclick="openNewTask()">＋ New Task</button>
-    <div class="filter-row" id="task-filters">
-      <button class="fbtn on" data-f="mine" onclick="setTaskFilter(this)">Assigned to me</button>
-      <button class="fbtn" data-f="created" onclick="setTaskFilter(this)">Created by me</button>
-      <button class="fbtn" data-f="all" onclick="setTaskFilter(this)">All</button>
-      <button class="fbtn" data-f="overdue" onclick="setTaskFilter(this)">Overdue</button>
-      <button class="fbtn" data-f="awaiting" onclick="setTaskFilter(this)">Awaiting response</button>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button class="btn btn-primary" style="flex:1" onclick="openNewTask()">＋ New Task</button>
+      <button class="btn btn-ghost" onclick="toggleTemplatesView()">🔁 Recurring</button>
     </div>
-    <div id="task-list"></div>
+    <div id="template-section" style="display:none">
+      <button class="btn btn-ghost" style="width:100%;margin-bottom:10px" onclick="openNewTemplate()">＋ New Recurring Template</button>
+      <div id="template-list"></div>
+      <p style="font-size:.72rem;color:var(--muted);margin:10px 0">Recurring tasks appear as a fresh Pending task automatically, the first time anyone opens the app on a day they apply — no manual creation needed each morning.</p>
+    </div>
+    <div id="regular-task-section">
+      <div class="filter-row" id="task-filters">
+        <button class="fbtn on" data-f="mine" onclick="setTaskFilter(this)">Assigned to me</button>
+        <button class="fbtn" data-f="created" onclick="setTaskFilter(this)">Created by me</button>
+        <button class="fbtn" data-f="all" onclick="setTaskFilter(this)">All</button>
+        <button class="fbtn" data-f="overdue" onclick="setTaskFilter(this)">Overdue</button>
+        <button class="fbtn" data-f="awaiting" onclick="setTaskFilter(this)">Awaiting response</button>
+      </div>
+      <div id="task-list"></div>
+    </div>
   </div>
 
   <!-- DASHBOARD -->
@@ -213,6 +223,35 @@ label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacin
     <div id="nt-warnings"></div>
     <label>Attachment link (Drive URL, optional)</label><input id="nt-attach" placeholder="https://drive.google.com/…">
     <div style="margin-top:14px"><button class="btn btn-primary" style="width:100%" onclick="createTask()">Assign Task</button></div>
+  </div>
+</div>
+
+<!-- ══════ NEW RECURRING TEMPLATE ══════ -->
+<div class="fullscr" id="scr-newtemplate">
+  <div class="hdr"><button class="backbtn" onclick="hide('scr-newtemplate')">‹</button><b>New Recurring Task</b></div>
+  <div class="body">
+    <label>Title</label><input id="tpl-title" placeholder="e.g. Morning stock count">
+    <label>Description</label><textarea id="tpl-desc" rows="2"></textarea>
+    <label>Recurrence</label>
+    <select id="tpl-recurrence" onchange="toggleTplWeekdays()"><option>Daily</option><option>Weekdays</option></select>
+    <div id="tpl-weekdays-wrap" style="display:none">
+      <label>Which days</label>
+      <div class="filter-row" id="tpl-weekdays">
+        <button type="button" class="fbtn" data-day="Mon" onclick="tplToggleDay(this)">Mon</button>
+        <button type="button" class="fbtn" data-day="Tue" onclick="tplToggleDay(this)">Tue</button>
+        <button type="button" class="fbtn" data-day="Wed" onclick="tplToggleDay(this)">Wed</button>
+        <button type="button" class="fbtn" data-day="Thu" onclick="tplToggleDay(this)">Thu</button>
+        <button type="button" class="fbtn" data-day="Fri" onclick="tplToggleDay(this)">Fri</button>
+        <button type="button" class="fbtn" data-day="Sat" onclick="tplToggleDay(this)">Sat</button>
+        <button type="button" class="fbtn" data-day="Sun" onclick="tplToggleDay(this)">Sun</button>
+      </div>
+    </div>
+    <label>Due Time (each day it applies)</label><input id="tpl-due" type="time" value="18:00">
+    <label>Estimated Hours</label><input id="tpl-est" type="number" step="0.5">
+    <label>Assign To</label>
+    <div id="tpl-assignees" class="card" style="padding:4px;max-height:200px;overflow-y:auto"></div>
+    <div style="margin-top:14px"><button class="btn btn-primary" style="width:100%" onclick="saveTemplate()">Save Recurring Template</button></div>
+    <p style="font-size:.72rem;color:var(--muted);margin-top:10px">The first day's task is created automatically the next time anyone opens the app — not retroactively for today if it's already late.</p>
   </div>
 </div>
 

@@ -117,10 +117,131 @@ async function onSignedIn(){
   myDoc = (await uref.get()).data();
   $('me-name').textContent = myDoc.name + (myDoc.role==='admin'?' · admin':'');
   listenAll();
+  ensureTodaysRecurringTasks();
   handleDeepLink();
 }
 
 function teardown(){ [unsubChans,unsubTasks,unsubUsers,unsubMsgs].forEach(u=>{ if(u) u(); }); }
+
+// ═══════════════════════════════════════════════════════════
+// RECURRING TASK TEMPLATES — "daily work as a pending list"
+// A template defines a task that should exist every day it applies
+// (Daily, or specific weekdays). Whenever ANYONE opens the app, we
+// check: for each active template, does today's task already exist?
+// If not, create it. A Firestore transaction on a per-template-per-day
+// "runlog" doc prevents two people opening the app at once from
+// creating the same day's task twice.
+// No billing plan needed — this runs client-side, on app open.
+// ═══════════════════════════════════════════════════════════
+const WEEKDAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+let TEMPLATES = [];
+let unsubTemplates = null;
+
+function listenTemplates(){
+  if(unsubTemplates) unsubTemplates();
+  unsubTemplates = db.collection('taskTemplates').orderBy('createdAt','desc').onSnapshot(s=>{
+    TEMPLATES = s.docs.map(d=>({id:d.id, ...d.data()}));
+    renderTemplates();
+  });
+}
+
+async function ensureTodaysRecurringTasks(){
+  const todayStr = new Date().toISOString().slice(0,10);
+  const dow = WEEKDAYS[new Date().getDay()];
+  const snap = await db.collection('taskTemplates').where('active','==', true).get();
+  for(const doc of snap.docs){
+    const tpl = doc.data();
+    const applies = tpl.recurrence==='Daily' || (tpl.recurrence==='Weekdays' && (tpl.weekdays||[]).includes(dow));
+    if(!applies) continue;
+    const runId = doc.id+'_'+todayStr;
+    const runRef = db.collection('taskTemplateRuns').doc(runId);
+    try{
+      // Transaction: only the first device to reach this today actually creates the task.
+      await db.runTransaction(async (tx)=>{
+        const runSnap = await tx.get(runRef);
+        if(runSnap.exists) return; // already created today by someone else
+        tx.set(runRef, {templateId:doc.id, date:todayStr, createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+        const chanRef = db.collection('channels').doc();
+        tx.set(chanRef, {
+          name:'✅ '+tpl.title, taskId:'pending', createdBy:'system',
+          createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+          lastAt:firebase.firestore.FieldValue.serverTimestamp(), lastMsg:'Recurring task — auto-created',
+        });
+        const dueDate = todayStr+'T'+(tpl.dueTime||'18:00');
+        const taskRef = db.collection('tasks').doc();
+        tx.set(taskRef, {
+          title: tpl.title, desc: tpl.desc||'', priority: tpl.priority||'Medium',
+          startDate: todayStr, dueDate,
+          estHours: tpl.estHours||0, attachment:'',
+          createdBy:'system', createdByName:'Recurring: '+tpl.title,
+          assignees: tpl.assignees||[], assigneeNames: tpl.assigneeNames||[],
+          status:'Pending', channelId: chanRef.id, templateId: doc.id,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+      });
+    }catch(e){ /* transaction races are expected & harmless — someone else won */ }
+  }
+}
+
+function openNewTemplate(){
+  $('tpl-title').value=''; $('tpl-desc').value=''; $('tpl-due').value='18:00'; $('tpl-est').value='';
+  document.querySelectorAll('#tpl-weekdays .fbtn').forEach(b=>b.classList.remove('on'));
+  $('tpl-recurrence').value='Daily';
+  toggleTplWeekdays();
+  renderTplAssigneePicker();
+  show('scr-newtemplate');
+}
+function toggleTplWeekdays(){
+  $('tpl-weekdays-wrap').style.display = $('tpl-recurrence').value==='Weekdays' ? '' : 'none';
+}
+function tplToggleDay(el){ el.classList.toggle('on'); }
+function renderTplAssigneePicker(){
+  $('tpl-assignees').innerHTML = USERS.map(u=>`
+    <label class="checkline"><input type="checkbox" class="tpl-a" value="${u.uid}" data-name="${esc(u.name)}">
+      <div class="avatar" style="width:30px;height:30px;font-size:.7rem">${initials(u.name)}</div><span>${esc(u.name)}</span></label>`).join('');
+}
+async function saveTemplate(){
+  const title = $('tpl-title').value.trim();
+  const picked = [...document.querySelectorAll('.tpl-a:checked')];
+  if(!title){ toast('Title required'); return; }
+  if(!picked.length){ toast('Select at least one assignee'); return; }
+  const recurrence = $('tpl-recurrence').value;
+  const weekdays = [...document.querySelectorAll('#tpl-weekdays .fbtn.on')].map(b=>b.dataset.day);
+  if(recurrence==='Weekdays' && !weekdays.length){ toast('Pick at least one weekday'); return; }
+  await db.collection('taskTemplates').add({
+    title, desc:$('tpl-desc').value, priority:'Medium',
+    recurrence, weekdays, dueTime:$('tpl-due').value||'18:00',
+    estHours:parseFloat($('tpl-est').value)||0,
+    assignees:picked.map(p=>p.value), assigneeNames:picked.map(p=>p.dataset.name),
+    active:true, createdBy:me.uid, createdByName:myDoc.name,
+    createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+  });
+  hide('scr-newtemplate');
+  toast('Recurring task template saved ✓ — first instance appears next time the app opens');
+}
+function renderTemplates(){
+  const el = $('template-list');
+  if(!el) return;
+  el.innerHTML = TEMPLATES.map(t=>`
+    <div class="task-card" style="cursor:default">
+      <div class="task-title">${esc(t.title)} ${t.active?'':'<span class="badge b-muted">Paused</span>'}</div>
+      <div class="task-meta">
+        <span class="badge b-blue">${t.recurrence==='Daily'?'Daily':(t.weekdays||[]).join(',')}</span>
+        <span>⏰ ${t.dueTime||'18:00'}</span>
+        <span>👤 ${(t.assigneeNames||[]).join(', ')}</span>
+      </div>
+      <div style="margin-top:8px;display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm" onclick="toggleTemplateActive('${t.id}',${t.active})">${t.active?'Pause':'Resume'}</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteTemplate('${t.id}')">Delete</button>
+      </div>
+    </div>`).join('') || '<p style="color:var(--muted);text-align:center;padding:20px;font-size:.85rem">No recurring templates — create one above. Each one auto-creates its task every day it applies, the moment anyone opens the app.</p>';
+}
+async function toggleTemplateActive(id, cur){ await db.collection('taskTemplates').doc(id).update({active: !cur}); }
+async function deleteTemplate(id){
+  if(!confirm('Delete this recurring template? Past auto-created tasks are unaffected — only future ones stop.')) return;
+  await db.collection('taskTemplates').doc(id).delete();
+}
 
 // ── REAL-TIME LISTENERS ──
 function listenAll(){
@@ -132,6 +253,7 @@ function listenAll(){
     CHANNELS = s.docs.map(d=>({id:d.id, ...d.data()}));
     renderChannels();
   });
+  listenTemplates();
   unsubTasks = db.collection('tasks').orderBy('createdAt','desc').onSnapshot(s=>{
     TASKS = s.docs.map(d=>({id:d.id, ...d.data()}));
     renderTasks(); renderDash(); updateDots();
@@ -206,6 +328,13 @@ async function sendMsg(){
 function setTaskFilter(el){
   document.querySelectorAll('#task-filters .fbtn').forEach(b=>b.classList.remove('on')); el.classList.add('on');
   taskFilter = el.dataset.f; renderTasks();
+}
+
+function toggleTemplatesView(){
+  const t = $('template-section'), r = $('regular-task-section');
+  const showingTpl = t.style.display !== 'none';
+  t.style.display = showingTpl ? 'none' : '';
+  r.style.display = showingTpl ? '' : 'none';
 }
 
 function filteredTasks(){
