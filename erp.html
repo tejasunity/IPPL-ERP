@@ -418,6 +418,11 @@ tr:hover td{background:rgba(255,255,255,.03);}
       <div class="card-title"><span>📈</span>Management View — Cycle Time · Plan vs Actual · QC · Allocation</div>
       <div id="mgmt-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px"></div>
     </div>
+    <div class="card" style="grid-column:1/-1">
+      <div class="card-title"><span>🤝</span>Team Tasks — Innotek Work
+        <a href="work/index.html" target="_blank" class="btn btn-ghost btn-sm" style="float:right;text-decoration:none">Open App ↗</a></div>
+      <div id="teamtasks-card"><p style="color:var(--muted);font-size:.8rem">Loading…</p></div>
+    </div>
     </div>
 
     <div class="card">
@@ -596,12 +601,24 @@ tr:hover td{background:rgba(255,255,255,.03);}
       </table></div>
     </div>
     <div id="inv-drilldown-area"></div>
-    <div class="card">
-      <div class="card-title"><span>📥</span>Finished Goods — Batch Level (QC-gated)</div>
-      <div class="tbl-wrap"><table>
-        <thead><tr><th>Batch #</th><th>Product</th><th>End Date</th><th>Qty (KG)</th><th>FG Exp.</th><th>pH</th><th>Carbon</th><th>Dry Wt</th><th>QC</th><th>Status</th><th>Customer PO</th></tr></thead>
-        <tbody id="fg-tbody-inv"></tbody>
-      </table></div>
+    <div id="wip-inv-wrap" style="display:none">
+      <div class="card">
+        <div class="card-title"><span>⚙️</span>WIP — Batches In Progress</div>
+        <div class="kpi-grid" id="wip-kpi"></div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Batch #</th><th>Product</th><th>Stage</th><th>Qty in WIP (KG)</th><th>Started</th><th>Progress</th></tr></thead>
+          <tbody id="wip-tbody"></tbody>
+        </table></div>
+      </div>
+    </div>
+    <div id="fg-inv-wrap" style="display:none">
+      <div class="card">
+        <div class="card-title"><span>📥</span>Finished Goods — Batch Level (QC-gated)</div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Batch #</th><th>Product</th><th>End Date</th><th>Qty (KG)</th><th>FG Exp.</th><th>pH</th><th>Carbon</th><th>Dry Wt</th><th>QC</th><th>Status</th><th>Customer PO</th></tr></thead>
+          <tbody id="fg-tbody-inv"></tbody>
+        </table></div>
+      </div>
     </div>
   </div>
 
@@ -854,18 +871,17 @@ tr:hover td{background:rgba(255,255,255,.03);}
 ══════════════════════════════════════════════ -->
 <div class="page" id="page-attendance">
   <div class="page-hdr">
-    <div><h2>Attendance Management</h2><div class="meta">Face detection • Entry / Exit • Leave</div></div>
-    <div class="btn-row" style="margin:0">
-      <button class="btn btn-ghost btn-sm" onclick="exportTblCSV('att-tbl','Attendance')">CSV</button>
-      <button class="btn btn-ghost btn-sm" onclick="exportTblPDF('att-tbl','Attendance Register')">PDF</button>
-    </div>
+    <div><h2>Attendance Management</h2><div class="meta">Face check-in • Entry/Exit • Leave workflow • OT & payable</div></div>
+    <div id="att-sync-badge" style="font-size:.72rem;color:var(--muted)">—</div>
   </div>
 
   <div class="tabs">
-    <button class="tab active" onclick="attTab(this,'face')">Face Check-In</button>
-    <button class="tab" onclick="attTab(this,'manual')">Manual Entry</button>
-    <button class="tab" onclick="attTab(this,'register')">Register</button>
-    <button class="tab" onclick="attTab(this,'leave')">Leave</button>
+    <button class="tab active" onclick="attTab(this,'face')">📷 Face</button>
+    <button class="tab" onclick="attTab(this,'daily')">✏️ Daily Entry</button>
+    <button class="tab" onclick="attTab(this,'backdate')">🗓️ Backdate</button>
+    <button class="tab" onclick="attTab(this,'register')">📋 Register</button>
+    <button class="tab" onclick="attTab(this,'leave')">🌴 Leave</button>
+    <button class="tab" onclick="attTab(this,'reports')">📤 Reports</button>
   </div>
 
   <!-- FACE TAB -->
@@ -896,8 +912,8 @@ tr:hover td{background:rgba(255,255,255,.03);}
           <button class="btn btn-ghost btn-sm" onclick="openEnrollModal()" title="Enroll new face">👤 Enroll</button>
         </div>
         <div id="cam-status" style="margin-top:12px;font-size:.83rem;color:var(--muted)">Camera off</div>
+        <p style="font-size:.68rem;color:var(--muted);margin-top:8px">Today: phone camera. Planned: MI 360 CCTV auto-detection — camera feed slot is ready in code (FACE_SOURCE), recognition logic reused as-is.</p>
       </div>
-
       <div class="card">
         <div class="card-title"><span>✅</span>Recognized Faces — Confirm Below</div>
         <div id="face-log" style="display:flex;flex-direction:column;gap:10px;max-height:400px;overflow-y:auto;"></div>
@@ -905,52 +921,80 @@ tr:hover td{background:rgba(255,255,255,.03);}
     </div>
   </div>
 
-  <!-- MANUAL TAB -->
-  <div id="att-manual" class="att-tab" style="display:none">
+  <!-- DAILY ENTRY TAB -->
+  <div id="att-daily" class="att-tab" style="display:none">
+    <div id="att-onleave-banner"></div>
     <div class="card">
-      <div class="card-title"><span>✏️</span>Manual Attendance Entry</div>
-      <div class="form-grid">
-        <div class="field"><label>Employee</label>
-          <select id="att-emp">
-            <option value="">Select Employee</option>
-          </select>
-        </div>
-        <div class="field"><label>Date</label><input type="date" id="att-date"></div>
-        <div class="field"><label>Type</label>
-          <select id="att-type">
-            <option value="Entry">Entry</option>
-            <option value="Exit">Exit</option>
-            <option value="Present">Present (Full Day)</option>
-            <option value="Half Day">Half Day</option>
-            <option value="Absent">Absent</option>
-            <option value="Leave">Leave</option>
-          </select>
-        </div>
-        <div class="field"><label>Time</label><input type="time" id="att-time"></div>
-        <div class="field"><label>Remarks</label><input id="att-remarks" placeholder="Optional"></div>
+      <div class="card-title"><span>✏️</span>Daily Entry — <span id="att-clock" style="color:var(--accent)"></span> <span id="att-clock-badge" class="badge badge-green">LIVE</span></div>
+      <div class="btn-row" style="margin-bottom:10px">
+        <button class="btn btn-ghost btn-sm" onclick="openTimeAdjust()">🕑 Adjust Time (system failure)</button>
+        <button class="btn btn-ghost btn-sm" id="btn-clear-manual" style="display:none" onclick="clearManualTime()">↺ Back to Live Time</button>
       </div>
+      <label style="font-size:.72rem;color:var(--muted)">Managed By (tap to filter)</label>
+      <div class="tabs" id="de-mb-grid" style="margin-bottom:8px"></div>
+      <div id="de-checklist" style="max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;padding:6px;margin-bottom:10px"></div>
       <div class="btn-row">
-        <button class="btn btn-primary" onclick="saveManualAtt()">Save Entry</button>
-        <button class="btn btn-ghost" onclick="markBulkPresent()">Mark All Present</button>
+        <button class="btn btn-success" onclick="markSelected('ENTRY')">↑ Mark Entry</button>
+        <button class="btn btn-primary" onclick="markSelected('EXIT')">↓ Mark Exit</button>
+        <button class="btn btn-ghost" onclick="markSelected('Leave')">🌴 Leave</button>
+        <button class="btn btn-ghost" onclick="markSelected('Absent')">❌ Absent</button>
       </div>
+      <div id="de-msgbox" style="margin-top:10px;display:flex;flex-direction:column;gap:4px;max-height:140px;overflow-y:auto;font-size:.78rem"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span>📆</span>Today — <span id="de-today-label"></span></div>
+      <div class="kpi-grid" id="de-kpis"></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Name</th><th>Managed By</th><th>Status</th><th>In</th><th>Out</th><th>Paid Hrs</th><th>OT Hrs</th></tr></thead>
+        <tbody id="de-today-tbody"></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- BACKDATE TAB -->
+  <div id="att-backdate" class="att-tab" style="display:none">
+    <div class="card">
+      <div class="card-title"><span>🗓️</span>Backdated Entry — full record for a past date</div>
+      <label style="font-size:.72rem;color:var(--muted)">Managed By</label>
+      <div class="tabs" id="bd-mb-grid" style="margin-bottom:8px"></div>
+      <div id="bd-checklist" style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;padding:6px;margin-bottom:10px"></div>
+      <div class="form-grid">
+        <div class="field"><label>Date</label><input type="date" id="bd-date"></div>
+        <div class="field"><label>Status</label><select id="bd-status"><option>Present</option><option>Half Day</option><option>Leave</option><option>Absent</option></select></div>
+        <div class="field"><label>Entry Time</label><input type="time" id="bd-entry"></div>
+        <div class="field"><label>Exit Time</label><input type="time" id="bd-exit"></div>
+        <div class="field" style="grid-column:1/-1"><label>Remarks</label><input id="bd-remarks" placeholder="Reason for backdated entry"></div>
+      </div>
+      <div class="btn-row"><button class="btn btn-primary" onclick="saveBackdate()">Save Backdated Record</button></div>
+      <div id="bd-msgbox" style="margin-top:10px;font-size:.78rem"></div>
     </div>
   </div>
 
   <!-- REGISTER TAB -->
   <div id="att-register" class="att-tab" style="display:none">
     <div class="card">
-      <div style="margin-bottom:10px">
-        <label style="font-size:.72rem;color:var(--muted)">Managed By <span style="font-weight:400">(tap to filter)</span></label>
-        <div class="tabs" id="att-mb-grid" style="margin-bottom:0"></div>
-      </div>
-      <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+      <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:end">
         <div class="field" style="flex:1;min-width:130px;margin-bottom:0">
-          <label>Month</label><input type="month" id="att-month" onchange="loadAttRegister()">
+          <label>Month</label><input type="month" id="att-month" onchange="renderAttRegister()">
         </div>
+        <button class="btn btn-ghost btn-sm" onclick="attSyncNow()">🔄 Sync from Sheet</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportRegisterCSV()">CSV</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportRegisterPDF()">PDF</button>
       </div>
+      <label style="font-size:.72rem;color:var(--muted)">Managed By (tap to filter)</label>
+      <div class="tabs" id="reg-mb-grid" style="margin-bottom:10px"></div>
       <div class="tbl-wrap"><table id="att-tbl">
-        <thead><tr id="att-hdr"></tr></thead>
+        <thead><tr><th>Employee</th><th>Managed By</th><th>Present</th><th>Half</th><th>Leave</th><th>Absent</th><th>Payable Days</th><th>Paid Hrs</th><th>OT Hrs</th><th>Payable ₹</th></tr></thead>
         <tbody id="att-tbody"></tbody>
+      </table></div>
+      <p style="font-size:.7rem;color:var(--muted);margin-top:6px">Payable ₹ needs a salary on the employee record (Employees page): month-salary ÷ 26 × payable days + OT hrs × hourly rate. Hours math: lunch −0.5h, minimum 4 paid, over 8 = OT — same as your Attendance Ledger app.</p>
+    </div>
+    <div class="card">
+      <div class="card-title"><span>📅</span>Day Detail</div>
+      <div class="field" style="max-width:200px"><label>Date</label><input type="date" id="att-day" onchange="renderDayDetail()"></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Name</th><th>Managed By</th><th>Status</th><th>In</th><th>Out</th><th>Actual</th><th>Paid</th><th>OT</th><th>Remarks</th></tr></thead>
+        <tbody id="att-day-tbody"></tbody>
       </table></div>
     </div>
   </div>
@@ -958,30 +1002,58 @@ tr:hover td{background:rgba(255,255,255,.03);}
   <!-- LEAVE TAB -->
   <div id="att-leave" class="att-tab" style="display:none">
     <div class="card">
-      <div class="card-title"><span>📅</span>Leave Requests</div>
+      <div class="card-title"><span>🌴</span>Apply Leave</div>
       <div class="form-grid">
         <div class="field"><label>Employee</label><select id="leave-emp"><option value="">Select</option></select></div>
+        <div class="field"><label>Leave Type</label>
+          <select id="leave-type"><option>Casual Leave</option><option>Sick Leave</option><option>Earned Leave</option><option>Unpaid Leave</option></select>
+        </div>
         <div class="field"><label>From Date</label><input type="date" id="leave-from"></div>
         <div class="field"><label>To Date</label><input type="date" id="leave-to"></div>
-        <div class="field"><label>Leave Type</label>
-          <select id="leave-type">
-            <option>Casual Leave</option><option>Sick Leave</option>
-            <option>Earned Leave</option><option>Unpaid Leave</option>
-          </select>
-        </div>
         <div class="field" style="grid-column:1/-1"><label>Reason</label><textarea id="leave-reason" rows="2"></textarea></div>
       </div>
       <div class="btn-row"><button class="btn btn-primary" onclick="applyLeave()">Apply Leave</button></div>
-      <div style="margin-top:16px">
-        <div class="card-title"><span>📋</span>Leave Records</div>
-        <div class="tbl-wrap"><table>
-          <thead><tr><th>Employee</th><th>Type</th><th>From</th><th>To</th><th>Days</th><th>Reason</th><th>Status</th></tr></thead>
-          <tbody id="leave-tbody"></tbody>
-        </table></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span>📋</span>Leave Requests — Approve / Reject / Cancel</div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Employee</th><th>Type</th><th>From</th><th>To</th><th>Days</th><th>Reason</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody id="leave-tbody"></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- REPORTS TAB -->
+  <div id="att-reports" class="att-tab" style="display:none">
+    <div class="card">
+      <div class="card-title"><span>📤</span>Reports & WhatsApp Cards</div>
+      <div class="form-grid">
+        <div class="field"><label>Date (daily card)</label><input type="date" id="rep-date"></div>
+        <div class="field"><label>Month (register export)</label><input type="month" id="rep-month"></div>
+      </div>
+      <label style="font-size:.72rem;color:var(--muted)">Managed By (tap to filter — none = all)</label>
+      <div class="tabs" id="rep-mb-grid" style="margin-bottom:12px"></div>
+      <div style="border-top:1px solid var(--border);padding-top:12px">
+        <label style="font-size:.72rem;color:var(--muted);display:block;margin-bottom:6px">WhatsApp card detail level</label>
+        <div class="tabs" id="wa-detail-row" style="margin-bottom:10px">
+          <button class="tab active" onclick="setWaDetail(this,'summary')">Summary</button>
+          <button class="tab" onclick="setWaDetail(this,'names')">Names</button>
+          <button class="tab" onclick="setWaDetail(this,'timings')">Timings</button>
+          <button class="tab" onclick="setWaDetail(this,'ot')">OT</button>
+          <button class="tab" onclick="setWaDetail(this,'all')">All</button>
+        </div>
+        <div id="wa-preview" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:.78rem;white-space:pre-wrap;font-family:monospace;max-height:260px;overflow-y:auto;margin-bottom:10px"></div>
+        <div class="btn-row">
+          <button class="btn btn-success" onclick="shareWaCard()">📱 Share on WhatsApp</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportDayCSV()">Day CSV</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportRegisterCSV()">Month CSV</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportRegisterPDF()">Month PDF</button>
+        </div>
       </div>
     </div>
   </div>
 </div>
+
 
 <!-- ══════════════════════════════════════════════
      EMPLOYEES
@@ -1419,6 +1491,9 @@ tr:hover td{background:rgba(255,255,255,.03);}
         <div class="field" style="grid-column:1/-1"><label>🆕 Masters (Vendors, Customers, BOM, Chart of Accounts, etc.) — set up FIRST</label>
           <input id="s-url-masters" placeholder="https://script.google.com/macros/s/.../exec">
         </div>
+        <div class="field" style="grid-column:1/-1"><label>🏭 Production Data (your QCQA spreadsheet with the NEW script — see backend-scripts/production-data)</label>
+          <input id="s-url-proddata" placeholder="https://script.google.com/macros/s/.../exec">
+        </div>
         <div class="field" style="grid-column:1/-1"><label>🆕 Inventory & Purchase</label>
           <input id="s-url-invpur" placeholder="https://script.google.com/macros/s/.../exec">
         </div>
@@ -1444,6 +1519,26 @@ tr:hover td{background:rgba(255,255,255,.03);}
         <div class="btn-row">
           <button class="btn btn-ghost btn-sm" onclick="attemptSyncNow(); refreshSyncDetail();">🔄 Retry Sync Now</button>
         </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span>🏷️</span>Product Grades & Customer-Specific Names</div>
+      <p style="font-size:.78rem;color:var(--muted);margin-bottom:10px">Grades sync to the Masters sheet. Customer names let the same grade appear under each customer's own naming on POs and summaries.</p>
+      <div class="form-grid">
+        <div class="field"><label>Product Code</label><input id="grade-code" placeholder="e.g. 9080230"></div>
+        <div class="field"><label>Grade Label (optional)</label><input id="grade-label" placeholder="e.g. GR-95 Fine"></div>
+        <div class="field"><label>NFG Code (optional)</label><input id="grade-nfg" placeholder="e.g. NFG-908"></div>
+      </div>
+      <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="addGrade()">+ Add Grade</button></div>
+      <div id="grades-list" style="margin-top:8px"></div>
+      <div style="border-top:1px solid var(--border);margin:14px 0 10px;padding-top:12px">
+        <div class="form-grid">
+          <div class="field"><label>Grade</label><select id="alias-grade"></select></div>
+          <div class="field"><label>Customer</label><input id="alias-customer" placeholder="e.g. GraphTech GmbH"></div>
+          <div class="field"><label>Customer's Name for It</label><input id="alias-name" placeholder="e.g. XG-Flake 95"></div>
+        </div>
+        <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="addGradeAlias()">+ Add Customer Name</button></div>
+        <div id="aliases-list" style="margin-top:8px"></div>
       </div>
     </div>
     <div class="card">
@@ -1502,7 +1597,8 @@ tr:hover td{background:rgba(255,255,255,.03);}
 <div class="entry-screen" id="entry-newbatch">
   <div class="entry-header">
     <button class="entry-back" onclick="closeEntryScreen('entry-newbatch')">‹</button>
-    <div><div class="entry-title">New Batch</div><div class="entry-sub">Basic data entry</div></div>
+    <div><div class="entry-title">New Batch</div><div class="entry-sub" id="eb-sub">Basic data entry</div></div>
+    <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="startVoiceFill('newbatch')">🎤 Voice</button>
   </div>
   <div class="entry-body">
 
@@ -1602,6 +1698,7 @@ tr:hover td{background:rgba(255,255,255,.03);}
   <div class="entry-header">
     <button class="entry-back" onclick="backToBatchHub('entry-cb')">‹</button>
     <div><div class="entry-title">CB Stage</div><div class="entry-sub" id="ecb-batch-label">Quantities, temps & times</div></div>
+    <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="startVoiceFill('cb')">🎤 Voice</button>
   </div>
   <div class="entry-body">
 
@@ -1707,6 +1804,7 @@ tr:hover td{background:rgba(255,255,255,.03);}
   <div class="entry-header">
     <button class="entry-back" onclick="backToBatchHub('entry-premix')">‹</button>
     <div><div class="entry-title">Pre-Mix</div><div class="entry-sub" id="epm-batch-label">Ribbon Blender data</div></div>
+    <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="startVoiceFill('premix')">🎤 Voice</button>
   </div>
   <div class="entry-body">
     <div class="form-section">
@@ -1744,6 +1842,7 @@ tr:hover td{background:rgba(255,255,255,.03);}
   <div class="entry-header">
     <button class="entry-back" onclick="backToBatchHub('entry-decant')">‹</button>
     <div><div class="entry-title">Decant</div><div class="entry-sub" id="edc-batch-label">P2 quantity</div></div>
+    <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="startVoiceFill('decant')">🎤 Voice</button>
   </div>
   <div class="entry-body">
     <div class="form-section">
@@ -1825,51 +1924,6 @@ tr:hover td{background:rgba(255,255,255,.03);}
   </div>
 </div>
 
-<!-- New Batch -->
-<div class="modal-bg" id="modal-newbatch">
-  <div class="modal">
-    <h3>🏭 New Production Batch</h3>
-    <div class="form-grid">
-      <div class="field"><label>Batch Number</label><input id="b-num" placeholder="Auto"></div>
-      <div class="field"><label>Date</label><input id="b-start" type="date"></div>
-      <div class="field" style="grid-column:1/-1"><label>Product Code</label>
-        <select id="b-product" onchange="onBatchProductChange()">
-          <option value="">Select product code</option>
-          <option>85200150</option><option>9080230</option><option>8550280</option>
-          <option>9650280</option><option>9980200</option><option>9950280</option>
-          <option>9980180</option><option>9680200</option><option>9650300</option>
-          <option>9050300</option><option>9450300</option><option>9450120</option>
-          <option>9080180</option>
-        </select>
-      </div>
-      <div class="field"><label>NFG Code (auto from product)</label><input id="b-nfg-code" readonly placeholder="Select product code above"></div>
-      <div class="field"><label>Grade Label</label><input id="b-grade" placeholder="e.g. GR-98"></div>
-      <div class="field"><label>Planned Qty (MT)</label><input id="b-qty" type="number" step="0.01"></div>
-      <div class="field"><label>Operator</label><input id="b-op" placeholder="Operator name"></div>
-      <div class="field" style="grid-column:1/-1"><label>NFG — Select GRN (Bag 1)</label>
-        <select id="b-nfg-grn-1"><option value="">Select GRN</option></select>
-      </div>
-      <div class="field" style="grid-column:1/-1"><label>L1 — Select GRN</label>
-        <select id="b-l1-grn"><option value="">Select L1 GRN (latest first)</option></select>
-      </div>
-      <div class="field"><label>L1 Concentration</label><input id="b-l1-conc" readonly placeholder="Auto"></div>
-      <div class="field"><label>L1 Density</label><input id="b-l1-density" readonly placeholder="Auto"></div>
-      <div class="field" style="grid-column:1/-1"><label>Select CB</label>
-        <div class="tabs" id="b-cb-row">
-          <button class="tab active" onclick="selectCB(this,'CB1')">CB1</button>
-          <button class="tab" onclick="selectCB(this,'CB2')">CB2</button>
-          <button class="tab" onclick="selectCB(this,'CB3')">CB3</button>
-          <button class="tab" onclick="selectCB(this,'CB4')">CB4</button>
-        </div>
-      </div>
-      <div class="field" style="grid-column:1/-1"><label>Observations</label><textarea id="b-notes" rows="2"></textarea></div>
-    </div>
-    <div class="btn-row">
-      <button class="btn btn-primary" onclick="saveBatch()">Create Batch</button>
-      <button class="btn btn-ghost" onclick="closeModal('modal-newbatch')">Cancel</button>
-    </div>
-  </div>
-</div>
 
 <!-- NFG GRN Create -->
 <div class="modal-bg" id="modal-nfg-grn">
@@ -1958,31 +2012,6 @@ tr:hover td{background:rgba(255,255,255,.03);}
   </div>
 </div>
 
-<!-- CB Stage Entry -->
-<div class="modal-bg" id="modal-cb">
-  <div class="modal">
-    <h3>🔬 CB Stage — Quantities, Temps & Times</h3>
-    <p style="font-size:.8rem;color:var(--muted);margin-bottom:10px" id="cb-batch-label"></p>
-    <div class="form-grid">
-      <div class="field"><label>L1 Quantity (Kg)</label><input id="cb-l1-qty" type="number" step="0.01"></div>
-      <div class="field"><label>L3 Quantity (Kg)</label><input id="cb-l3-qty" type="number" step="0.01"></div>
-      <div class="field"><label>Start Time</label><input id="cb-start-time" type="time"></div>
-      <div class="field"><label>Start Temp (°C)</label><input id="cb-start-temp" type="number"></div>
-      <div class="field"><label>End Time</label><input id="cb-end-time" type="time"></div>
-      <div class="field"><label>End Temp (°C)</label><input id="cb-end-temp" type="number"></div>
-      <div class="field"><label>L3 Add Time</label><input id="cb-l3-time" type="time"></div>
-      <div class="field"><label>L3 Add Temp (°C)</label><input id="cb-l3-temp" type="number"></div>
-      <div class="field"><label>Unload Time</label><input id="cb-unload-time" type="time"></div>
-      <div class="field"><label>Unload Temp (°C)</label><input id="cb-unload-temp" type="number"></div>
-      <div class="field"><label>Expansion at CB Stage (CC)</label><input id="cb-expansion" type="number"></div>
-      <div class="field" style="grid-column:1/-1"><label>Observations</label><textarea id="cb-obs" rows="2" placeholder="No. of trips/halts, during addition/during soak etc."></textarea></div>
-    </div>
-    <div class="btn-row">
-      <button class="btn btn-primary" onclick="submitCB()">Submit ✓</button>
-      <button class="btn btn-ghost" onclick="closeModal('modal-cb')">Cancel</button>
-    </div>
-  </div>
-</div>
 
 <!-- Decant Stage Entry -->
 <div class="modal-bg" id="modal-decant">
@@ -2389,14 +2418,16 @@ const BACKEND = {
   ATTENDANCE_SHEET_ID: '1bixbhqwXgLI4FvDCddIhynf7QXVlQ2uMpftG2BHhgpM',
   // Doc Mgmt System (Invoice / Voucher / Due / Supplier Master)
   DOCMGMT_GAS_URL: 'https://script.google.com/macros/s/AKfycbx604OvD680m-CSBdCNquBZSizXzTJmaW-2eBF5cyT-JBCaFYjdJ8qjYiTldlzzsWC_/exec',
-  // Innotek QCQA Lab (Batch / Pre-Mix / CB / Decant / NFG / L1 / Dispatch samples)
-  QCQA_GAS_URL: 'https://script.google.com/macros/s/AKfycbw0PiBAnef8ov_G8OOTnqnZ7eMFaFSjB9u5QD4wzZ2p52K1leWTGM67swDoen2Yq3Z7Vw/exec',
+  // Production Data (the QCQA spreadsheet, now ERP-owned). Once you deploy the new
+  // Production Data script and save its URL in Settings, it takes over from the
+  // legacy QCQA script URL below. Same spreadsheet, same data — new, safer script.
+  QCQA_GAS_URL: localStorage.getItem('erp_url_proddata') || 'https://script.google.com/macros/s/AKfycbw0PiBAnef8ov_G8OOTnqnZ7eMFaFSjB9u5QD4wzZ2p52K1leWTGM67swDoen2Yq3Z7Vw/exec',
   // ── NEW BACKENDS — paste your deployed Web App URLs here (or via Settings page) ──
   MASTERS_GAS_URL:    localStorage.getItem('erp_url_masters')    || 'https://script.google.com/macros/s/AKfycby6noofIJWisvJK7GrJPrlsjx8TLEQh43UvYWv2jMqiUsuI0RQI41IL_nG3wyoYybHnGw/exec',
   INVPUR_GAS_URL:     localStorage.getItem('erp_url_invpur')     || 'https://script.google.com/macros/s/AKfycbwc4mJQsxg51wYUKM5m-m1A_e_FhtX82lwx4lOdyIDjf8UFbJofnJmOC1UlSr_f6iK6/exec',
   PLAN_GAS_URL:       localStorage.getItem('erp_url_plan')       || 'https://script.google.com/macros/s/AKfycby3WP1d9rH44tuFUF7-hZJ3q9Jf0TBGafactgrBZxPFjBvKxYlTRCombLPebK_ISRhvBQ/exec',
   FINANCE_GAS_URL:    localStorage.getItem('erp_url_finance')    || 'https://script.google.com/macros/s/AKfycbzuuGfUT0ASs0jsCxixLTxGs6fr2lQWzOrsG1j7wfKI39HlOAzUjgtiAJJaYi8Rvo7Aag/exec',
-  SALESDISP_GAS_URL:  localStorage.getItem('erp_url_salesdisp')  || 'https://script.google.com/macros/s/AKfycbylC99rRuWwdMioVB-fWyJIiAnwGchuD52nbY7xgOprwdGcrT8D3t1ibpnECwn4Jbi36A/exec',
+  SALESDISP_GAS_URL:  localStorage.getItem('erp_url_salesdisp')  || 'https://script.google.com/a/macros/unitycpl.com/s/AKfycbxIKM1BwmxpdoOqkVbFO2quvYzhtbD9ewcWeaEEGiyrNRVAnOsiAblPKi5JYRA9Lnr4LA/exec',
 };
 const FACE_MODEL_CDN = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
 const FACE_MODEL_FALLBACK = 'https://justadudewhohacks.github.io/face-api.js/models';
@@ -2535,6 +2566,9 @@ const DB = {
   fgBatches: JSON.parse(localStorage.getItem('erp_fgBatches') || '[]'),
   customerPOs: JSON.parse(localStorage.getItem('erp_customerPOs') || '[]'),
   audit:     JSON.parse(localStorage.getItem('erp_audit')     || '[]'),
+  productGrades: JSON.parse(localStorage.getItem('erp_productGrades') || '[]'),
+  gradeAliases:  JSON.parse(localStorage.getItem('erp_gradeAliases')  || '[]'),
+  attCompanies:  JSON.parse(localStorage.getItem('erp_attCompanies')  || '[]'),
 };
 function save(key){ localStorage.setItem('erp_'+key, JSON.stringify(DB[key])); }
 let camStream = null;
@@ -2667,9 +2701,13 @@ function showPage(id){
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(b=>{ if(b.getAttribute('onclick')===`showPage('${id}')`) b.classList.add('active'); });
-  if(window.innerWidth<768) toggleSidebar();
-  if(id==='attendance'){ populateEmpSelects(); setDefaults(); }
-  if(id==='dashboard') renderDashboard();
+  if(window.innerWidth<768){
+    document.getElementById('sidebar').classList.remove('open');
+    const ov = document.getElementById('overlay'); if(ov) ov.classList.remove('open');
+  }
+  if(id!=='attendance' && typeof stopFaceCam==='function'){ stopFaceCam(); }
+  if(id==='attendance'){ populateEmpSelects(); renderTodayEntry(); renderOnLeaveBanner(); updateAttSyncBadge(); attFlush(); }
+  if(id==='dashboard'){ renderDashboard(); loadTeamTasksCard(); }
   if(id==='production') renderProduction();
   if(id==='plan') renderPlan();
   if(id==='inventory'){ renderInventory(); renderFGBatches(); }
@@ -2680,7 +2718,7 @@ function showPage(id){
   if(id==='purchase') renderPO();
   if(id==='sales'){ renderSO(); renderCustomerPOs(); }
   if(id==='documents') renderDocs();
-  if(id==='settings'){ loadSettingsPage(); renderAuditTrail(); }
+  if(id==='settings'){ loadSettingsPage(); renderAuditTrail(); renderGradesManager(); }
 }
 
 function toggleSidebar(){
@@ -2721,10 +2759,135 @@ function nextNum(prefix){
 // ─────────────────────────────────────────────────────
 // DASHBOARD
 // ─────────────────────────────────────────────────────
+// ── PRODUCT GRADES MASTER + CUSTOMER-SPECIFIC NAMES ──
+const DEFAULT_GRADE_CODES = ['85200150','9080230','8550280','9650280','9980200','9950280','9980180','9680200','9650300','9050300','9450300','9450120','9080180'];
+
+function gradeList(){
+  return DB.productGrades.length ? DB.productGrades.map(g=>g.code) : DEFAULT_GRADE_CODES;
+}
+function gradeOptionsHTML(selected){
+  return '<option value="">Select product code</option>' +
+    gradeList().map(c=>{
+      const g = DB.productGrades.find(x=>x.code===c);
+      return `<option value="${c}" ${c===selected?'selected':''}>${c}${g&&g.label?' — '+g.label:''}</option>`;
+    }).join('');
+}
+function customerGradeName(code, customer){
+  const a = DB.gradeAliases.find(x=>x.code===code && x.customer.toLowerCase()===(customer||'').toLowerCase());
+  return a ? a.name : '';
+}
+
+function renderGradesManager(){
+  const gl = document.getElementById('grades-list');
+  if(!gl) return;
+  gl.innerHTML = DB.productGrades.map((g,i)=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--surface);border-radius:8px;margin-bottom:6px">
+      <div><b>${g.code}</b> ${g.label?'— '+g.label:''} <span style="color:var(--muted);font-size:.75rem">${g.nfgCode||''}</span></div>
+      <button class="btn btn-ghost btn-sm" onclick="deleteGrade(${i})">🗑️</button>
+    </div>`).join('') || '<p style="color:var(--muted);font-size:.8rem;padding:6px">No custom grades — using built-in code list. Add yours to take over.</p>';
+  const al = document.getElementById('aliases-list');
+  al.innerHTML = DB.gradeAliases.map((a,i)=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--surface);border-radius:8px;margin-bottom:6px">
+      <div><b>${a.code}</b> → "<span style="color:var(--accent)">${a.name}</span>" for ${a.customer}</div>
+      <button class="btn btn-ghost btn-sm" onclick="deleteGradeAlias(${i})">🗑️</button>
+    </div>`).join('') || '<p style="color:var(--muted);font-size:.8rem;padding:6px">No customer-specific names yet</p>';
+  const sel = document.getElementById('alias-grade');
+  if(sel) sel.innerHTML = gradeList().map(c=>`<option>${c}</option>`).join('');
+}
+
+function addGrade(){
+  const code = document.getElementById('grade-code').value.trim();
+  const label = document.getElementById('grade-label').value.trim();
+  const nfgCode = document.getElementById('grade-nfg').value.trim();
+  if(!code){ toast('Enter a product code'); return; }
+  if(DB.productGrades.some(g=>g.code===code)){ toast('Code already exists'); return; }
+  DB.productGrades.push({code, label, nfgCode}); save('productGrades');
+  queueWrite(BACKEND.MASTERS_GAS_URL, {sheet:'ProductGrades', action:'upsert', keyField:'ProductCode', data:{
+    ProductCode:code, NFGCode:nfgCode, GradeLabel:label,
+  }});
+  audit('Grade Added', `${code} ${label||''}`);
+  document.getElementById('grade-code').value=''; document.getElementById('grade-label').value=''; document.getElementById('grade-nfg').value='';
+  toast('Grade added ✓'); renderGradesManager();
+}
+function deleteGrade(i){
+  if(!confirm(`Remove grade ${DB.productGrades[i].code} from the ERP list? (Masters sheet row stays for history)`)) return;
+  DB.productGrades.splice(i,1); save('productGrades'); renderGradesManager();
+}
+
+function addGradeAlias(){
+  const code = document.getElementById('alias-grade').value;
+  const customer = document.getElementById('alias-customer').value.trim();
+  const name = document.getElementById('alias-name').value.trim();
+  if(!customer || !name){ toast('Customer and their grade name required'); return; }
+  DB.gradeAliases.push({code, customer, name}); save('gradeAliases');
+  queueWrite(BACKEND.MASTERS_GAS_URL, {sheet:'GradeAliases', action:'append', data:{
+    ProductCode:code, Customer:customer, CustomerGradeName:name,
+  }});
+  audit('Grade Alias', `${code} = "${name}" for ${customer}`);
+  document.getElementById('alias-customer').value=''; document.getElementById('alias-name').value='';
+  toast('Customer grade name saved ✓'); renderGradesManager(); renderCustomerPOs();
+}
+function deleteGradeAlias(i){
+  DB.gradeAliases.splice(i,1); save('gradeAliases'); renderGradesManager(); renderCustomerPOs();
+}
+
 function batchCycleDays(b){
   if(!b.stageTimestamps || !b.stageTimestamps['NFG']) return null;
   const endTs = b.status==='Complete' ? Math.max(...Object.values(b.stageTimestamps).map(t=>+new Date(t))) : Date.now();
   return (endTs - new Date(b.stageTimestamps['NFG'])) / 864e5;
+}
+
+// ── TEAM TASKS REFLECTION (Innotek Work / Firebase) ──
+// Same-origin as the work app → shares its saved config AND its signed-in
+// session, so the ERP reads live task data with zero extra login.
+let fbLoaded=false, fbTasksUnsub=null;
+function loadTeamTasksCard(){
+  const el = document.getElementById('teamtasks-card');
+  if(!el) return;
+  const cfgRaw = localStorage.getItem('innotek_fb_config');
+  if(!cfgRaw){
+    el.innerHTML = '<p style="color:var(--muted);font-size:.8rem">Not connected yet — open the Innotek Work app once on this device and complete its setup. This card then shows live team-task status.</p>';
+    return;
+  }
+  if(fbLoaded){ return; }
+  fbLoaded = true;
+  const srcs = ['firebase-app-compat.js','firebase-auth-compat.js','firebase-firestore-compat.js'];
+  let loaded = 0;
+  srcs.forEach(s=>{
+    const sc = document.createElement('script');
+    sc.src = 'https://www.gstatic.com/firebasejs/10.12.2/'+s;
+    sc.onload = ()=>{ if(++loaded===srcs.length) initTeamTasks(cfgRaw); };
+    sc.onerror = ()=>{ el.innerHTML = '<p style="color:var(--warn);font-size:.8rem">⚠️ Could not load Firebase SDK — check connection.</p>'; };
+    document.head.appendChild(sc);
+  });
+}
+function initTeamTasks(cfgRaw){
+  const el = document.getElementById('teamtasks-card');
+  try{
+    const app = firebase.initializeApp(JSON.parse(cfgRaw), 'erp-view');
+    const auth = app.auth();
+    auth.onAuthStateChanged(u=>{
+      if(!u){ el.innerHTML = '<p style="color:var(--muted);font-size:.8rem">Sign in once in the <a href="work/index.html" target="_blank" style="color:var(--accent)">Innotek Work app</a> on this device — the ERP then shows live tasks automatically.</p>'; return; }
+      if(fbTasksUnsub) fbTasksUnsub();
+      fbTasksUnsub = app.firestore().collection('tasks').orderBy('updatedAt','desc').limit(50).onSnapshot(s=>{
+        const tasks = s.docs.map(d=>({id:d.id, ...d.data()}));
+        const open = tasks.filter(t=>!['Completed','Cancelled','Rejected'].includes(t.status));
+        const overdue = open.filter(t=>t.dueDate && new Date(t.dueDate)<new Date());
+        const awaiting = tasks.filter(t=>t.status==='Pending');
+        el.innerHTML = `
+          <div class="kpi-grid" style="margin-bottom:10px">
+            <div class="kpi accent"><div class="label">Open Tasks</div><div class="value">${open.length}</div></div>
+            <div class="kpi danger"><div class="label">Overdue</div><div class="value">${overdue.length}</div></div>
+            <div class="kpi warn"><div class="label">Awaiting Acceptance</div><div class="value">${awaiting.length}</div></div>
+          </div>` +
+          tasks.slice(0,5).map(t=>`<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:.82rem">
+            <a href="work/index.html#task-${t.id}" target="_blank" style="color:var(--text);text-decoration:none;flex:1">${t.title}</a>
+            <span style="color:var(--muted);font-size:.72rem">${(t.assigneeNames||[]).join(', ')}</span>
+            <span class="badge ${t.status==='Completed'?'badge-green':t.status==='Pending'?'badge-warn':'badge-blue'}">${t.status}</span>
+          </div>`).join('');
+      }, err=>{ el.innerHTML = '<p style="color:var(--warn);font-size:.8rem">⚠️ '+err.message+'</p>'; });
+    });
+  }catch(e){ el.innerHTML = '<p style="color:var(--warn);font-size:.8rem">⚠️ '+e.message+'</p>'; }
 }
 
 function renderMgmtCards(){
@@ -2859,7 +3022,7 @@ if(STAGE_FLOW.includes('Ore Receipt')){
   STAGE_FLOW = STAGE_FLOW.map(s=>s==='Ore Receipt'?'NFG':s);
   localStorage.setItem('erp_stageFlow', JSON.stringify(STAGE_FLOW));
 }
-DB.batches.forEach(b=>{ if(b.stage==='Ore Receipt'){ b.stage='NFG'; } });
+DB.batches.forEach(b=>{ if(b.stage==='Ore Receipt'){ b.stage='NFG'; } if(typeof b.num!=='string'){ b.num=String(b.num); } });
 
 // ── AUDIT TRAIL ──
 function audit(action, detail){
@@ -3053,7 +3216,7 @@ function openNewPlanLine(planId){
   document.getElementById('planline-modal-title').textContent = '+ Add Batch Line';
   document.getElementById('planline-edit-key').value = '';
   document.getElementById('planline-plan-id').value = planId;
-  document.getElementById('planline-grade').value = '';
+  document.getElementById('planline-grade').innerHTML = gradeOptionsHTML('');
   document.getElementById('planline-qty').value = '';
   document.getElementById('planline-date').value = today();
   document.getElementById('planline-batch').value = '';
@@ -3068,7 +3231,7 @@ function openEditPlanLine(planId, lineNum){
   document.getElementById('planline-modal-title').textContent = `✏️ Edit Line ${lineNum}`;
   document.getElementById('planline-edit-key').value = lineNum;
   document.getElementById('planline-plan-id').value = planId;
-  document.getElementById('planline-grade').value = line.grade;
+  document.getElementById('planline-grade').innerHTML = gradeOptionsHTML(line.grade);
   document.getElementById('planline-qty').value = line.qty;
   document.getElementById('planline-date').value = line.date;
   document.getElementById('planline-batch').value = line.batchNumber||'';
@@ -3275,34 +3438,7 @@ function genericSheetGet(baseUrl, sheetName){
 let selectedCB = 'CB1';
 let activeBatchForStage = null;
 
-function selectCB(el, cb){
-  document.querySelectorAll('#b-cb-row .tab').forEach(t=>t.classList.remove('active'));
-  el.classList.add('active');
-  selectedCB = cb;
-}
 
-function onBatchProductChange(){
-  const code = document.getElementById('b-product').value;
-  document.getElementById('b-nfg-code').value = PRODUCT_TO_NFG[code] || '';
-  populateGrnSelects();
-}
-
-function populateGrnSelects(){
-  const nfgSel = document.getElementById('b-nfg-grn-1');
-  if(nfgSel) nfgSel.innerHTML = '<option value="">Select GRN</option>' +
-    DB.nfgGrns.map(g=>`<option value="${g.grn}">${g.grn} (${g.weight}Kg)</option>`).join('');
-  const l1Sel = document.getElementById('b-l1-grn');
-  if(l1Sel) l1Sel.innerHTML = '<option value="">Select L1 GRN (latest first)</option>' +
-    [...DB.l1Grns].reverse().map(g=>`<option value="${g.grn}">${g.grn}</option>`).join('');
-}
-
-document.addEventListener('change', e=>{
-  if(e.target.id==='b-l1-grn'){
-    const g = DB.l1Grns.find(x=>x.grn===e.target.value);
-    document.getElementById('b-l1-conc').value = g ? g.conc+'%' : '';
-    document.getElementById('b-l1-density').value = g ? g.density : '';
-  }
-});
 
 async function refreshBatchesFromQCQA(){
   const statusEl = document.getElementById('qcqa-refresh-status');
@@ -3329,9 +3465,11 @@ async function refreshBatchesFromQCQA(){
     qcqaBatches.forEach(qb=>{
       const stages = processMap[qb.batchNumber]||[];
       const cbStage = stages.find(s=>s.stage==='CB');
-      let existing = DB.batches.find(b=>b.num===qb.batchNumber);
+      // Sheets returns numeric-looking cells as numbers — normalize to String or strict-equality lookups fail (dead Open Batch buttons)
+      const bnum = String(qb.batchNumber);
+      let existing = DB.batches.find(b=>String(b.num)===bnum);
       const mapped = {
-        num: qb.batchNumber,
+        num: bnum,
         product: qb.product,
         nfgCode: qb.nfgCode,
         grade: existing?existing.grade:(qb.product||''),
@@ -3372,7 +3510,6 @@ async function refreshBatchesFromQCQA(){
 }
 
 function renderProduction(){
-  populateGrnSelects();
   const tbody = document.getElementById('prod-tbody');
   tbody.innerHTML = DB.batches.map(b=>{
     const pct = b.progress||0;
@@ -3407,38 +3544,6 @@ function renderProduction(){
   </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted)">No L1 GRNs</td></tr>';
 }
 
-function saveBatch(){
-  const code = document.getElementById('b-product').value;
-  const b = {
-    num: document.getElementById('b-num').value || nextNum('BTH-2406-'),
-    product: code || 'Unspecified',
-    nfgCode: document.getElementById('b-nfg-code').value,
-    grade: document.getElementById('b-grade').value,
-    qty: parseFloat(document.getElementById('b-qty').value)||0,
-    start: document.getElementById('b-start').value || today(),
-    nfgGrn: document.getElementById('b-nfg-grn-1').value,
-    l1Grn: document.getElementById('b-l1-grn').value,
-    cb: selectedCB,
-    notes: document.getElementById('b-notes').value,
-    stage:'NFG', progress:0,
-    operator: document.getElementById('b-op').value,
-    status:'Planned', source:'ERP',
-    premix:null, cbData:null, decant:null,
-  };
-  DB.batches.unshift(b); save('batches');
-
-  // Write to QCQA's real BATCHES sheet — field names matched exactly to the QCQA app's own schema
-  qcqaApi({sheet:'BATCHES', action:'append', data:{
-    batchNumber: b.num, date: b.start, product: b.product, nfgCode: b.nfgCode,
-    grn1: b.nfgGrn, bag1:'', weight1:'',
-    grn2:'', bag2:'', weight2:'',
-    l1GRN: b.l1Grn, l1Conc:'', l1Density:'',
-    obs: b.notes, cb: b.cb,
-  }});
-
-  closeModal('modal-newbatch'); toast('Batch created ✓ — synced to QCQA sheet');
-  renderProduction();
-}
 
 // ═══════════════════════════════════════════════════════════
 // QCQA-STYLE FULL-SCREEN ENTRY (New Batch + CB Stage)
@@ -3459,6 +3564,7 @@ function closeEntryScreen(id){
 
 function openEntryNewBatch(){
   pendingBatchCpoId='';
+  document.getElementById('eb-product').innerHTML = gradeOptionsHTML('');
   // Defaults
   document.getElementById('eb-date').value = today();
   document.getElementById('eb-num').value = nextNum('BTH-2607-');
@@ -3481,9 +3587,127 @@ function openEntryNewBatch(){
   openEntryScreen('entry-newbatch');
 }
 
+// ═══════════════════════════════════════════════════════════
+// VOICE QUICK-FILL — Web Speech API + keyword parser.
+// One sentence fills a form; every value shows for review before
+// submit. Speak digits: "l1 150, l3 30, start temp 25, start time
+// 9 30, end temp 180, expansion 285". Works in Chrome & Safari.
+// (Note: on the factory floor next to running machines, camera-scan
+// will beat voice — this is the office/quiet-area tool.)
+// ═══════════════════════════════════════════════════════════
+let voiceRec = null;
+
+function startVoiceFill(kind){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){ toast('Voice not supported in this browser — use Chrome or Safari'); return; }
+  if(voiceRec){ try{voiceRec.stop();}catch(e){} voiceRec=null; toast('Voice stopped'); return; }
+  voiceRec = new SR();
+  voiceRec.lang = 'en-IN';
+  voiceRec.interimResults = false;
+  voiceRec.maxAlternatives = 1;
+  toast('🎤 Listening… speak the values, digits work best');
+  voiceRec.onresult = (ev)=>{
+    const transcript = ev.results[0][0].transcript;
+    const applied = parseVoice(kind, transcript);
+    if(applied.length){
+      toast(`Heard: "${transcript}" → filled ${applied.map(a=>a.label).join(', ')} — verify before submit`);
+      audit('Voice Fill', `${kind}: ${applied.map(a=>a.label+'='+a.value).join(', ')}`);
+    } else {
+      toast(`Heard: "${transcript}" — nothing matched. Try e.g. "start temp 25 expansion 285"`);
+    }
+  };
+  voiceRec.onerror = (e)=>{ toast('Voice error: '+e.error); voiceRec=null; };
+  voiceRec.onend = ()=>{ voiceRec=null; };
+  voiceRec.start();
+}
+
+function vNum(s){ return s.replace(/\s+/g,''); }
+function vTime(h, m){
+  h = parseInt(h)||0; m = m!==undefined && m!==null && m!=='' ? parseInt(m) : 0;
+  return pad(h)+':'+pad(m);
+}
+
+// Extract keyword-value pairs; consume matched text so "end temp" is not
+// re-read as an "end time". Temps extracted before times before quantities.
+function parseVoice(kind, text){
+  let t = ' '+text.toLowerCase().replace(/[,.]/g,' ').replace(/point/g,'.')+' ';
+  const applied = [];
+  function grab(re, id, label, fmt){
+    const m = t.match(re);
+    if(!m) return;
+    const el = document.getElementById(id);
+    if(!el) return;
+    const val = fmt ? fmt(m) : vNum(m[1]);
+    el.value = val;
+    if(el.tagName==='SELECT') el.dispatchEvent(new Event('change'));
+    applied.push({label, value:val});
+    t = t.replace(m[0], ' ');
+  }
+  if(kind==='cb'){
+    grab(/start\s*temp(?:erature)?\s*(?:is|at)?\s*([\d.]+)/, 'ecb-start-temp', 'Start Temp');
+    grab(/(?:l3|l 3)\s*(?:add)?\s*temp(?:erature)?\s*([\d.]+)/, 'ecb-l3-temp', 'L3 Temp');
+    grab(/end\s*temp(?:erature)?\s*([\d.]+)/, 'ecb-end-temp', 'End Temp');
+    grab(/unload(?:ing)?\s*temp(?:erature)?\s*([\d.]+)/, 'ecb-unload-temp', 'Unload Temp');
+    grab(/start\s*(?:time)?\s*(?:at)?\s*(\d{1,2})[:\s]?(\d{2})?(?=\s)/, 'ecb-start-time', 'Start Time', m=>vTime(m[1],m[2]));
+    grab(/(?:l3|l 3)\s*(?:add)?\s*(?:time)?\s*(?:at)?\s*(\d{1,2})[:\s]?(\d{2})?(?=\s)/, 'ecb-l3-time', 'L3 Time', m=>vTime(m[1],m[2]));
+    grab(/end\s*(?:time)?\s*(?:at)?\s*(\d{1,2})[:\s]?(\d{2})?(?=\s)/, 'ecb-end-time', 'End Time', m=>vTime(m[1],m[2]));
+    grab(/unload(?:ing)?\s*(?:time)?\s*(?:at)?\s*(\d{1,2})[:\s]?(\d{2})?(?=\s)/, 'ecb-unload-time', 'Unload Time', m=>vTime(m[1],m[2]));
+    grab(/(?:l1|l 1)\s*(?:quantity|qty)?\s*([\d.]+)/, 'ecb-l1-qty', 'L1 Qty');
+    grab(/(?:l3|l 3)\s*(?:quantity|qty)?\s*([\d.]+)/, 'ecb-l3-qty', 'L3 Qty');
+    grab(/expansion\s*(?:is)?\s*([\d.]+)/, 'ecb-expansion', 'Expansion');
+  }
+  if(kind==='newbatch'){
+    const pm = t.match(/product\s*(?:code)?\s*([\d]{4,})/);
+    if(pm){
+      const sel = document.getElementById('eb-product');
+      if(gradeList().includes(pm[1])){
+        sel.value = pm[1]; ebProductChange();
+        applied.push({label:'Product', value:pm[1]});
+        t = t.replace(pm[0],' ');
+      }
+    }
+    grab(/(?:quantity|qty)\s*([\d.]+)/, 'eb-qty', 'Qty');
+    const cm = t.match(/\bcb\s*([1-4])\b/);
+    if(cm){
+      document.querySelectorAll('#eb-cb-row .cb-pill').forEach(p=>{
+        if(p.textContent.trim().startsWith('CB'+cm[1]) && !p.disabled){ p.click(); applied.push({label:'CB', value:'CB'+cm[1]}); }
+      });
+      t = t.replace(cm[0],' ');
+    }
+    grab(/operator\s*(?:is)?\s*([a-z]+(?:\s[a-z]+)?)/, 'eb-op', 'Operator', m=>m[1].replace(/\b\w/g,c=>c.toUpperCase()));
+  }
+  if(kind==='decant'){
+    grab(/(?:p2|p 2|total)?\s*(?:quantity|qty)?\s*([\d.]+)/, 'edc-p2', 'P2 Qty');
+  }
+  if(kind==='premix'){
+    grab(/total\s*(?:p1|p 1)\s*([\d.]+)/, 'epm-total-p1', 'Total P1');
+    grab(/total\s*(?:l2|l 2)\s*([\d.]+)/, 'epm-total-l2', 'Total L2');
+    grab(/nfg\s*(?:total)?\s*(?:weight|wt)?\s*([\d.]+)/, 'epm-nfg-wt', 'NFG Wt');
+  }
+  return applied;
+}
+
+function lastBatchOfProduct(product, excludeNum){
+  return DB.batches.find(b=>b.product===product && b.num!==excludeNum);
+}
+
 function ebProductChange(){
   const code = document.getElementById('eb-product').value;
-  document.getElementById('eb-nfg-code').value = PRODUCT_TO_NFG[code] || '';
+  const g = DB.productGrades.find(x=>x.code===code);
+  document.getElementById('eb-nfg-code').value = PRODUCT_TO_NFG[code] || (g&&g.nfgCode) || '';
+  // Carry-forward: pre-fill INPUTS from the last batch of this product (never measured outputs)
+  const last = lastBatchOfProduct(code);
+  const sub = document.getElementById('eb-sub');
+  if(last){
+    const qtyEl = document.getElementById('eb-qty');
+    if(!qtyEl.value && last.qty) qtyEl.value = last.qty;
+    if(!ebSelectedCB && last.cb){
+      document.querySelectorAll('#eb-cb-row .cb-pill').forEach(p=>{
+        if(p.textContent.trim().startsWith(last.cb) && !p.disabled) p.click();
+      });
+    }
+    if(sub) sub.textContent = `Pre-filled from ${last.num} — edit what differs`;
+  } else if(sub){ sub.textContent = 'Basic data entry'; }
 }
 
 function ebL1Change(){
@@ -3519,7 +3743,7 @@ function submitEntryBatch(){
   if(!product){ toast('Select product code'); return; }
   if(!date){ toast('Select date'); return; }
   if(!ebSelectedCB){ toast('Select a CB'); return; }
-  if(DB.batches.some(b=>b.num===num)){ toast('Batch number already exists'); return; }
+  if(DB.batches.some(b=>String(b.num)===String(num))){ toast('Batch number already exists'); return; }
 
   const b = {
     num, product,
@@ -3579,12 +3803,23 @@ function submitEntryBatch(){
 
 function openEntryCB(num){
   activeBatchForStage = num;
-  const b = DB.batches.find(x=>x.num===num);
+  const b = findBatch(num);
   if(!b) return;
   document.getElementById('ecb-batch-label').textContent =
     `${b.num} · ${b.product} · ${b.cb||'—'} · ${fmtDate(b.start)}`;
-  // Reset fields (or pre-fill from existing cbData if editing)
-  const d = b.cbData||{};
+  // Pre-fill: own saved data if editing; else INPUT fields carried from the
+  // last batch of the same product (temps & quantities are recipe-like).
+  // Measured outputs (times, expansion, obs) are never carried forward.
+  let d = b.cbData||{};
+  if(!b.cbData){
+    const src = DB.batches.find(x=>x.product===b.product && x.num!==b.num && x.cbData);
+    if(src){
+      d = {l1Qty:src.cbData.l1Qty, l3Qty:src.cbData.l3Qty,
+           startTemp:src.cbData.startTemp, l3Temp:src.cbData.l3Temp,
+           endTemp:src.cbData.endTemp, unloadTemp:src.cbData.unloadTemp};
+      document.getElementById('ecb-batch-label').textContent += ` · pre-filled from ${src.num}`;
+    }
+  }
   document.getElementById('ecb-l1-qty').value = d.l1Qty||'';
   document.getElementById('ecb-l3-qty').value = d.l3Qty||'';
   document.getElementById('ecb-start-time').value = d.startTime||'';
@@ -3638,6 +3873,9 @@ function submitEntryCB(){
 const STAGE_ICONS = {'NFG':'🪨','Pre-Mix':'🥣','CB':'🔬','Decant':'🧴','Tank Wash':'🚿','RDS':'⚗️','Centrifuge':'🌀','Drying':'🌡️','Packaging':'📥'};
 let activeBatchDetail = null;
 
+function findBatch(num){
+  return DB.batches.find(x => String(x.num) === String(num));
+}
 function stageHasData(b, stage){
   if(stage==='Pre-Mix') return !!b.premix;
   if(stage==='CB') return !!b.cbData;
@@ -3646,7 +3884,7 @@ function stageHasData(b, stage){
 }
 
 function openBatchDetail(num){
-  const b = DB.batches.find(x=>x.num===num);
+  const b = findBatch(num);
   if(!b) return;
   activeBatchDetail = num;
   document.getElementById('bd-title').textContent = b.num;
@@ -3716,7 +3954,7 @@ function backToBatchHub(fromId){
 // Forward-only stage completion: editing an already-completed earlier stage
 // never moves the batch backwards or double-advances it.
 function markStageComplete(num, stageName, patch){
-  const b = DB.batches.find(x=>x.num===num);
+  const b = findBatch(num);
   if(!b) return;
   if(patch) Object.assign(b, patch);
   if(!b.stageTimestamps) b.stageTimestamps = {};
@@ -3751,10 +3989,19 @@ function markStageComplete(num, stageName, patch){
 
 // ── PRE-MIX (QCQA: Blender A/B × 3 rounds, exact PREMIX sheet fields) ──
 function openEntryPremix(num){
-  const b = DB.batches.find(x=>x.num===num);
+  const b = findBatch(num);
   if(!b) return;
   document.getElementById('epm-batch-label').textContent = `${b.num} · ${b.product||''}`;
-  const pm = b.premix||{};
+  let pm = b.premix||{};
+  if(!b.premix){
+    const src = DB.batches.find(x=>x.product===b.product && x.num!==b.num && x.premix);
+    if(src){
+      const r = {};
+      Object.entries(src.premix.rounds||{}).forEach(([k,v])=>{ r[k] = {p1:v.p1, l2:v.l2, dt:''}; });
+      pm = {totalP1:src.premix.totalP1, totalL2:src.premix.totalL2, nfgTotalWt:src.premix.nfgTotalWt, rounds:r};
+      document.getElementById('epm-batch-label').textContent += ` · pre-filled from ${src.num}`;
+    }
+  }
   document.getElementById('epm-total-p1').value = pm.totalP1||'';
   document.getElementById('epm-total-l2').value = pm.totalL2||'';
   document.getElementById('epm-nfg-wt').value = pm.nfgTotalWt||'';
@@ -3776,7 +4023,7 @@ function openEntryPremix(num){
 
 function submitEntryPremix(saveOnly){
   const num = activeBatchForStage;
-  const b = DB.batches.find(x=>x.num===num);
+  const b = findBatch(num);
   if(!b) return;
   const tp1 = document.getElementById('epm-total-p1').value;
   const tl2 = document.getElementById('epm-total-l2').value;
@@ -3810,7 +4057,7 @@ function submitEntryPremix(saveOnly){
 
 // ── DECANT (QCQA: {batchNumber, p2Qty, draft}) ──
 function openEntryDecant(num){
-  const b = DB.batches.find(x=>x.num===num);
+  const b = findBatch(num);
   if(!b) return;
   document.getElementById('edc-batch-label').textContent = `${b.num} · ${b.product||''}`;
   document.getElementById('edc-p2').value = (b.decant&&b.decant.p2)||'';
@@ -3819,7 +4066,7 @@ function openEntryDecant(num){
 
 function submitEntryDecant(saveOnly){
   const num = activeBatchForStage;
-  const b = DB.batches.find(x=>x.num===num);
+  const b = findBatch(num);
   if(!b) return;
   const p2 = document.getElementById('edc-p2').value;
   if(!saveOnly && !p2){ toast('Enter P2 quantity'); return; }
@@ -3835,7 +4082,7 @@ function submitEntryDecant(saveOnly){
 // ── GENERIC STAGE (Tank Wash / RDS / Centrifuge / Drying / Packaging / custom) ──
 let activeGenStage = '';
 function openEntryGenStage(num, stage){
-  const b = DB.batches.find(x=>x.num===num);
+  const b = findBatch(num);
   if(!b) return;
   activeGenStage = stage;
   document.getElementById('egs-title').textContent = stage;
@@ -3849,7 +4096,7 @@ function openEntryGenStage(num, stage){
 
 function submitEntryGenStage(){
   const num = activeBatchForStage;
-  const b = DB.batches.find(x=>x.num===num);
+  const b = findBatch(num);
   if(!b) return;
   const obs = document.getElementById('egs-obs').value;
   const patch = {};
@@ -3875,7 +4122,7 @@ const ECF_CHECKS = ['Outside machine cleanliness','Inside drum cleanliness','Wat
 let ecfRuns = [], ecfSamples = [];
 
 function openEntryCentrifuge(num){
-  const b = DB.batches.find(x=>x.num===num);
+  const b = findBatch(num);
   if(!b) return;
   document.getElementById('ecf-batch-label').textContent = `${b.num} · ${b.product||''}`;
   const c = b.centrifuge||{};
@@ -3944,7 +4191,7 @@ function ecfUpdateAvg(){
 
 function submitEntryCentrifuge(saveOnly){
   const num = activeBatchForStage;
-  const b = DB.batches.find(x=>x.num===num);
+  const b = findBatch(num);
   if(!b) return;
   const checklist = {};
   ECF_CHECKS.forEach((label,i)=>{ checklist[label] = document.getElementById('ecf-chk-'+i).checked; });
@@ -3958,8 +4205,15 @@ function submitEntryCentrifuge(saveOnly){
   b.centAvgPh = a.ph!==null? a.ph.toFixed(2) : '';
   b.centAvgMoist = a.moisture!==null? a.moisture.toFixed(1) : '';
   save('batches');
-  qcqaApi({sheet:'BATCH_PROCESS', action:'append', data:{
-    batchNumber:num, stage:'Centrifuge', obs:(b.centrifuge.remark||'')+` | AvgpH:${b.centAvgPh||'—'} AvgMoist:${b.centAvgMoist||'—'}%`, draft:saveOnly?'yes':'no',
+  // Full centrifuge detail → dedicated tabs on the Production Data sheet (ERP-owned)
+  qcqaApi({sheet:'CENTRIFUGE_RUNS', action:'replaceForBatch', batchNumber:num,
+    data: ecfRuns.map((r,i)=>({batchNumber:num, runNum:i+1, tank:r.tank||'', startTime:r.start||'', endTime:r.end||'', drumClean:r.drumClean?'Y':'N', weightKg:r.weight||''}))});
+  qcqaApi({sheet:'CENTRIFUGE_SAMPLES', action:'replaceForBatch', batchNumber:num,
+    data: ecfSamples.map((s,i)=>({batchNumber:num, sampleNum:i+1, time:s.time||'', moisture:s.moisture||'', ph:s.ph||'', pusherRpm:s.pusherRpm||'', rotorRpm:s.rotorRpm||''}))});
+  qcqaApi({sheet:'CENTRIFUGE_META', action:'upsert', keyField:'batchNumber', data:{
+    batchNumber:num, commence:b.centrifuge.commence, oilTemp:b.centrifuge.oilTemp,
+    checklist: ECF_CHECKS.filter(c=>checklist[c]).join('; '), remark:b.centrifuge.remark,
+    avgPh:b.centAvgPh, avgMoisture:b.centAvgMoist, draft:saveOnly?'yes':'no',
   }});
   closeEntryScreen('entry-centrifuge');
   if(saveOnly){ toast('Centrifuge saved as draft ✓'); }
@@ -4017,7 +4271,7 @@ function renderFGBatches(){
 }
 
 function setFGStatus(batchNum, status){
-  const f = DB.fgBatches.find(x=>x.batchNum===batchNum);
+  const f = DB.fgBatches.find(x=>String(x.batchNum)===String(batchNum));
   if(!f) return;
   f.status = status; save('fgBatches');
   audit('FG Status', `${batchNum} → ${status}`);
@@ -4029,7 +4283,7 @@ function setFGStatus(batchNum, status){
 let activeFGQC = null;
 function openFGQC(batchNum){
   activeFGQC = batchNum;
-  const f = DB.fgBatches.find(x=>x.batchNum===batchNum);
+  const f = DB.fgBatches.find(x=>String(x.batchNum)===String(batchNum));
   if(!f) return;
   document.getElementById('fgqc-label').textContent = `${f.batchNum} · ${f.product} · ${f.qty} KG`;
   document.getElementById('fgqc-exp').value = f.fgExp||'';
@@ -4040,7 +4294,7 @@ function openFGQC(batchNum){
 }
 
 function submitFGQC(pass){
-  const f = DB.fgBatches.find(x=>x.batchNum===activeFGQC);
+  const f = DB.fgBatches.find(x=>String(x.batchNum)===String(activeFGQC));
   if(!f) return;
   f.fgExp = document.getElementById('fgqc-exp').value;
   f.ph = document.getElementById('fgqc-ph').value;
@@ -4085,7 +4339,7 @@ function renderCustomerPOs(){
     const allocQty = linked.reduce((s,f)=>s+(parseFloat(f.qty)||0),0);
     const pct = p.qty>0 ? Math.min(100, Math.round(allocQty/p.qty*100)) : 0;
     return `<tr>
-      <td><b>${p.poNumber}</b></td><td>${p.customer}</td><td>${p.grade}</td>
+      <td><b>${p.poNumber}</b></td><td>${p.customer}</td><td>${p.grade}${customerGradeName(p.grade,p.customer)?`<br><small style="color:var(--accent)">"${customerGradeName(p.grade,p.customer)}"</small>`:''}</td>
       <td>${p.qty} KG</td><td>${fmtDate(p.deliveryDate)}</td>
       <td><div class="progress-bar"><div class="progress-fill ${pct>=100?'green':''}" style="width:${pct}%"></div></div><small>${allocQty}/${p.qty} KG (${pct}%)</small></td>
       <td>${linked.map(f=>`<span class="badge badge-muted">${f.batchNum}</span>`).join(' ')||'—'}</td>
@@ -4131,7 +4385,7 @@ function openLinkFGToPO(batchNum){
 function confirmLinkFGToPO(){
   const poId = document.getElementById('linkpo-select').value;
   if(!poId){ toast('Select a PO'); return; }
-  const f = DB.fgBatches.find(x=>x.batchNum===activeLinkFG);
+  const f = DB.fgBatches.find(x=>String(x.batchNum)===String(activeLinkFG));
   if(!f) return;
   f.customerPoId = poId; f.allocated = true;
   save('fgBatches');
@@ -4144,7 +4398,7 @@ function confirmLinkFGToPO(){
 
 // "Reject to continue / sell to another customer": release frees the batch for any other PO
 function releaseFGFromPO(batchNum){
-  const f = DB.fgBatches.find(x=>x.batchNum===batchNum);
+  const f = DB.fgBatches.find(x=>String(x.batchNum)===String(batchNum));
   if(!f) return;
   const po = DB.customerPOs.find(p=>p.id===f.customerPoId);
   if(!confirm(`Release ${batchNum} from ${po?po.poNumber:'its PO'}? It becomes free to sell to another customer, and you can link a different batch to this PO.`)) return;
@@ -4179,32 +4433,9 @@ function renderAuditTrail(){
   </tr>`).join('') || '<tr><td colspan="3" style="text-align:center;color:var(--muted)">No activity yet</td></tr>';
 }
 
-function openStageEntry(num){
-  activeBatchForStage = num;
-  const b = DB.batches.find(x=>x.num===num);
-  if(!b) return;
-  const idx = STAGE_FLOW.indexOf(b.stage);
-  const nextStage = STAGE_FLOW[idx+1];
-  if(!nextStage){ toast('Batch already complete'); return; }
-
-  const label = `Batch: ${b.num} · Product: ${b.product} · CB: ${b.cb} · Date: ${fmtDate(b.start)}`;
-
-  if(nextStage==='Pre-Mix'){
-    document.getElementById('premix-batch-label').textContent = label;
-    openModal('modal-premix');
-  } else if(nextStage==='CB'){
-    openEntryCB(num);
-  } else if(nextStage==='Decant'){
-    document.getElementById('decant-batch-label').textContent = label;
-    openModal('modal-decant');
-  } else {
-    // Tank Wash / RDS / Centrifuge / Drying / Packaging — quick advance
-    advanceStage(num);
-  }
-}
 
 function advanceStage(num, data){
-  const b = DB.batches.find(x=>x.num===num);
+  const b = findBatch(num);
   if(!b) return;
   const idx = STAGE_FLOW.indexOf(b.stage);
   if(idx < STAGE_FLOW.length-1){
@@ -4228,35 +4459,6 @@ function submitPremix(){
   advanceStage(activeBatchForStage, {premix:data});
 }
 
-function submitCB(){
-  const data = {
-    l1Qty: parseFloat(document.getElementById('cb-l1-qty').value)||0,
-    l3Qty: parseFloat(document.getElementById('cb-l3-qty').value)||0,
-    startTime: document.getElementById('cb-start-time').value,
-    startTemp: document.getElementById('cb-start-temp').value,
-    endTime: document.getElementById('cb-end-time').value,
-    endTemp: document.getElementById('cb-end-temp').value,
-    l3Time: document.getElementById('cb-l3-time').value,
-    l3Temp: document.getElementById('cb-l3-temp').value,
-    unloadTime: document.getElementById('cb-unload-time').value,
-    unloadTemp: document.getElementById('cb-unload-temp').value,
-    expansion: document.getElementById('cb-expansion').value,
-    obs: document.getElementById('cb-obs').value,
-  };
-  // Write to QCQA's real BATCH_PROCESS sheet — field names matched exactly to the QCQA app's own schema
-  // so Expansion (and everything else here) shows up correctly if opened in the QCQA app itself.
-  qcqaApi({sheet:'BATCH_PROCESS', action:'append', data:{
-    batchNumber: activeBatchForStage, stage:'CB',
-    l1Qty:data.l1Qty, l3Qty:data.l3Qty,
-    startTime:data.startTime, startTemp:data.startTemp,
-    endTime:data.endTime, endTemp:data.endTemp,
-    l3AddTime:data.l3Time, l3AddTemp:data.l3Temp,
-    unloadTime:data.unloadTime, unloadTemp:data.unloadTemp,
-    obs:data.obs, expansion:data.expansion, draft:'no',
-  }});
-  closeModal('modal-cb');
-  advanceStage(activeBatchForStage, {cbData:data});
-}
 
 function submitDecant(){
   const data = { p2: parseFloat(document.getElementById('decant-p2').value)||0 };
@@ -4409,7 +4611,7 @@ async function refreshInventoryFromSheet(){
     rows.forEach(row=>{
       if(row.Status==='Deleted') return; // soft-deleted items don't come back
       const mapped = {
-        code: row.ItemCode, desc: row.Description, cat: row.Category, subCat: row.SubCategory,
+        code: String(row.ItemCode), desc: row.Description, cat: row.Category, subCat: row.SubCategory,
         uom: row.UOM, location: row.BayLocation, stock: parseFloat(row.Stock)||0,
         reorder: parseFloat(row.ReorderLevel)||0, critical: parseFloat(row.CriticalLevel)||0,
         maxStock: parseFloat(row.MaxStockLevel)||0, vendor1: row.PreferredVendor1, vendor2: row.PreferredVendor2,
@@ -4447,6 +4649,14 @@ function renderInventory(){
     <div class="kpi warn"><div class="label">Low Stock</div><div class="value">${lowCt}</div></div>
     <div class="kpi danger"><div class="label">Critical</div><div class="value">${critCt}</div></div>`;
 
+  // Category-specific sections: WIP summary only on WIP filter, FG batch table only on Finished Goods filter
+  const wipWrap = document.getElementById('wip-inv-wrap');
+  const fgWrap = document.getElementById('fg-inv-wrap');
+  if(wipWrap) wipWrap.style.display = currentInvCatFilter==='WIP' ? '' : 'none';
+  if(fgWrap) fgWrap.style.display = currentInvCatFilter==='Finished Goods' ? '' : 'none';
+  if(currentInvCatFilter==='WIP') renderWIPSummary();
+  if(currentInvCatFilter==='Finished Goods') renderFGBatches();
+
   const filtered = currentInvCatFilter ? DB.inventory.filter(i=>i.cat===currentInvCatFilter) : DB.inventory;
   document.getElementById('inv-tbody').innerHTML = filtered.map(i=>{
     const stock = getItemTotalStock(i);
@@ -4468,6 +4678,21 @@ function renderInventory(){
       </td>
     </tr>`;
   }).join('') || '<tr><td colspan="9" style="text-align:center;color:var(--muted)">No items — add via Settings > Master Data Excel, or + Add Item</td></tr>';
+}
+
+function renderWIPSummary(){
+  const inProgress = DB.batches.filter(b=>
+    b.status!=='Complete' && !DB.fgBatches.some(f=>String(f.batchNum)===String(b.num) && f.qcStatus==='Passed'));
+  const totalQty = inProgress.reduce((s,b)=>s+(parseFloat(b.qty)||0),0);
+  document.getElementById('wip-kpi').innerHTML = `
+    <div class="kpi accent"><div class="label">Batches in WIP</div><div class="value">${inProgress.length}</div></div>
+    <div class="kpi warn"><div class="label">Total WIP Qty</div><div class="value">${totalQty.toLocaleString('en-IN')}<small style="font-size:.5em"> KG</small></div></div>`;
+  document.getElementById('wip-tbody').innerHTML = inProgress.map(b=>`<tr>
+    <td><b>${b.num}</b></td><td>${b.product}</td>
+    <td><span class="badge badge-blue">${b.stage}</span></td>
+    <td>${b.qty||'—'}</td><td>${fmtDate(b.start)}</td>
+    <td><div class="progress-bar"><div class="progress-fill" style="width:${b.progress||0}%"></div></div><small>${b.progress||0}%</small></td>
+  </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted)">No batches in progress</td></tr>';
 }
 
 function drilldownItem(code){
@@ -5475,101 +5700,388 @@ function toggleEmpStatus(id){
 function populateEmpSelects(){
   const emps = DB.employees.filter(e=>e.status==='Active');
   const opts = emps.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
-  ['att-emp','leave-emp'].forEach(id=>{
+  ['leave-emp'].forEach(id=>{
     const el=document.getElementById(id);
     if(el){ el.innerHTML='<option value="">Select Employee</option>'+opts; }
   });
 }
 
 // ─────────────────────────────────────────────────────
-// ATTENDANCE
+// ATTENDANCE — full engine (ported from Attendance Ledger app)
+// Transport: gasGet = JSONP (CORS-proof reads), gasPost = no-preflight
+// fetch (proven live). Every failed write goes to a retry queue —
+// nothing is silently lost.
 // ─────────────────────────────────────────────────────
+function setDefaults(){
+  const d = today();
+  ['bd-date','att-day','rep-date','leave-from','leave-to'].forEach(id=>{
+    const el = document.getElementById(id); if(el && !el.value) el.value = d;
+  });
+  ['att-month','rep-month'].forEach(id=>{
+    const el = document.getElementById(id); if(el && !el.value) el.value = d.slice(0,7);
+  });
+}
+let attManualTime = null;   // {h,m} when time is adjusted (system failure mode)
+let deActiveCos = new Set(), bdActiveCos = new Set(), regActiveCos = new Set(), repActiveCos = new Set();
+let waDetail = 'summary';
+
 function attTab(el, tab){
-  document.querySelectorAll('#page-attendance .tab').forEach(t=>t.classList.remove('active')); el.classList.add('active');
+  if(tab!=='face' && typeof stopFaceCam==='function') stopFaceCam();
+  document.querySelectorAll('#page-attendance > .tabs .tab').forEach(t=>t.classList.remove('active')); el.classList.add('active');
   document.querySelectorAll('.att-tab').forEach(t=>t.style.display='none');
   document.getElementById('att-'+tab).style.display='';
-  if(tab==='register') loadAttRegister();
+  if(tab==='daily'){ renderMbGrid('de-mb-grid',deActiveCos,renderDeChecklist); renderDeChecklist(); renderTodayEntry(); renderOnLeaveBanner(); }
+  if(tab==='backdate'){ renderMbGrid('bd-mb-grid',bdActiveCos,renderBdChecklist); renderBdChecklist(); if(!document.getElementById('bd-date').value) document.getElementById('bd-date').value=today(); }
+  if(tab==='register'){ renderMbGrid('reg-mb-grid',regActiveCos,renderAttRegister); if(!document.getElementById('att-month').value) document.getElementById('att-month').value=today().slice(0,7); if(!document.getElementById('att-day').value) document.getElementById('att-day').value=today(); renderAttRegister(); renderDayDetail(); }
+  if(tab==='leave'){ populateLeaveEmp(); renderLeaves(); }
+  if(tab==='reports'){ renderMbGrid('rep-mb-grid',repActiveCos,renderWaPreview); if(!document.getElementById('rep-date').value) document.getElementById('rep-date').value=today(); if(!document.getElementById('rep-month').value) document.getElementById('rep-month').value=today().slice(0,7); renderWaPreview(); }
 }
 
-function setDefaults(){
-  const td = document.getElementById('att-date'); if(td) td.value=today();
-  const tt = document.getElementById('att-time'); if(tt) tt.value=new Date().toTimeString().slice(0,5);
-  const am = document.getElementById('att-month'); if(am) am.value=today().slice(0,7);
-  const pm = document.getElementById('payroll-month'); if(pm) pm.value=today().slice(0,7);
+// ── WRITE RELIABILITY: retry queue for attendance ──
+function attQueue(body){
+  const q = JSON.parse(localStorage.getItem('erp_attQueue')||'[]');
+  q.push({body, ts:Date.now()});
+  localStorage.setItem('erp_attQueue', JSON.stringify(q));
+  updateAttSyncBadge();
 }
-
-function saveManualAtt(){
-  const empId = document.getElementById('att-emp').value;
-  const emp = DB.employees.find(e=>e.id===empId);
-  if(!emp){ toast('Select employee first'); return; }
-  const rec = {
-    empId, empName:emp.name, dept:emp.dept,
-    date: document.getElementById('att-date').value,
-    type: document.getElementById('att-type').value,
-    time: document.getElementById('att-time').value,
-    remarks: document.getElementById('att-remarks').value,
-    method: 'Manual',
-  };
-  DB.attendance.push(rec); save('attendance');
-  toast(`Attendance saved for ${emp.name} ✓`);
-  loadAttRegister();
-}
-
-function markBulkPresent(){
-  DB.employees.filter(e=>e.status==='Active').forEach(emp=>{
-    DB.attendance.push({
-      empId:emp.id, empName:emp.name, dept:emp.dept,
-      date:today(), type:'Present', time:'09:00', method:'Bulk',
-    });
-  });
-  save('attendance'); toast('All marked Present ✓');
-}
-
-function renderMbGrid(){
-  const grid = document.getElementById('att-mb-grid');
-  if(!grid) return;
-  const companies = ['All','Innotek','BVG','Valkunde','Vicky Ent.'];
-  grid.innerHTML = companies.map(c=>{
-    const val = c==='All' ? '' : c;
-    const active = currentMbFilter===val ? 'active' : '';
-    return `<button class="tab ${active}" onclick="setMbFilter('${val}')">${c}</button>`;
-  }).join('');
-}
-function setMbFilter(val){
-  currentMbFilter = val;
-  renderMbGrid();
-  loadAttRegister();
-}
-
-function loadAttRegister(){
-  renderMbGrid();
-  const month = document.getElementById('att-month')?.value || today().slice(0,7);
-  const [yr, mo] = month.split('-').map(Number);
-  const days = new Date(yr, mo, 0).getDate();
-
-  // Header
-  const hdr = document.getElementById('att-hdr');
-  if(hdr){
-    hdr.innerHTML = '<th>Employee</th><th>Co.</th>' +
-      Array.from({length:days},(_,i)=>`<th style="min-width:32px">${i+1}</th>`).join('') +
-      '<th>P</th><th>A</th><th>L</th>';
+async function attFlush(){
+  const q = JSON.parse(localStorage.getItem('erp_attQueue')||'[]');
+  if(!q.length) return;
+  const remaining = [];
+  for(const item of q){
+    try{ const r = await gasPost(item.body); if(!r || r.ok===false) remaining.push(item); }
+    catch(e){ remaining.push(item); }
   }
+  localStorage.setItem('erp_attQueue', JSON.stringify(remaining));
+  updateAttSyncBadge();
+}
+function attSend(body){
+  gasPost(body).then(r=>{ if(!r || r.ok===false) attQueue(body); }).catch(()=>attQueue(body));
+}
+function updateAttSyncBadge(){
+  const el = document.getElementById('att-sync-badge');
+  if(!el) return;
+  const n = JSON.parse(localStorage.getItem('erp_attQueue')||'[]').length;
+  el.innerHTML = n ? `<span style="color:var(--warn)">⏳ ${n} pending write(s) — retrying</span>` : `<span style="color:var(--accent2)">✓ Sheet synced</span>`;
+}
+setInterval(attFlush, 25000);
+window.addEventListener('online', attFlush);
 
-  // Body
+// ── FULL SYNC FROM SHEET (employees + companies + attendance log) ──
+async function attSyncNow(){
+  updateAttSyncBadgeText('⏳ Syncing from Google Sheet…');
+  try{
+    const data = await gasGet({action:'getAll'});
+    if(data.employees && data.employees.length){
+      DB.employees = data.employees.map(e=>({
+        id:String(e.EmployeeID), name:e.EmployeeName, dept:e.Department||'', managedBy:e.ManagedBy||'',
+        designation:(DB.employees.find(x=>x.id===String(e.EmployeeID))||{}).designation||'',
+        phone:(DB.employees.find(x=>x.id===String(e.EmployeeID))||{}).phone||'',
+        salary:(DB.employees.find(x=>x.id===String(e.EmployeeID))||{}).salary||0,
+        status:'Active',
+      }));
+      save('employees');
+    }
+    if(data.companies && data.companies.length){ DB.attCompanies = data.companies; save('attCompanies'); }
+    if(data.log && data.log.length){
+      DB.attendance = data.log.map(r=>({
+        date:String(r.Date).slice(0,10), empId:String(r.EmployeeID), employeeId:String(r.EmployeeID),
+        empName:r.EmployeeName, employeeName:r.EmployeeName,
+        dept:r.Department||'', managedBy:r.ManagedBy||'',
+        status:r.Status||'', entryTime:r.EntryTime||'', exitTime:r.ExitTime||'',
+        actualHours:r.ActualHours||'', paidHours:r.PaidHours||'', regularHours:r.RegularHours||'', overtimeHours:r.OvertimeHours||'',
+        remarks:r.Remarks||'',
+      }));
+      save('attendance');
+    }
+    if(data.leaveRequests){ DB.leaves = data.leaveRequests.map(l=>({
+      reqId:String(l.ReqID), empId:String(l.EmployeeID), empName:l.EmployeeName, managedBy:l.ManagedBy||'',
+      from:String(l.FromDate).slice(0,10), to:String(l.ToDate).slice(0,10), days:parseFloat(l.Days)||0,
+      type:l.Type, reason:l.Reason||'', status:l.Status||'Pending',
+    })); save('leaves'); }
+    updateAttSyncBadge();
+    toast('Attendance synced from sheet ✓');
+    renderTodayEntry(); renderAttRegister(); renderDayDetail(); renderLeaves(); renderOnLeaveBanner();
+  }catch(e){
+    updateAttSyncBadgeText('⚠️ Sync failed — using local data. '+e.message);
+  }
+}
+function updateAttSyncBadgeText(t){ const el=document.getElementById('att-sync-badge'); if(el) el.textContent=t; }
+
+function attCompanies(){
+  if(DB.attCompanies && DB.attCompanies.length) return DB.attCompanies;
+  const fromEmp = [...new Set(DB.employees.map(e=>e.managedBy).filter(Boolean))];
+  return fromEmp.length ? fromEmp : ['Innotek','BVG','Valkunde','Vicky Ent.'];
+}
+
+// ── COMPANY (MANAGED BY) FILTER GRIDS — shared renderer ──
+function renderMbGrid(gridId, activeSet, onChange){
+  const grid = document.getElementById(gridId);
+  if(!grid) return;
+  grid.innerHTML = attCompanies().map(co=>
+    `<button class="tab ${activeSet.has(co)?'active':''}" onclick="toggleMb('${gridId}','${co.replace(/'/g,"\\'")}')">${co}</button>`).join('');
+  grid.dataset.onchange = onChange.name;
+}
+function toggleMb(gridId, co){
+  const set = gridId==='de-mb-grid'?deActiveCos : gridId==='bd-mb-grid'?bdActiveCos : gridId==='reg-mb-grid'?regActiveCos : repActiveCos;
+  set.has(co) ? set.delete(co) : set.add(co);
+  const fn = document.getElementById(gridId).dataset.onchange;
+  renderMbGrid(gridId, set, window[fn]);
+  window[fn]();
+}
+function filteredEmps(activeSet){
+  return activeSet.size===0 ? DB.employees : DB.employees.filter(e=>activeSet.has(e.managedBy||''));
+}
+
+// ── DAILY ENTRY ──
+function renderDeChecklist(){
+  const wrap = document.getElementById('de-checklist');
+  const emps = filteredEmps(deActiveCos);
+  wrap.innerHTML = `<label style="display:flex;gap:8px;padding:8px;border-bottom:1px solid var(--border);font-weight:700;cursor:pointer"><input type="checkbox" onchange="document.querySelectorAll('.de-check').forEach(c=>c.checked=this.checked)"> Select All (${emps.length})</label>` +
+    emps.map(e=>`<label style="display:flex;gap:8px;padding:8px;cursor:pointer;align-items:center">
+      <input type="checkbox" class="de-check" value="${e.id}">
+      <span style="font-weight:600">${e.name}</span>
+      <span style="color:var(--muted);font-size:.72rem">${e.dept||''}${e.managedBy?' · '+e.managedBy:''}</span>
+    </label>`).join('') || '<p style="color:var(--muted);padding:10px;font-size:.8rem">No employees — sync from sheet on the Register tab</p>';
+}
+
+function attRecordTime(){
+  if(attManualTime) return pad(attManualTime.h)+':'+pad(attManualTime.m)+':00';
+  const d=new Date(); return pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
+}
+function openTimeAdjust(){
+  const v = prompt('Enter time as HH:MM (24h) — for entries when the system/camera failed:','09:00');
+  if(!v) return;
+  const m = v.match(/^(\d{1,2}):(\d{2})$/);
+  if(!m){ toast('Format: HH:MM'); return; }
+  attManualTime = {h:+m[1], m:+m[2]};
+  document.getElementById('att-clock-badge').textContent='MANUAL';
+  document.getElementById('att-clock-badge').className='badge badge-warn';
+  document.getElementById('btn-clear-manual').style.display='';
+  toast('Time adjusted — entries will record '+v+' until reset');
+}
+function clearManualTime(){
+  attManualTime=null;
+  document.getElementById('att-clock-badge').textContent='LIVE';
+  document.getElementById('att-clock-badge').className='badge badge-green';
+  document.getElementById('btn-clear-manual').style.display='none';
+}
+
+function doMarkLeave(emp, date, status, remarks){
+  let row = findAttRow(date, emp.id);
+  if(row){
+    if(row.entryTime) return {ok:false, text:`${emp.name}: already Present on ${date}.`};
+    row.status=status; row.remarks=remarks||'';
+  } else {
+    DB.attendance.push({date, empId:emp.id, employeeId:emp.id, empName:emp.name, employeeName:emp.name,
+      dept:emp.dept||'', managedBy:emp.managedBy||'', status, entryTime:'', exitTime:'',
+      actualHours:0, paidHours:0, regularHours:0, overtimeHours:0, remarks:remarks||''});
+  }
+  save('attendance');
+  attSend({action:'markLeave', date, employeeId:emp.id, employeeName:emp.name, department:emp.dept||'', managedBy:emp.managedBy||'', status, remarks:remarks||''});
+  return {ok:true, text:`${emp.name}: ${status} on ${date}.`};
+}
+
+function markSelected(mode){
+  const ids = [...document.querySelectorAll('.de-check:checked')].map(c=>c.value);
+  const emps = DB.employees.filter(e=>ids.includes(e.id));
+  if(!emps.length){ toast('Select at least one employee'); return; }
+  const t = attRecordTime();
+  const box = document.getElementById('de-msgbox');
+  let remarks='';
+  if(mode==='Leave'||mode==='Absent'){ remarks = prompt(`Remarks for ${mode} (optional):`)||''; }
+  emps.forEach(emp=>{
+    let r;
+    if(mode==='ENTRY') r = doMarkEntry(emp, t);
+    else if(mode==='EXIT') r = doMarkExit(emp, t);
+    else r = doMarkLeave(emp, today(), mode, remarks);
+    const d=document.createElement('div');
+    d.style.color = r.ok?'var(--accent2)':'var(--warn)';
+    d.textContent = (r.ok?'✓ ':'⚠️ ')+r.text;
+    box.prepend(d);
+  });
+  audit('Attendance', `${mode} × ${emps.length}${attManualTime?' (time-adjusted '+attRecordTime()+')':''}`);
+  renderTodayEntry(); renderOnLeaveBanner();
+}
+
+function renderTodayEntry(){
+  const el = document.getElementById('de-today-tbody');
+  if(!el) return;
+  document.getElementById('de-today-label').textContent = fmtDate(today());
+  const rows = DB.attendance.filter(r=>r.date===today()).sort((a,b)=>(a.empName||'').localeCompare(b.empName||''));
+  let p=0,pend=0,l=0,a=0;
+  rows.forEach(r=>{ if(r.status==='Present'){p++; if(!r.exitTime)pend++;} else if(r.status==='Leave')l++; else if(r.status==='Absent')a++; });
+  document.getElementById('de-kpis').innerHTML = `
+    <div class="kpi green"><div class="label">Present</div><div class="value">${p}</div></div>
+    <div class="kpi warn"><div class="label">No Exit Yet</div><div class="value">${pend}</div></div>
+    <div class="kpi accent"><div class="label">Leave</div><div class="value">${l}</div></div>
+    <div class="kpi danger"><div class="label">Absent</div><div class="value">${a}</div></div>`;
+  el.innerHTML = rows.map(r=>`<tr>
+    <td>${r.empName}</td><td>${r.managedBy||'—'}</td>
+    <td><span class="badge ${r.status==='Present'?'badge-green':r.status==='Leave'?'badge-warn':r.status==='Absent'?'badge-danger':'badge-muted'}">${r.status}</span></td>
+    <td>${r.entryTime||'—'}</td><td>${r.exitTime||'—'}</td>
+    <td>${r.paidHours!==''&&r.paidHours!==undefined?r.paidHours:'—'}</td>
+    <td>${r.overtimeHours!==''&&r.overtimeHours!==undefined?r.overtimeHours:'—'}</td>
+  </tr>`).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--muted)">No entries today yet</td></tr>';
+}
+
+function renderOnLeaveBanner(){
+  const el = document.getElementById('att-onleave-banner');
+  if(!el) return;
+  const onLeave = DB.attendance.filter(r=>r.date===today() && r.status==='Leave').map(r=>r.empName);
+  el.innerHTML = onLeave.length ? `<div class="card" style="border-color:var(--warn);padding:10px 14px;margin-bottom:12px">
+    🌴 <b>On leave today:</b> ${onLeave.join(', ')}</div>` : '';
+}
+
+// ── BACKDATE ──
+function renderBdChecklist(){
+  const wrap = document.getElementById('bd-checklist');
+  const emps = filteredEmps(bdActiveCos);
+  wrap.innerHTML = `<label style="display:flex;gap:8px;padding:8px;border-bottom:1px solid var(--border);font-weight:700;cursor:pointer"><input type="checkbox" onchange="document.querySelectorAll('.bd-check').forEach(c=>c.checked=this.checked)"> Select All (${emps.length})</label>` +
+    emps.map(e=>`<label style="display:flex;gap:8px;padding:8px;cursor:pointer;align-items:center">
+      <input type="checkbox" class="bd-check" value="${e.id}">
+      <span style="font-weight:600">${e.name}</span>
+      <span style="color:var(--muted);font-size:.72rem">${e.managedBy||''}</span>
+    </label>`).join('') || '<p style="color:var(--muted);padding:10px;font-size:.8rem">No employees</p>';
+}
+
+function saveBackdate(){
+  const ids = [...document.querySelectorAll('.bd-check:checked')].map(c=>c.value);
+  const emps = DB.employees.filter(e=>ids.includes(e.id));
+  const date = document.getElementById('bd-date').value;
+  if(!emps.length || !date){ toast('Select employees and date'); return; }
+  if(date > today()){ toast('Backdate cannot be in the future'); return; }
+  const status = document.getElementById('bd-status').value;
+  const entryT = document.getElementById('bd-entry').value ? document.getElementById('bd-entry').value+':00' : '';
+  const exitT = document.getElementById('bd-exit').value ? document.getElementById('bd-exit').value+':00' : '';
+  const remarks = document.getElementById('bd-remarks').value;
+  const box = document.getElementById('bd-msgbox');
+  const records = [];
+  emps.forEach(emp=>{
+    const h = (entryT&&exitT) ? calcHours(entryT, exitT) : {actual:0,paid:0,regular:0,ot:0};
+    const rec = {date, empId:emp.id, employeeId:emp.id, empName:emp.name, employeeName:emp.name,
+      dept:emp.dept||'', department:emp.dept||'', managedBy:emp.managedBy||'',
+      status, entryTime:entryT, exitTime:exitT,
+      actualHours:h.actual, paidHours:h.paid, regularHours:h.regular, overtimeHours:h.ot, remarks};
+    const row = findAttRow(date, emp.id);
+    if(row) Object.assign(row, rec); else DB.attendance.push(rec);
+    records.push({Date:date, EmployeeID:emp.id, EmployeeName:emp.name, Department:emp.dept||'', ManagedBy:emp.managedBy||'',
+      Status:status, EntryTime:entryT, ExitTime:exitT, ActualHours:h.actual, PaidHours:h.paid,
+      RegularHours:h.regular, OvertimeHours:h.ot, Remarks:remarks});
+  });
+  save('attendance');
+  attSend({action:'bulkSync', records});
+  audit('Backdate', `${emps.length} record(s) for ${date}`);
+  box.innerHTML = `<span style="color:var(--accent2)">✓ Saved ${emps.length} backdated record(s) for ${fmtDate(date)}</span>`;
+  toast('Backdated records saved ✓');
+}
+
+// ── REGISTER (monthly, with OT + payable) ──
+function renderAttRegister(){
   const tbody = document.getElementById('att-tbody');
   if(!tbody) return;
-  const emps = DB.employees.filter(e=>e.status==='Active' && (!currentMbFilter || e.managedBy===currentMbFilter));
-  tbody.innerHTML = emps.map(emp=>{
-    let P=0,A=0,L=0;
-    const cells = Array.from({length:days},(_,i)=>{
-      const d = `${month}-${String(i+1).padStart(2,'0')}`;
-      const rec = DB.attendance.find(a=>(a.empId===emp.id||a.employeeId===emp.id) && a.date===d);
-      if(!rec){ A++; return `<td style="color:var(--muted)">-</td>`; }
-      if(rec.type==='Leave'||rec.type==='Half Day'||rec.status==='Leave'){ L++; return `<td style="color:var(--warn)">L</td>`; }
-      P++; return `<td style="color:var(--accent2)">P</td>`;
-    }).join('');
-    return `<tr><td><b>${emp.name}</b></td><td><span class="badge badge-muted">${emp.managedBy||'—'}</span></td>${cells}<td style="color:var(--accent2)">${P}</td><td style="color:var(--danger)">${A}</td><td style="color:var(--warn)">${L}</td></tr>`;
-  }).join('');
+  const month = document.getElementById('att-month').value || today().slice(0,7);
+  const emps = filteredEmps(regActiveCos);
+  const monthRows = DB.attendance.filter(r=>r.date && r.date.startsWith(month));
+  tbody.innerHTML = emps.map(e=>{
+    const rows = monthRows.filter(r=>String(r.empId||r.employeeId)===String(e.id));
+    const p = rows.filter(r=>r.status==='Present').length;
+    const h = rows.filter(r=>r.status==='Half Day').length;
+    const l = rows.filter(r=>r.status==='Leave').length;
+    const a = rows.filter(r=>r.status==='Absent').length;
+    const payDays = p + h*0.5;
+    const paidHrs = rows.reduce((s,r)=>s+(parseFloat(r.paidHours)||0),0);
+    const otHrs = rows.reduce((s,r)=>s+(parseFloat(r.overtimeHours)||0),0);
+    const sal = parseFloat(e.salary)||0;
+    const payable = sal>0 ? Math.round(sal/26*payDays + otHrs*(sal/26/8)) : null;
+    return `<tr>
+      <td><b>${e.name}</b></td><td>${e.managedBy||'—'}</td>
+      <td>${p}</td><td>${h}</td><td>${l}</td><td>${a}</td>
+      <td><b>${payDays}</b></td><td>${paidHrs.toFixed(1)}</td><td>${otHrs.toFixed(1)}</td>
+      <td>${payable!==null?'₹'+payable.toLocaleString('en-IN'):'<span style="color:var(--muted)">set salary</span>'}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="10" style="text-align:center;color:var(--muted)">No employees</td></tr>';
+}
+
+function renderDayDetail(){
+  const tbody = document.getElementById('att-day-tbody');
+  if(!tbody) return;
+  const date = document.getElementById('att-day').value || today();
+  const rows = DB.attendance.filter(r=>r.date===date);
+  tbody.innerHTML = rows.map(r=>`<tr>
+    <td>${r.empName}</td><td>${r.managedBy||'—'}</td>
+    <td><span class="badge ${r.status==='Present'?'badge-green':r.status==='Leave'?'badge-warn':'badge-muted'}">${r.status}</span></td>
+    <td>${r.entryTime||'—'}</td><td>${r.exitTime||'—'}</td>
+    <td>${r.actualHours||'—'}</td><td>${r.paidHours||'—'}</td><td>${r.overtimeHours||'—'}</td><td>${r.remarks||''}</td>
+  </tr>`).join('') || '<tr><td colspan="9" style="text-align:center;color:var(--muted)">No records this day</td></tr>';
+}
+
+function exportRegisterCSV(){
+  const month = (document.getElementById('att-month')?.value)||(document.getElementById('rep-month')?.value)||today().slice(0,7);
+  const emps = filteredEmps(regActiveCos.size?regActiveCos:repActiveCos);
+  const monthRows = DB.attendance.filter(r=>r.date && r.date.startsWith(month));
+  let csv = 'Employee,ManagedBy,Present,HalfDay,Leave,Absent,PayableDays,PaidHrs,OTHrs,PayableINR\n';
+  emps.forEach(e=>{
+    const rows = monthRows.filter(r=>String(r.empId||r.employeeId)===String(e.id));
+    const p=rows.filter(r=>r.status==='Present').length, h=rows.filter(r=>r.status==='Half Day').length;
+    const l=rows.filter(r=>r.status==='Leave').length, a=rows.filter(r=>r.status==='Absent').length;
+    const payDays=p+h*0.5;
+    const paidHrs=rows.reduce((s,r)=>s+(parseFloat(r.paidHours)||0),0);
+    const otHrs=rows.reduce((s,r)=>s+(parseFloat(r.overtimeHours)||0),0);
+    const sal=parseFloat(e.salary)||0;
+    const payable=sal>0?Math.round(sal/26*payDays+otHrs*(sal/26/8)):'';
+    csv += [e.name,e.managedBy||'',p,h,l,a,payDays,paidHrs.toFixed(1),otHrs.toFixed(1),payable].join(',')+'\n';
+  });
+  const blob = new Blob([csv],{type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = `Attendance_${month}.csv`; a.click();
+}
+
+function exportDayCSV(){
+  const date = document.getElementById('rep-date')?.value||today();
+  const rows = DB.attendance.filter(r=>r.date===date);
+  let csv = 'Employee,ManagedBy,Status,Entry,Exit,ActualHrs,PaidHrs,OTHrs,Remarks\n';
+  rows.forEach(r=>{ csv += [r.empName,r.managedBy||'',r.status,r.entryTime,r.exitTime,r.actualHours,r.paidHours,r.overtimeHours,'"'+(r.remarks||'')+'"'].join(',')+'\n'; });
+  const blob = new Blob([csv],{type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = `Attendance_${date}.csv`; a.click();
+}
+
+function exportRegisterPDF(){
+  const month = (document.getElementById('att-month')?.value)||(document.getElementById('rep-month')?.value)||today().slice(0,7);
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({orientation:'landscape', unit:'pt'});
+  const emps = filteredEmps(regActiveCos.size?regActiveCos:repActiveCos);
+  const monthRows = DB.attendance.filter(r=>r.date && r.date.startsWith(month));
+  let y = 40;
+  doc.setFont('helvetica','bold'); doc.setFontSize(13);
+  doc.text(`Innotek — Attendance & Payable Register — ${month}`, 40, y); y += 24;
+  doc.setFontSize(8.5);
+  const cols = ['Employee','Managed By','P','H','L','A','Pay Days','Paid Hrs','OT Hrs','Payable'];
+  const w = [130,90,35,35,35,35,60,60,55,70];
+  let x = 40; cols.forEach((c,i)=>{ doc.text(c, x, y); x += w[i]; }); y += 6;
+  doc.setLineWidth(.4); doc.line(40, y, 800, y); y += 14;
+  doc.setFont('helvetica','normal');
+  emps.forEach(e=>{
+    if(y > 540){ doc.addPage(); y = 40; }
+    const rows = monthRows.filter(r=>String(r.empId||r.employeeId)===String(e.id));
+    const p=rows.filter(r=>r.status==='Present').length, h=rows.filter(r=>r.status==='Half Day').length;
+    const l=rows.filter(r=>r.status==='Leave').length, a=rows.filter(r=>r.status==='Absent').length;
+    const payDays=p+h*0.5;
+    const paidHrs=rows.reduce((s,r)=>s+(parseFloat(r.paidHours)||0),0);
+    const otHrs=rows.reduce((s,r)=>s+(parseFloat(r.overtimeHours)||0),0);
+    const sal=parseFloat(e.salary)||0;
+    const payable=sal>0?('Rs '+Math.round(sal/26*payDays+otHrs*(sal/26/8)).toLocaleString('en-IN')):'-';
+    const vals=[e.name,e.managedBy||'-',p,h,l,a,payDays,paidHrs.toFixed(1),otHrs.toFixed(1),payable];
+    x = 40; vals.forEach((v,i)=>{ doc.text(String(v).substring(0,24), x, y); x += w[i]; }); y += 15;
+  });
+  doc.save(`Attendance_${month}.pdf`);
+}
+
+// ── LEAVE WORKFLOW: apply → approve/reject → cancel ──
+function populateLeaveEmp(){
+  const sel = document.getElementById('leave-emp');
+  if(sel) sel.innerHTML = '<option value="">Select</option>' + DB.employees.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
 }
 
 function applyLeave(){
@@ -5578,77 +6090,132 @@ function applyLeave(){
   if(!emp){ toast('Select employee'); return; }
   const from = document.getElementById('leave-from').value;
   const to = document.getElementById('leave-to').value;
-  if(!from||!to){ toast('Select dates'); return; }
-  const days = Math.round((new Date(to)-new Date(from))/(86400000))+1;
+  if(!from||!to||to<from){ toast('Select valid dates'); return; }
+  const days = Math.round((new Date(to)-new Date(from))/86400000)+1;
   const rec = {
-    empId, empName:emp.name,
+    reqId: nextNum('LR-'), empId, empName:emp.name, managedBy:emp.managedBy||'',
     type: document.getElementById('leave-type').value,
     from, to, days,
     reason: document.getElementById('leave-reason').value,
-    status:'Pending',
-    applied:today(),
+    status:'Pending', applied:today(),
   };
   DB.leaves.push(rec); save('leaves');
-  toast(`Leave applied for ${emp.name} ✓`); renderLeaves();
+  attSend({action:'saveLeaveRequest', ReqID:rec.reqId, EmployeeID:empId, EmployeeName:emp.name, ManagedBy:rec.managedBy,
+    FromDate:from, ToDate:to, Days:days, Type:rec.type, Reason:rec.reason, Status:'Pending'});
+  audit('Leave Applied', `${emp.name} · ${rec.type} · ${from}→${to}`);
+  toast(`Leave applied for ${emp.name} ✓ — pending approval`); renderLeaves();
+}
+
+function decideLeave(reqId, decision){
+  const l = DB.leaves.find(x=>x.reqId===reqId);
+  if(!l) return;
+  l.status = decision; save('leaves');
+  attSend({action:'saveLeaveRequest', ReqID:l.reqId, EmployeeID:l.empId, EmployeeName:l.empName, ManagedBy:l.managedBy,
+    FromDate:l.from, ToDate:l.to, Days:l.days, Type:l.type, Reason:l.reason, Status:decision});
+  if(decision==='Approved'){
+    // Approval writes Leave into the attendance ledger for every date in range
+    const emp = DB.employees.find(e=>e.id===l.empId) || {id:l.empId, name:l.empName, managedBy:l.managedBy};
+    let d = new Date(l.from);
+    const end = new Date(l.to);
+    while(d <= end){
+      const ds = d.toISOString().slice(0,10);
+      doMarkLeave(emp, ds, 'Leave', l.type+(l.reason?': '+l.reason:''));
+      d.setDate(d.getDate()+1);
+    }
+  }
+  if(decision==='Cancelled'){
+    // Cancelling an approved leave removes future Leave marks in the range
+    DB.attendance = DB.attendance.filter(r=>!(String(r.empId)===String(l.empId) && r.status==='Leave' && r.date>=l.from && r.date<=l.to && r.date>=today()));
+    save('attendance');
+    const emp = DB.employees.find(e=>e.id===l.empId);
+    let d = new Date(Math.max(new Date(l.from), new Date(today())));
+    const end = new Date(l.to);
+    const records=[];
+    while(d <= end){
+      records.push({Date:d.toISOString().slice(0,10), EmployeeID:l.empId, EmployeeName:l.empName, ManagedBy:l.managedBy, Status:'', EntryTime:'', ExitTime:'', Remarks:'Leave cancelled'});
+      d.setDate(d.getDate()+1);
+    }
+    if(records.length) attSend({action:'bulkSync', records});
+  }
+  audit('Leave '+decision, `${l.empName} · ${l.from}→${l.to}`);
+  toast(`Leave ${decision} ✓`); renderLeaves(); renderOnLeaveBanner();
 }
 
 function renderLeaves(){
   const tbody = document.getElementById('leave-tbody');
   if(!tbody) return;
-  tbody.innerHTML = DB.leaves.map(l=>`<tr>
-    <td>${l.empName}</td><td>${l.type}</td>
-    <td>${fmtDate(l.from)}</td><td>${fmtDate(l.to)}</td>
-    <td>${l.days}</td><td>${l.reason}</td>
-    <td>
-      <span class="badge ${l.status==='Approved'?'badge-green':l.status==='Rejected'?'badge-danger':'badge-warn'}">${l.status}</span>
-      ${l.status==='Pending'?`<button class="btn btn-ghost btn-sm" style="margin-left:4px" onclick="approveLeave(${DB.leaves.indexOf(l)})">Approve</button>`:''}
-    </td>
-  </tr>`).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--muted)">No leave records</td></tr>';
+  tbody.innerHTML = [...DB.leaves].reverse().map(l=>{
+    const badge = l.status==='Approved'?'badge-green':l.status==='Rejected'?'badge-danger':l.status==='Cancelled'?'badge-muted':'badge-warn';
+    let actions='';
+    if(l.status==='Pending') actions = `<button class="btn btn-success btn-sm" onclick="decideLeave('${l.reqId}','Approved')">✓</button>
+      <button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="decideLeave('${l.reqId}','Rejected')">✗</button>`;
+    else if(l.status==='Approved' && l.to>=today()) actions = `<button class="btn btn-ghost btn-sm" onclick="decideLeave('${l.reqId}','Cancelled')">Cancel</button>`;
+    return `<tr>
+      <td>${l.empName}</td><td>${l.type}</td>
+      <td>${fmtDate(l.from)}</td><td>${fmtDate(l.to)}</td>
+      <td>${l.days}</td><td>${l.reason||''}</td>
+      <td><span class="badge ${badge}">${l.status}</span></td>
+      <td>${actions}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--muted)">No leave requests</td></tr>';
 }
 
-function approveLeave(idx){ DB.leaves[idx].status='Approved'; save('leaves'); renderLeaves(); toast('Leave Approved ✓'); }
+// ── WHATSAPP CARDS with detail levels ──
+function setWaDetail(el, level){
+  waDetail = level;
+  document.querySelectorAll('#wa-detail-row .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderWaPreview();
+}
 
-// Face recognition (camera)
-function startCamera(){
-  if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
-    navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false})
-      .then(stream=>{
-        camStream=stream;
-        const v=document.getElementById('cam-view'); v.srcObject=stream;
-        document.getElementById('btn-cam-start').style.display='none';
-        document.getElementById('btn-capture').style.display='';
-        document.getElementById('cam-status').textContent='📷 Camera active — position face in frame';
-        document.getElementById('cam-status').style.color='var(--accent2)';
-      })
-      .catch(e=>{
-        document.getElementById('cam-status').textContent='⚠️ Camera error: '+e.message;
-        document.getElementById('cam-status').style.color='var(--warn)';
+function buildWaCard(){
+  const date = document.getElementById('rep-date').value || today();
+  const emps = filteredEmps(repActiveCos);
+  const log = DB.attendance.filter(r=>r.date===date);
+  const dateLabel = new Date(date+'T00:00:00').toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const byCo = {};
+  emps.forEach(e=>{
+    const co = e.managedBy||'Others';
+    (byCo[co]=byCo[co]||[]).push(e);
+  });
+  let card = `📋 *ATTENDANCE REPORT*\n📅 ${dateLabel}\n\n`;
+  Object.entries(byCo).forEach(([co, people])=>{
+    const recs = people.map(e=>({e, r:log.find(x=>String(x.empId||x.employeeId)===String(e.id))}));
+    const present = recs.filter(x=>x.r && x.r.status==='Present').length;
+    card += `*${co}* — ${present}/${people.length} present\n`;
+    if(waDetail!=='summary'){
+      recs.forEach(({e,r})=>{
+        const st = r?r.status:'—';
+        const icon = st==='Present'?'✅':st==='Leave'?'🟡':st==='Absent'?'❌':'⬜';
+        card += `${icon} ${e.name}`;
+        if((waDetail==='timings'||waDetail==='all') && r && r.status==='Present'){
+          card += ` (In: ${r.entryTime||'—'}${r.exitTime?' Out: '+r.exitTime:''})`;
+        }
+        if((waDetail==='ot'||waDetail==='all') && r && (parseFloat(r.paidHours)||parseFloat(r.overtimeHours))){
+          card += ` [Paid ${r.paidHours||0}h${parseFloat(r.overtimeHours)?' · OT '+r.overtimeHours+'h':''}]`;
+        }
+        card += '\n';
       });
-  } else {
-    document.getElementById('cam-status').textContent='Camera not supported on this device/browser';
-  }
+    }
+    card += '\n';
+  });
+  card += `_Innotek ERP — Attendance_`;
+  return card;
 }
 
-function captureAndRecognize(){
-  const v=document.getElementById('cam-view');
-  const c=document.getElementById('cam-canvas');
-  c.width=v.videoWidth||320; c.height=v.videoHeight||240;
-  c.getContext('2d').drawImage(v,0,0);
-  // Simulated recognition (in production: send frame to GAS/ML backend)
-  const emp = DB.employees[Math.floor(Math.random()*DB.employees.length)];
-  document.getElementById('cam-status').textContent=`✅ Recognized: ${emp.name} — Attendance marked!`;
-  document.getElementById('cam-status').style.color='var(--accent2)';
-  const rec = {empId:emp.id,empName:emp.name,dept:emp.dept,date:today(),type:'Present',time:new Date().toTimeString().slice(0,5),method:'Face'};
-  DB.attendance.push(rec); save('attendance');
-  const log = document.getElementById('face-log');
-  log.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--surface);border-radius:8px;border:1px solid var(--accent2)">
-    <div style="font-size:2rem">👤</div>
-    <div><div style="font-weight:700;color:var(--accent2)">${emp.name}</div>
-    <div style="font-size:.75rem;color:var(--muted)">${emp.dept} • ${rec.time} • Face</div></div>
-    <span class="badge badge-green" style="margin-left:auto">✓ In</span>
-  </div>` + log.innerHTML;
-  toast(`${emp.name} marked Present via Face ✓`);
+function renderWaPreview(){
+  const el = document.getElementById('wa-preview');
+  if(el) el.textContent = buildWaCard().replace(/\*/g,'');
 }
+
+function shareWaCard(){
+  window.open('https://wa.me/?text='+encodeURIComponent(buildWaCard()), '_blank');
+}
+
+setInterval(()=>{
+  const el = document.getElementById('att-clock');
+  if(el){ const d=new Date(); el.textContent = attManualTime ? pad(attManualTime.h)+':'+pad(attManualTime.m)+' (set)' : pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds()); }
+}, 1000);
 
 // ─────────────────────────────────────────────────────
 // FINANCE
@@ -6049,7 +6616,7 @@ async function refreshPOFromSheet(){
     let added=0, updated=0;
     rows.forEach(row=>{
       const mapped = {
-        num: row.PONum, date: row.Date, vendor: row.Vendor, item: row.Item, itemCode: row.ItemCode,
+        num: String(row.PONum), date: row.Date, vendor: row.Vendor, item: row.Item, itemCode: row.ItemCode,
         qty: parseFloat(row.Qty)||0, uom: row.UOM, rate: parseFloat(row.Rate)||0, amount: parseFloat(row.Amount)||0,
         eta: row.ETA, advancePct: parseFloat(row.AdvancePct)||0, advanceAmt: parseFloat(row.AdvanceAmt)||0,
         advancePaid: row.AdvancePaid==='Y', balancePaid: row.BalancePaid==='Y',
@@ -6184,7 +6751,7 @@ function savePO(){
 }
 
 function editPO(num){
-  const p = DB.po.find(x=>x.num===num);
+  const p = DB.po.find(x=>String(x.num)===String(num));
   if(!p) return;
   document.getElementById('po-modal-title').textContent = `✏️ Edit PO — ${num}`;
   document.getElementById('po-edit-num').value = num;
@@ -6201,14 +6768,14 @@ function editPO(num){
 }
 
 function sharePOCard(num){
-  const p = DB.po.find(x=>x.num===num);
+  const p = DB.po.find(x=>String(x.num)===String(num));
   if(!p) return;
   const text = `🛒 *PURCHASE ORDER*\n${p.num}\n\nVendor: ${p.vendor}\nItem: ${p.item}\nQty: ${p.qty} ${p.uom}\nRate: ₹${p.rate}\nAmount: ₹${p.amount.toLocaleString('en-IN')}\nExpected: ${fmtDate(p.eta)}\nAdvance: ${p.advancePct}% (₹${(p.advanceAmt||0).toLocaleString('en-IN')})\n\n_Innotek Products — Purchase_`;
   window.open('https://wa.me/?text='+encodeURIComponent(text), '_blank');
 }
 
 function exportPOPdf(num){
-  const p = DB.po.find(x=>x.num===num);
+  const p = DB.po.find(x=>String(x.num)===String(num));
   if(!p) return;
   const w = window.open('','_blank');
   w.document.write(`
@@ -6271,7 +6838,7 @@ function renderPoPayments(){
 }
 
 function markPoAdvancePaid(num){
-  const p = DB.po.find(x=>x.num===num);
+  const p = DB.po.find(x=>String(x.num)===String(num));
   if(!p) return;
   p.advancePaid = true; save('po');
   const adv = (p.amount||0)*(p.advancePct||0)/100;
@@ -6285,7 +6852,7 @@ function markPoAdvancePaid(num){
 }
 
 function markPoBalancePaid(num){
-  const p = DB.po.find(x=>x.num===num);
+  const p = DB.po.find(x=>String(x.num)===String(num));
   if(!p) return;
   p.balancePaid = true; save('po');
   const adv = (p.amount||0)*(p.advancePct||0)/100;
@@ -6309,7 +6876,7 @@ async function refreshSalesFromSheet(){
     let added=0, updated=0;
     rows.forEach(row=>{
       const mapped = {
-        num: row.SONum, date: row.Date, customer: row.Customer, product: row.Product, grade: row.Grade,
+        num: String(row.SONum), date: row.Date, customer: row.Customer, product: row.Product, grade: row.Grade,
         qty: parseFloat(row.Qty)||0, rate: parseFloat(row.Rate)||0, amount: parseFloat(row.Amount)||0,
         delivery: row.DeliveryDate, status: row.Status||'Confirmed',
       };
@@ -6560,8 +7127,6 @@ function saveSettings(){
   const cfg = {
     company:document.getElementById('s-company').value,
     gst:document.getElementById('s-gst').value,
-    gas:document.getElementById('s-gas').value,
-    sheetId:document.getElementById('s-sheetid').value,
   };
   localStorage.setItem('erp_config', JSON.stringify(cfg));
   toast('Settings saved ✓');
@@ -6569,7 +7134,7 @@ function saveSettings(){
 
 function loadSettingsPage(){
   const map = {
-    's-url-masters':'erp_url_masters', 's-url-invpur':'erp_url_invpur',
+    's-url-masters':'erp_url_masters', 's-url-proddata':'erp_url_proddata', 's-url-invpur':'erp_url_invpur',
     's-url-plan':'erp_url_plan', 's-url-finance':'erp_url_finance',
     's-url-salesdisp':'erp_url_salesdisp',
   };
@@ -6583,7 +7148,7 @@ function loadSettingsPage(){
 
 function saveBackendUrls(){
   const map = {
-    's-url-masters':'erp_url_masters', 's-url-invpur':'erp_url_invpur',
+    's-url-masters':'erp_url_masters', 's-url-proddata':'erp_url_proddata', 's-url-invpur':'erp_url_invpur',
     's-url-plan':'erp_url_plan', 's-url-finance':'erp_url_finance',
     's-url-salesdisp':'erp_url_salesdisp',
   };
@@ -6598,6 +7163,7 @@ function testAllBackends(){
   const el = document.getElementById('backend-test-status');
   const urls = {
     'Masters': document.getElementById('s-url-masters').value,
+    'Production Data': document.getElementById('s-url-proddata').value,
     'Inventory & Purchase': document.getElementById('s-url-invpur').value,
     'Production Plan': document.getElementById('s-url-plan').value,
     'Finance Ledger': document.getElementById('s-url-finance').value,
@@ -6627,17 +7193,6 @@ function refreshSyncDetail(){
   }
 }
 
-function testGAS(){
-  const url = document.getElementById('s-gas')?.value;
-  const el = document.getElementById('gas-status');
-  if(!el) return;
-  if(!url){ el.textContent='⚠️ Enter GAS URL first'; return; }
-  el.textContent='⏳ Testing connection...';
-  const img=new Image();
-  img.onload=()=>{ el.style.color='var(--accent2)'; el.textContent='✅ Connected to GAS backend'; };
-  img.onerror=()=>{ el.style.color='var(--warn)'; el.textContent='⚠️ Could not reach GAS URL — check deployment'; };
-  img.src = url+'?action=ping&cb='+Date.now();
-}
 
 // ── MASTER DATA EXCEL IMPORT ──────────────────────────────────────
 // Reads the Innotek ERP Master Data Template workbook and applies each
@@ -6840,12 +7395,11 @@ function importMasterExcel(){
 function init(){
   seedIfEmpty();
   renderDashboard();
+  loadTeamTasksCard();
   populateEmpSelects();
   setDefaults();
   updateSyncIndicator();
   const cfg = JSON.parse(localStorage.getItem('erp_config')||'{}');
-  if(cfg.gas && document.getElementById('s-gas')) document.getElementById('s-gas').value=cfg.gas;
-  if(cfg.sheetId && document.getElementById('s-sheetid')) document.getElementById('s-sheetid').value=cfg.sheetId;
 
   // Deep-link support: erp.html#inventory opens the Inventory page directly
   const hash = window.location.hash.replace('#','');
@@ -6942,7 +7496,7 @@ async function startFaceCam(){
     });
     video.srcObject = faceStream; await video.play();
     hideFaceSplash();
-    document.getElementById('btnFaceCapture').disabled=false;
+    const cap=document.getElementById('btn-capture'); cap.style.display=''; cap.disabled=false;
     startFaceDetectionLoop();
   }catch(e){
     setFaceProgress(0, '⚠️ Camera error: '+e.message);
@@ -7054,11 +7608,12 @@ function doMarkEntry(emp, t){
   } else {
     DB.attendance.push({date:today, empId, employeeId:empId, empName, employeeName:empName,
       dept:emp.department||emp.dept||'', department:emp.department||emp.dept||'',
+      managedBy:emp.managedBy||emp.ManagedBy||'',
       status:'Present', type:'Present', entryTime:t, exitTime:'', method:'Face',
       actualHours:'', paidHours:'', regularHours:'', overtimeHours:''});
   }
   save('attendance');
-  gasPost({action:'markEntry', date:today, employeeId:empId, employeeName:empName, entryTime:t}).catch(()=>{});
+  attSend({action:'markEntry', date:today, employeeId:empId, employeeName:empName, department:emp.department||emp.dept||'', managedBy:emp.managedBy||emp.ManagedBy||'', entryTime:t});
   return {ok:true, text:`${empName}: ENTRY at ${t}.`};
 }
 
@@ -7071,7 +7626,7 @@ function doMarkExit(emp, t){
   const h=calcHours(row.entryTime, t);
   row.exitTime=t; row.actualHours=h.actual; row.paidHours=h.paid; row.regularHours=h.regular; row.overtimeHours=h.ot;
   save('attendance');
-  gasPost({action:'markExit', date:today, employeeId:empId, employeeName:empName, exitTime:t}).catch(()=>{});
+  attSend({action:'markExit', date:today, employeeId:empId, employeeName:empName, managedBy:emp.managedBy||emp.ManagedBy||'', exitTime:t});
   return {ok:true, text:`${empName}: EXIT at ${t}. Paid ${h.paid}hr(s).`};
 }
 
@@ -7091,7 +7646,7 @@ async function confirmFaceAttendance(){
   toast(resultMsgs.join(' · '));
   capturedFaces=[];
   document.getElementById('face-log').innerHTML='';
-  loadAttRegister();
+  renderTodayEntry(); renderOnLeaveBanner();
 }
 
 function setFaceMode(m){

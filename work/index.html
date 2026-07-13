@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0b1420">
+<title>Innotek Work — Chat & Tasks</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root{
+  --bg:#0b1420; --card:#121e2d; --surface:#1a2940; --border:#24354d;
+  --text:#e8eef5; --muted:#7d8fa5; --accent:#00c2ff; --accent2:#2fd67b;
+  --warn:#f5b942; --danger:#ff5d6c;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,'Segoe UI',Roboto,sans-serif;font-size:15px;}
+button{font-family:inherit;cursor:pointer;}
+input,select,textarea{font-family:inherit;background:var(--bg);border:1px solid var(--border);border-radius:9px;color:var(--text);font-size:15px;padding:11px 12px;outline:none;width:100%;}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);}
+label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;display:block;margin:10px 0 4px;}
+.btn{border:none;border-radius:10px;padding:12px 18px;font-weight:700;font-size:.9rem;}
+.btn-primary{background:var(--accent);color:#00263a;}
+.btn-success{background:var(--accent2);color:#00301a;}
+.btn-ghost{background:var(--surface);color:var(--text);border:1px solid var(--border);}
+.btn-sm{padding:7px 12px;font-size:.78rem;}
+.btn-danger{background:transparent;color:var(--danger);border:1px solid var(--danger);}
+.badge{font-size:.68rem;padding:3px 9px;border-radius:10px;font-weight:700;}
+.b-green{background:rgba(47,214,123,.15);color:var(--accent2);}
+.b-blue{background:rgba(0,194,255,.15);color:var(--accent);}
+.b-warn{background:rgba(245,185,66,.15);color:var(--warn);}
+.b-danger{background:rgba(255,93,108,.15);color:var(--danger);}
+.b-muted{background:var(--surface);color:var(--muted);}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;}
+.screen{display:none;min-height:100vh;}
+.screen.on{display:block;}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#0e1826;border:1px solid var(--accent);color:var(--text);padding:10px 18px;border-radius:12px;font-size:.82rem;z-index:999;max-width:90vw;box-shadow:0 8px 30px rgba(0,0,0,.5);}
+/* Login */
+#scr-login{display:none;align-items:center;justify-content:center;padding:20px;}
+#scr-login.on{display:flex;}
+.login-box{width:100%;max-width:380px;}
+.logo{text-align:center;margin-bottom:24px;}
+.logo .mark{font-size:2.6rem;}
+.logo h1{font-size:1.4rem;margin-top:6px;}
+.logo p{color:var(--muted);font-size:.8rem;}
+/* Main layout */
+#topbar{position:sticky;top:0;background:rgba(11,20,32,.94);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:10px;z-index:50;}
+#topbar h2{font-size:1.05rem;flex:1;}
+#tabbar{position:fixed;bottom:0;left:0;right:0;background:rgba(11,20,32,.96);backdrop-filter:blur(10px);border-top:1px solid var(--border);display:flex;z-index:50;padding-bottom:env(safe-area-inset-bottom);}
+.tabbtn{flex:1;background:none;border:none;color:var(--muted);padding:10px 4px 8px;font-size:.66rem;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative;}
+.tabbtn .ico{font-size:1.25rem;}
+.tabbtn.on{color:var(--accent);}
+.tabbtn .dot{position:absolute;top:6px;right:calc(50% - 16px);background:var(--danger);color:#fff;font-size:.6rem;min-width:16px;height:16px;border-radius:8px;display:none;align-items:center;justify-content:center;padding:0 4px;font-weight:700;}
+.view{display:none;padding:14px 14px 90px;}
+.view.on{display:block;}
+/* Chat */
+.chan-row{display:flex;align-items:center;gap:12px;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:8px;cursor:pointer;}
+.chan-ico{width:42px;height:42px;border-radius:12px;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;}
+.chan-name{font-weight:700;font-size:.92rem;}
+.chan-last{color:var(--muted);font-size:.76rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60vw;}
+#chat-screen{position:fixed;inset:0;background:var(--bg);z-index:100;display:none;flex-direction:column;}
+#chat-screen.on{display:flex;}
+#chat-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:8px;}
+.msg{max-width:80%;padding:9px 13px;border-radius:14px;font-size:.88rem;line-height:1.4;}
+.msg .who{font-size:.68rem;color:var(--accent);font-weight:700;margin-bottom:2px;}
+.msg .when{font-size:.62rem;color:var(--muted);margin-top:3px;text-align:right;}
+.msg.them{background:var(--surface);align-self:flex-start;border-bottom-left-radius:4px;}
+.msg.me{background:#0a3d55;align-self:flex-end;border-bottom-right-radius:4px;}
+#chat-input-row{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--border);padding-bottom:calc(10px + env(safe-area-inset-bottom));}
+#chat-input-row input{flex:1;}
+/* Tasks */
+.task-card{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--border);border-radius:12px;padding:12px;margin-bottom:10px;cursor:pointer;}
+.task-card.p-Critical{border-left-color:var(--danger);}
+.task-card.p-High{border-left-color:var(--warn);}
+.task-card.p-Medium{border-left-color:var(--accent);}
+.task-card.p-Low{border-left-color:var(--muted);}
+.task-title{font-weight:700;font-size:.94rem;margin-bottom:4px;}
+.task-meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:.72rem;color:var(--muted);}
+.filter-row{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:8px;}
+.filter-row .fbtn{background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:16px;padding:6px 14px;font-size:.76rem;white-space:nowrap;}
+.filter-row .fbtn.on{background:rgba(0,194,255,.15);border-color:var(--accent);color:var(--accent);}
+/* Task detail / modal-style full screens */
+.fullscr{position:fixed;inset:0;background:var(--bg);z-index:110;display:none;overflow-y:auto;}
+.fullscr.on{display:block;}
+.fullscr .hdr{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--border);padding:12px 14px;display:flex;align-items:center;gap:10px;z-index:5;}
+.backbtn{background:var(--surface);border:1px solid var(--border);color:var(--text);width:36px;height:36px;border-radius:10px;font-size:18px;flex-shrink:0;}
+.fullscr .body{padding:14px 14px 40px;}
+.kv{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:.85rem;}
+.kv .k{color:var(--muted);}
+.audit-row{font-size:.74rem;color:var(--muted);padding:6px 0;border-bottom:1px dashed var(--border);}
+.warnbox{background:rgba(245,185,66,.1);border:1px solid var(--warn);border-radius:10px;padding:10px;font-size:.8rem;margin:8px 0;}
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;}
+.kpi .n{font-size:1.6rem;font-weight:800;}
+.kpi .l{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
+.kpi.warn .n{color:var(--warn);} .kpi.danger .n{color:var(--danger);} .kpi.green .n{color:var(--accent2);} .kpi.accent .n{color:var(--accent);}
+.member-row{display:flex;align-items:center;gap:10px;padding:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;}
+.avatar{width:38px;height:38px;border-radius:50%;background:var(--surface);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--accent);flex-shrink:0;}
+.checkline{display:flex;align-items:center;gap:10px;padding:9px;border-bottom:1px solid var(--border);cursor:pointer;font-size:.88rem;}
+</style>
+</head>
+<body>
+
+<!-- ══════ SETUP (first run — paste Firebase config) ══════ -->
+<div class="screen on" id="scr-setup">
+  <div style="max-width:480px;margin:0 auto;padding:24px 16px;">
+    <div class="logo"><div class="mark">🤝</div><h1>Innotek Work — Setup</h1>
+      <p>One-time: paste your Firebase config (from Project Settings → Your apps → Web app)</p></div>
+    <div class="card">
+      <label>Firebase Config (the {...} block, JSON or JS form)</label>
+      <textarea id="setup-config" rows="9" placeholder='{"apiKey":"...","authDomain":"...","projectId":"...","storageBucket":"...","messagingSenderId":"...","appId":"..."}'></textarea>
+      <label>Attendance backend URL (for leave & workload checks — pre-filled)</label>
+      <input id="setup-att" value="https://script.google.com/macros/s/AKfycbwnGNFm09DXdjC3TI5yDFKvv3kTxJwcke1MdKhKzWGPyAV8zO0KyqtKhH4HmbWSpnwRpg/exec">
+      <div style="margin-top:14px"><button class="btn btn-primary" style="width:100%" onclick="saveSetup()">Save & Start</button></div>
+      <p style="font-size:.72rem;color:var(--muted);margin-top:10px">Config is stored only on this device. Each device does this once.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ LOGIN ══════ -->
+<div class="screen" id="scr-login">
+  <div class="login-box">
+    <div class="logo"><div class="mark">🤝</div><h1>Innotek Work</h1><p>Chat · Tasks · Team — confidential to Innotek</p></div>
+    <div class="card">
+      <label>Email</label><input id="login-email" type="email" autocomplete="username">
+      <label>Password</label><input id="login-pass" type="password" autocomplete="current-password">
+      <div style="margin-top:14px"><button class="btn btn-primary" style="width:100%" onclick="doLogin()">Sign In</button></div>
+      <p id="login-err" style="color:var(--danger);font-size:.78rem;margin-top:8px"></p>
+      <p style="font-size:.72rem;color:var(--muted);margin-top:8px">Accounts are created by the admin in the Firebase console. No self-signup.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ MAIN ══════ -->
+<div class="screen" id="scr-main">
+  <div id="topbar">
+    <h2 id="topbar-title">Innotek Work</h2>
+    <span id="me-name" style="font-size:.74rem;color:var(--muted)"></span>
+    <button class="btn btn-ghost btn-sm" onclick="doLogout()">Logout</button>
+  </div>
+
+  <!-- CHATS -->
+  <div class="view on" id="view-chats">
+    <div class="card" style="display:flex;gap:8px;align-items:center">
+      <input id="new-chan-name" placeholder="New channel name…" style="flex:1">
+      <button class="btn btn-primary btn-sm" onclick="createChannel()">＋</button>
+    </div>
+    <div id="chan-list"></div>
+  </div>
+
+  <!-- TASKS -->
+  <div class="view" id="view-tasks">
+    <button class="btn btn-primary" style="width:100%;margin-bottom:10px" onclick="openNewTask()">＋ New Task</button>
+    <div class="filter-row" id="task-filters">
+      <button class="fbtn on" data-f="mine" onclick="setTaskFilter(this)">Assigned to me</button>
+      <button class="fbtn" data-f="created" onclick="setTaskFilter(this)">Created by me</button>
+      <button class="fbtn" data-f="all" onclick="setTaskFilter(this)">All</button>
+      <button class="fbtn" data-f="overdue" onclick="setTaskFilter(this)">Overdue</button>
+      <button class="fbtn" data-f="awaiting" onclick="setTaskFilter(this)">Awaiting response</button>
+    </div>
+    <div id="task-list"></div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="view" id="view-dash">
+    <div class="kpi-grid" id="dash-kpis"></div>
+    <div class="card"><b style="font-size:.85rem">📅 Due Today</b><div id="dash-today"></div></div>
+    <div class="card"><b style="font-size:.85rem">⏳ Awaiting Acceptance</b><div id="dash-awaiting"></div></div>
+    <div class="card"><b style="font-size:.85rem">🔴 Overdue</b><div id="dash-overdue"></div></div>
+    <div class="card" id="dash-team-card" style="display:none"><b style="font-size:.85rem">👥 Team Workload (admin)</b><div id="dash-team"></div></div>
+    <button class="btn btn-ghost" style="width:100%" onclick="shareTeamDigest()">📱 WhatsApp Team Digest</button>
+  </div>
+
+  <!-- TEAM -->
+  <div class="view" id="view-team">
+    <div id="team-list"></div>
+    <p style="font-size:.72rem;color:var(--muted)">To add a person: Firebase console → Authentication → Add user. They appear here after first sign-in. Admins can promote members.</p>
+  </div>
+
+  <div id="tabbar">
+    <button class="tabbtn on" data-v="chats" onclick="switchTab(this)"><span class="ico">💬</span>Chats<span class="dot" id="dot-chats"></span></button>
+    <button class="tabbtn" data-v="tasks" onclick="switchTab(this)"><span class="ico">✅</span>Tasks<span class="dot" id="dot-tasks"></span></button>
+    <button class="tabbtn" data-v="dash" onclick="switchTab(this)"><span class="ico">📊</span>Dashboard</button>
+    <button class="tabbtn" data-v="team" onclick="switchTab(this)"><span class="ico">👥</span>Team</button>
+  </div>
+</div>
+
+<!-- ══════ CHAT SCREEN ══════ -->
+<div id="chat-screen">
+  <div class="fullscr hdr" style="position:sticky;display:flex">
+    <button class="backbtn" onclick="closeChat()">‹</button>
+    <div style="flex:1"><b id="chat-title"></b><div id="chat-sub" style="font-size:.7rem;color:var(--muted)"></div></div>
+  </div>
+  <div id="chat-msgs"></div>
+  <div id="chat-input-row">
+    <input id="chat-input" placeholder="Type a message…" onkeydown="if(event.key==='Enter')sendMsg()">
+    <button class="btn btn-primary" onclick="sendMsg()">➤</button>
+  </div>
+</div>
+
+<!-- ══════ NEW TASK ══════ -->
+<div class="fullscr" id="scr-newtask">
+  <div class="hdr"><button class="backbtn" onclick="hide('scr-newtask')">‹</button><b>New Task</b></div>
+  <div class="body">
+    <label>Title</label><input id="nt-title">
+    <label>Description</label><textarea id="nt-desc" rows="3"></textarea>
+    <label>Priority</label>
+    <select id="nt-priority"><option>Low</option><option selected>Medium</option><option>High</option><option>Critical</option></select>
+    <label>Start Date</label><input id="nt-start" type="date">
+    <label>Due Date & Time</label><input id="nt-due" type="datetime-local">
+    <label>Estimated Hours</label><input id="nt-est" type="number" step="0.5">
+    <label>Assign To (tap to select)</label>
+    <div id="nt-assignees" class="card" style="padding:4px;max-height:200px;overflow-y:auto"></div>
+    <div id="nt-warnings"></div>
+    <label>Attachment link (Drive URL, optional)</label><input id="nt-attach" placeholder="https://drive.google.com/…">
+    <div style="margin-top:14px"><button class="btn btn-primary" style="width:100%" onclick="createTask()">Assign Task</button></div>
+  </div>
+</div>
+
+<!-- ══════ TASK DETAIL ══════ -->
+<div class="fullscr" id="scr-task">
+  <div class="hdr"><button class="backbtn" onclick="hide('scr-task')">‹</button>
+    <div style="flex:1"><b id="td-title"></b></div><span id="td-status" class="badge b-muted"></span></div>
+  <div class="body">
+    <p id="td-desc" style="font-size:.86rem;color:var(--muted);margin-bottom:10px"></p>
+    <div id="td-kv"></div>
+    <div id="td-actions" style="display:flex;gap:8px;flex-wrap:wrap;margin:14px 0"></div>
+    <div class="card"><b style="font-size:.82rem">💬 Discussion</b>
+      <div id="td-comments" style="max-height:220px;overflow-y:auto;margin:8px 0"></div>
+      <div style="display:flex;gap:8px"><input id="td-comment-in" placeholder="Comment…" onkeydown="if(event.key==='Enter')addComment()"><button class="btn btn-primary btn-sm" onclick="addComment()">➤</button></div>
+    </div>
+    <div class="card"><b style="font-size:.82rem">📜 Audit Trail (immutable)</b><div id="td-audit"></div></div>
+    <button class="btn btn-ghost" style="width:100%" onclick="shareTaskWA()">📱 Share Task Summary</button>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
