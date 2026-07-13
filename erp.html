@@ -1494,6 +1494,9 @@ tr:hover td{background:rgba(255,255,255,.03);}
         <div class="field" style="grid-column:1/-1"><label>🏭 Production Data (your QCQA spreadsheet with the NEW script — see backend-scripts/production-data)</label>
           <input id="s-url-proddata" placeholder="https://script.google.com/macros/s/.../exec">
         </div>
+        <div class="field" style="grid-column:1/-1"><label>📷 Gemini Scan Proxy (camera-scan for paper log sheets — see backend-scripts/gemini-proxy)</label>
+          <input id="s-url-geminiproxy" placeholder="https://script.google.com/macros/s/.../exec">
+        </div>
         <div class="field" style="grid-column:1/-1"><label>🆕 Inventory & Purchase</label>
           <input id="s-url-invpur" placeholder="https://script.google.com/macros/s/.../exec">
         </div>
@@ -1889,7 +1892,10 @@ tr:hover td{background:rgba(255,255,255,.03);}
   <div class="entry-header">
     <button class="entry-back" onclick="backToBatchHub('entry-centrifuge')">‹</button>
     <div><div class="entry-title">Centrifuge</div><div class="entry-sub" id="ecf-batch-label"></div></div>
+    <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="triggerScan('centrifuge')">📷 Scan Log Sheet</button>
+    <input type="file" id="ecf-scan-input" accept="image/*" capture="environment" style="display:none" onchange="handleScanFile(event,'centrifuge')">
   </div>
+  <div id="ecf-scan-status" style="display:none;padding:10px 16px;font-size:.8rem;background:var(--surface);border-bottom:1px solid var(--border)"></div>
   <div class="entry-body">
     <div class="form-section">
       <div class="form-section-title">Commencement</div>
@@ -2428,6 +2434,7 @@ const BACKEND = {
   PLAN_GAS_URL:       localStorage.getItem('erp_url_plan')       || 'https://script.google.com/macros/s/AKfycby3WP1d9rH44tuFUF7-hZJ3q9Jf0TBGafactgrBZxPFjBvKxYlTRCombLPebK_ISRhvBQ/exec',
   FINANCE_GAS_URL:    localStorage.getItem('erp_url_finance')    || 'https://script.google.com/macros/s/AKfycbzuuGfUT0ASs0jsCxixLTxGs6fr2lQWzOrsG1j7wfKI39HlOAzUjgtiAJJaYi8Rvo7Aag/exec',
   SALESDISP_GAS_URL:  localStorage.getItem('erp_url_salesdisp')  || 'https://script.google.com/a/macros/unitycpl.com/s/AKfycbxIKM1BwmxpdoOqkVbFO2quvYzhtbD9ewcWeaEEGiyrNRVAnOsiAblPKi5JYRA9Lnr4LA/exec',
+  GEMINI_PROXY_URL:   localStorage.getItem('erp_url_geminiproxy') || '',
 };
 const FACE_MODEL_CDN = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
 const FACE_MODEL_FALLBACK = 'https://justadudewhohacks.github.io/face-api.js/models';
@@ -4155,6 +4162,70 @@ function ecfRenderRuns(){
     </div>`).join('');
 }
 function ecfAddRun(){ ecfRuns.push({}); ecfRenderRuns(); }
+
+// ═══════════════════════════════════════════════════════════
+// CAMERA-SCAN — photo of a filled paper log sheet → Gemini vision
+// proxy → fields returned → YOU REVIEW → nothing auto-submits.
+// No image is stored; it's sent, read once by Gemini, discarded.
+// ═══════════════════════════════════════════════════════════
+function triggerScan(formType){
+  if(!BACKEND.GEMINI_PROXY_URL){
+    toast('⚠️ Scan proxy not configured — Settings → Gemini Scan Proxy URL');
+    return;
+  }
+  document.getElementById('ecf-scan-input').click();
+}
+
+function fileToBase64(file){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=>resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleScanFile(ev, formType){
+  const file = ev.target.files[0];
+  ev.target.value = ''; // reset so the same photo can be re-picked if needed
+  if(!file) return;
+  const statusEl = document.getElementById('ecf-scan-status');
+  statusEl.style.display = '';
+  statusEl.style.color = 'var(--muted)';
+  statusEl.textContent = '⏳ Reading log sheet… (Gemini, ~5-10 sec)';
+  try{
+    const dataUrl = await fileToBase64(file);
+    const resp = await fetch(BACKEND.GEMINI_PROXY_URL, {
+      method:'POST', body: JSON.stringify({image:dataUrl, formType}),
+    });
+    const result = await resp.json();
+    if(result.status !== 'success') throw new Error(result.message||'Scan failed');
+    applyScanFields(formType, result.fields);
+    statusEl.style.color = 'var(--accent2)';
+    statusEl.textContent = '✅ Scanned — review every field below before submitting, then correct anything misread';
+    audit('Camera Scan', formType+' log sheet scanned — review required');
+  }catch(err){
+    statusEl.style.color = 'var(--warn)';
+    statusEl.textContent = '⚠️ Scan failed: '+err.message+' — enter manually or retake the photo';
+  }
+}
+
+function applyScanFields(formType, f){
+  if(formType==='centrifuge'){
+    if(f.commenceTime) document.getElementById('ecf-commence').value = f.commenceTime;
+    if(f.oilTemp) document.getElementById('ecf-oiltemp').value = f.oilTemp;
+    if(f.remark) document.getElementById('ecf-remark').value = f.remark;
+    if(Array.isArray(f.runs) && f.runs.length){
+      ecfRuns = f.runs.map(r=>({tank:r.tank||'', start:r.startTime||'', end:r.endTime||'', drumClean:r.drumClean==='Y', weight:r.weightKg||''}));
+      ecfRenderRuns();
+    }
+    if(Array.isArray(f.samples) && f.samples.length){
+      ecfSamples = f.samples.map(s=>({time:s.time||'', moisture:s.moisture||'', ph:s.ph||'', pusherRpm:s.pusherRpm||'', rotorRpm:s.rotorRpm||''}));
+      ecfRenderSamples();
+    }
+  }
+}
+
 
 function ecfRenderSamples(){
   document.getElementById('ecf-samples').innerHTML = ecfSamples.map((s,i)=>`
@@ -7134,7 +7205,7 @@ function saveSettings(){
 
 function loadSettingsPage(){
   const map = {
-    's-url-masters':'erp_url_masters', 's-url-proddata':'erp_url_proddata', 's-url-invpur':'erp_url_invpur',
+    's-url-masters':'erp_url_masters', 's-url-proddata':'erp_url_proddata', 's-url-geminiproxy':'erp_url_geminiproxy', 's-url-invpur':'erp_url_invpur',
     's-url-plan':'erp_url_plan', 's-url-finance':'erp_url_finance',
     's-url-salesdisp':'erp_url_salesdisp',
   };
@@ -7148,7 +7219,7 @@ function loadSettingsPage(){
 
 function saveBackendUrls(){
   const map = {
-    's-url-masters':'erp_url_masters', 's-url-proddata':'erp_url_proddata', 's-url-invpur':'erp_url_invpur',
+    's-url-masters':'erp_url_masters', 's-url-proddata':'erp_url_proddata', 's-url-geminiproxy':'erp_url_geminiproxy', 's-url-invpur':'erp_url_invpur',
     's-url-plan':'erp_url_plan', 's-url-finance':'erp_url_finance',
     's-url-salesdisp':'erp_url_salesdisp',
   };
