@@ -2413,7 +2413,7 @@ tr:hover td{background:rgba(255,255,255,.03);}
       <div class="field"><label>Customer</label><input id="so-cust"></div>
       <div class="field"><label>Product</label>
         <select id="so-prod">
-          <option>NFG - Natural Flake Graphite</option><option>Micronized Graphite</option>
+          <option>NEG - Natural Expandable Graphite</option><option>Micronized Graphite</option>
           <option>Graphite Powder</option>
         </select>
       </div>
@@ -2736,7 +2736,7 @@ function seedIfEmpty(){
     DB.inventory = [
       {code:'RM-001',desc:'Raw Graphite Ore (+899)',cat:'Raw Material',subCat:'NFG',uom:'KG',stock:0,reorder:20000,critical:8000,maxStock:60000,location:'PRM Bay',updated:today(),cost:12,vendor1:'Asbury',vendor2:'DGD Industries',batchTracked:'Y',batches:[{ref:'NFG-049-899',date:prevDate(5),qty:45200,rate:12,bay:'PRM Bay'}]},
       {code:'RM-L1',desc:'L1 Chemical (Intercalation Agent)',cat:'Liquid',subCat:'L1',uom:'KG',stock:1100,reorder:500,critical:200,maxStock:2000,location:'SAS Bay',updated:today(),cost:45,vendor1:'Shreehari Enterprises',vendor2:'Reliable Chemicals',batchTracked:'N',batches:[]},
-      {code:'FG-001',desc:'NFG GR-95 (Finished)',cat:'Finished Goods',subCat:'NFG',uom:'KG',stock:8400,reorder:5000,critical:2000,maxStock:20000,location:'FG Bay',updated:today(),cost:85,vendor1:'',vendor2:'',batchTracked:'N',batches:[]},
+      {code:'FG-001',desc:'NEG GR-95 (Finished — Natural Expandable Graphite)',cat:'Finished Goods',subCat:'NEG',uom:'KG',stock:8400,reorder:5000,critical:2000,maxStock:20000,location:'FG Bay',updated:today(),cost:85,vendor1:'',vendor2:'',batchTracked:'N',batches:[]},
       {code:'FG-002',desc:'Micronized GR-300 (Finished)',cat:'Finished Goods',subCat:'Micronized',uom:'KG',stock:3100,reorder:3000,critical:1200,maxStock:15000,location:'FG Bay',updated:today(),cost:95,vendor1:'',vendor2:'',batchTracked:'N',batches:[]},
       {code:'PM-001',desc:'HDPE Bags 25 Kg',cat:'Packing Material',subCat:'Bags',uom:'Nos',stock:1200,reorder:500,critical:150,maxStock:2000,location:'Packing RM Bay',updated:today(),cost:35,vendor1:'Goyal Enterprises',vendor2:'',batchTracked:'N',batches:[]},
       {code:'SP-001',desc:'MS Spanner Set 8-24mm',cat:'Spares',subCat:'Tool',uom:'Nos',stock:2,reorder:2,critical:1,maxStock:10,location:'Store Bay',updated:today(),cost:450,vendor1:'Local Hardware',vendor2:'',batchTracked:'N',batches:[]},
@@ -2746,7 +2746,7 @@ function seedIfEmpty(){
   }
   if(DB.dispatch.length === 0){
     DB.dispatch = [
-      {do:'DO-2406-001',so:'SO-2406-003',customer:'Graphene Corp India',product:'NFG GR-95',qty:5,vehicle:'MH 12 XX 4567',driver:'Mahesh Sable',dphone:'9823456789',date:today(),eta:nextDate(3),lr:'LR-456123',status:'In Transit'},
+      {do:'DO-2406-001',so:'SO-2406-003',customer:'Graphene Corp India',product:'NEG GR-95',qty:5,vehicle:'MH 12 XX 4567',driver:'Mahesh Sable',dphone:'9823456789',date:today(),eta:nextDate(3),lr:'LR-456123',status:'In Transit'},
       {do:'DO-2406-002',so:'SO-2406-005',customer:'Carbon Tech Ltd',product:'Micronized GP-300',qty:2.5,vehicle:'MH 14 AB 1122',driver:'Raju Patil',dphone:'9812345678',date:prevDate(1),eta:today(),lr:'LR-456124',status:'Delivered'},
     ];
     save('dispatch');
@@ -2770,7 +2770,7 @@ function seedIfEmpty(){
   }
   if(DB.so.length === 0){
     DB.so = [
-      {num:'SO-2406-001',date:prevDate(10),customer:'Graphene Corp India',product:'NFG GR-95',grade:'GR-95',qty:10,rate:85000,amount:850000,delivery:nextDate(5),status:'Confirmed'},
+      {num:'SO-2406-001',date:prevDate(10),customer:'Graphene Corp India',product:'NEG GR-95',grade:'GR-95',qty:10,rate:85000,amount:850000,delivery:nextDate(5),status:'Confirmed'},
       {num:'SO-2406-002',date:prevDate(5),customer:'Carbon Tech Ltd',product:'Micronized GP',grade:'MG-300',qty:5,rate:95000,amount:475000,delivery:nextDate(3),status:'In Process'},
       {num:'SO-2406-003',date:prevDate(3),customer:'Steel India Co.',product:'Graphite Powder',grade:'GP-100',qty:8,rate:70000,amount:560000,delivery:nextDate(7),status:'Pending'},
     ];
