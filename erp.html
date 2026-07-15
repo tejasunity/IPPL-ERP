@@ -449,7 +449,7 @@ tr:hover td{background:rgba(255,255,255,.03);}
     <div class="btn-row" style="margin:0">
       <button class="btn btn-success btn-sm" onclick="refreshBatchesFromQCQA()">🔄 Refresh from QCQA</button>
       <button class="btn btn-primary btn-sm" onclick="openEntryNewBatch()">+ New Batch</button>
-      <button class="btn btn-ghost btn-sm" onclick="openModal('modal-nfg-grn')">+ NFG GRN</button>
+      <button class="btn btn-ghost btn-sm" onclick="openNfgGrnModal()">+ NFG GRN</button>
       <button class="btn btn-ghost btn-sm" onclick="openModal('modal-l1-grn')">+ L1 GRN</button>
       <button class="btn btn-ghost btn-sm" onclick="openManageStagesModal()">⚙️ Manage Stages</button>
       <button class="btn btn-ghost btn-sm" onclick="exportTblCSV('prod-tbl','Production')">CSV</button>
@@ -1650,10 +1650,19 @@ tr:hover td{background:rgba(255,255,255,.03);}
       <div class="form-grid">
         <div class="field"><label>Product Code</label><input id="grade-code" placeholder="e.g. 9080230"></div>
         <div class="field"><label>Grade Label (optional)</label><input id="grade-label" placeholder="e.g. GR-95 Fine"></div>
-        <div class="field"><label>NFG Code (optional)</label><input id="grade-nfg" placeholder="e.g. NFG-908"></div>
+        <div class="field"><label>NFG Code (optional)</label><input id="grade-nfg" placeholder="e.g. NFGD4"></div>
+        <div class="field"><label>RM Grade (only for RM mapping rows)</label><input id="grade-rm" placeholder="e.g. +899"></div>
       </div>
-      <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="addGrade()">+ Add Grade</button></div>
+      <div class="btn-row">
+        <button class="btn btn-primary btn-sm" onclick="addGrade()">+ Add Grade</button>
+        <button class="btn btn-success btn-sm" onclick="refreshGradesFromMasters()">🔄 Refresh from Masters Sheet</button>
+      </div>
+      <div id="grades-refresh-status" style="font-size:.75rem;color:var(--muted);margin-top:6px"></div>
       <div id="grades-list" style="margin-top:8px"></div>
+      <div style="border-top:1px solid var(--border);margin:14px 0 10px;padding-top:12px">
+        <div style="font-size:.8rem;font-weight:700;margin-bottom:8px">🪨 RM Grade → NFG Code (feeds the NFG GRN screen)</div>
+        <div id="rm-grades-list"></div>
+      </div>
       <div style="border-top:1px solid var(--border);margin:14px 0 10px;padding-top:12px">
         <div class="form-grid">
           <div class="field"><label>Grade</label><select id="alias-grade"></select></div>
@@ -2061,14 +2070,14 @@ tr:hover td{background:rgba(255,255,255,.03);}
       <div class="field"><label>NFG Grade</label>
         <select id="nfg-grade" onchange="onNfgGradeChange()">
           <option value="">Select grade</option>
-          <option value="+899">+899</option><option value="+599">+599</option>
-          <option value="+899.5">+899.5</option><option value="+599.5">+599.5</option>
-          <option value="+8520">+8520</option><option value="+897">+897</option>
-          <option value="+597">+597</option><option value="+895">+895</option>
-          <option value="+595">+595</option><option value="+890">+890</option><option value="+590">+590</option>
         </select>
       </div>
-      <div class="field"><label>NFG Code (auto)</label><input id="nfg-code-out" readonly></div>
+      <div class="field"><label>NFG Code (auto — from Masters)</label><input id="nfg-code-out" readonly>
+        <div id="nfg-code-warn" style="display:none;font-size:.72rem;color:var(--warn);margin-top:4px">
+          ⚠️ No NFG code mapped for this grade.
+          <button type="button" class="btn btn-ghost btn-sm" style="padding:1px 8px" onclick="quickAddRmGradeMapping()">+ Add mapping</button>
+        </div>
+      </div>
       <div class="field"><label>Supplier</label>
         <select id="nfg-supplier">
           <option value="">Select supplier</option>
@@ -2896,7 +2905,9 @@ function nextNum(prefix){
 const DEFAULT_GRADE_CODES = ['85200150','9080230','8550280','9650280','9980200','9950280','9980180','9680200','9650300','9050300','9450300','9450120','9080180'];
 
 function gradeList(){
-  return DB.productGrades.length ? DB.productGrades.map(g=>g.code) : DEFAULT_GRADE_CODES;
+  // rmGrade rows are RM-grade→NFG-code mappings, not sellable product codes — exclude them
+  const products = DB.productGrades.filter(g=>!g.rmGrade);
+  return products.length ? products.map(g=>g.code) : DEFAULT_GRADE_CODES;
 }
 function gradeOptionsHTML(selected){
   return '<option value="">Select product code</option>' +
@@ -2913,11 +2924,19 @@ function customerGradeName(code, customer){
 function renderGradesManager(){
   const gl = document.getElementById('grades-list');
   if(!gl) return;
-  gl.innerHTML = DB.productGrades.map((g,i)=>`
+  gl.innerHTML = DB.productGrades.map((g,i)=>g.rmGrade?'':`
     <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--surface);border-radius:8px;margin-bottom:6px">
       <div><b>${g.code}</b> ${g.label?'— '+g.label:''} <span style="color:var(--muted);font-size:.75rem">${g.nfgCode||''}</span></div>
       <button class="btn btn-ghost btn-sm" onclick="deleteGrade(${i})">🗑️</button>
     </div>`).join('') || '<p style="color:var(--muted);font-size:.8rem;padding:6px">No custom grades — using built-in code list. Add yours to take over.</p>';
+  const rml = document.getElementById('rm-grades-list');
+  if(rml){
+    rml.innerHTML = DB.productGrades.map((g,i)=>!g.rmGrade?'':`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--surface);border-radius:8px;margin-bottom:6px">
+        <div><b>${g.rmGrade}</b> → <span style="color:var(--accent)">${g.nfgCode||g.code}</span></div>
+        <button class="btn btn-ghost btn-sm" onclick="deleteGrade(${i})">🗑️</button>
+      </div>`).join('') || '<p style="color:var(--muted);font-size:.8rem;padding:6px">No RM grade mappings — add one with the RM Grade field above, or quick-add from the NFG GRN screen.</p>';
+  }
   const al = document.getElementById('aliases-list');
   al.innerHTML = DB.gradeAliases.map((a,i)=>`
     <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--surface);border-radius:8px;margin-bottom:6px">
@@ -2932,15 +2951,43 @@ function addGrade(){
   const code = document.getElementById('grade-code').value.trim();
   const label = document.getElementById('grade-label').value.trim();
   const nfgCode = document.getElementById('grade-nfg').value.trim();
+  const rmGrade = document.getElementById('grade-rm').value.trim();
   if(!code){ toast('Enter a product code'); return; }
   if(DB.productGrades.some(g=>g.code===code)){ toast('Code already exists'); return; }
-  DB.productGrades.push({code, label, nfgCode}); save('productGrades');
+  DB.productGrades.push({code, label, nfgCode, rmGrade}); save('productGrades');
   queueWrite(BACKEND.MASTERS_GAS_URL, {sheet:'ProductGrades', action:'upsert', keyField:'ProductCode', data:{
-    ProductCode:code, NFGCode:nfgCode, GradeLabel:label,
+    ProductCode:code, NFGCode:nfgCode, GradeLabel:label, RMGrade:rmGrade,
   }});
-  audit('Grade Added', `${code} ${label||''}`);
-  document.getElementById('grade-code').value=''; document.getElementById('grade-label').value=''; document.getElementById('grade-nfg').value='';
+  audit('Grade Added', `${code} ${label||''}${rmGrade?' (RM '+rmGrade+')':''}`);
+  ['grade-code','grade-label','grade-nfg','grade-rm'].forEach(id=>document.getElementById(id).value='');
   toast('Grade added ✓'); renderGradesManager();
+}
+
+async function refreshGradesFromMasters(){
+  const statusEl = document.getElementById('grades-refresh-status');
+  if(!BACKEND.MASTERS_GAS_URL){ statusEl.textContent='⚠️ Masters backend URL not configured (Backend Connections above)'; return; }
+  statusEl.textContent = '⏳ Fetching ProductGrades from Masters sheet...';
+  try{
+    const rows = await genericSheetGet(BACKEND.MASTERS_GAS_URL, 'ProductGrades');
+    if(rows.length===0){ statusEl.textContent='⚠️ No grades found in Masters sheet'; return; }
+    let added=0, updated=0;
+    rows.forEach(row=>{
+      if(!row.ProductCode) return;
+      const mapped = {
+        code: String(row.ProductCode), label: row.GradeLabel||'',
+        nfgCode: row.NFGCode||'', rmGrade: row.RMGrade||'',
+      };
+      const existing = DB.productGrades.find(g=>g.code===mapped.code);
+      if(existing){ Object.assign(existing, mapped); updated++; }
+      else { DB.productGrades.push(mapped); added++; }
+    });
+    save('productGrades');
+    statusEl.textContent = `✅ Synced: ${added} new, ${updated} updated (Sheet is source of truth)`;
+    toast('Grades refreshed from Masters ✓');
+    renderGradesManager();
+  }catch(err){
+    statusEl.textContent = '⚠️ Could not reach Masters sheet: '+err.message;
+  }
 }
 function deleteGrade(i){
   if(!confirm(`Remove grade ${DB.productGrades[i].code} from the ERP list? (Masters sheet row stays for history)`)) return;
@@ -3136,18 +3183,27 @@ function renderDashboard(){
 // ─────────────────────────────────────────────────────
 // PRODUCTION
 // ─────────────────────────────────────────────────────
-// NFG Grade → Code mapping (from QCQA app)
-const NFG_GRADE_CODES = {
-  '+899':'NFG-899','+599':'NFG-599','+899.5':'NFG-8995','+599.5':'NFG-5995',
-  '+8520':'NFG-8520','+897':'NFG-897','+597':'NFG-597','+895':'NFG-895',
-  '+595':'NFG-595','+890':'NFG-890','+590':'NFG-590',
-};
-const PRODUCT_TO_NFG = {
-  '85200150':'NFG-8520','9080230':'NFG-908','8550280':'NFG-855',
-  '9650280':'NFG-965','9980200':'NFG-998','9950280':'NFG-995',
-  '9980180':'NFG-998','9680200':'NFG-968','9650300':'NFG-965',
-  '9050300':'NFG-905','9450300':'NFG-945','9450120':'NFG-945','9080180':'NFG-908',
-};
+// NFG grade → code mapping now lives in DB.productGrades (Masters sheet, ProductGrades
+// tab) — rows with an rmGrade value map an RM grade like '+899' to its real material
+// code. The old hardcoded maps here held invented codes (e.g. 'NFG-899'); the real
+// codes below come from Site Admin Tool Data R1.xlsx, Raw Material Master tab.
+const RM_GRADE_SEED = [
+  {code:'NFGB1', rmGrade:'+899'},   {code:'NFGA1', rmGrade:'+599'},
+  {code:'NFGB0', rmGrade:'+899.5'}, {code:'NFGA0', rmGrade:'+599.5'},
+  {code:'NFGD4', rmGrade:'+8520'},  {code:'NFGB2', rmGrade:'+897'},
+  {code:'NFGA2', rmGrade:'+597'},   {code:'NFGB3', rmGrade:'+895'},
+  {code:'NFGA3', rmGrade:'+595'},   {code:'NFGB4', rmGrade:'+890'},
+  {code:'NFGA4', rmGrade:'+590'},
+];
+// One-time migration: if no RM grade mappings exist locally yet, seed the real ones.
+if(!DB.productGrades.some(g=>g.rmGrade)){
+  RM_GRADE_SEED.forEach(s=>DB.productGrades.push({code:s.code, label:'NFG '+s.rmGrade, rmGrade:s.rmGrade, nfgCode:s.code}));
+  save('productGrades');
+}
+function nfgCodeForRmGrade(grade){
+  const g = DB.productGrades.find(x=>x.rmGrade===grade);
+  return g ? (g.nfgCode || g.code) : '';
+}
 let STAGE_FLOW = JSON.parse(localStorage.getItem('erp_stageFlow') || 'null') ||
   ['NFG','Pre-Mix','CB','Decant','Tank Wash','RDS','Centrifuge','Drying','Packaging'];
 // Migration: 'Ore Receipt' never existed at Innotek — rename to 'NFG' in any stored flow/batches
@@ -3827,7 +3883,7 @@ function lastBatchOfProduct(product, excludeNum){
 function ebProductChange(){
   const code = document.getElementById('eb-product').value;
   const g = DB.productGrades.find(x=>x.code===code);
-  document.getElementById('eb-nfg-code').value = PRODUCT_TO_NFG[code] || (g&&g.nfgCode) || '';
+  document.getElementById('eb-nfg-code').value = (g&&g.nfgCode) || '';
   // Carry-forward: pre-fill INPUTS from the last batch of this product (never measured outputs)
   const last = lastBatchOfProduct(code);
   const sub = document.getElementById('eb-sub');
@@ -5001,11 +5057,43 @@ function submitDecant(){
 }
 
 // ── NFG / L1 GRN ──
+function populateNfgGradeOptions(){
+  const sel = document.getElementById('nfg-grade');
+  const current = sel.value;
+  const grades = DB.productGrades.filter(g=>g.rmGrade).map(g=>g.rmGrade);
+  sel.innerHTML = '<option value="">Select grade</option>' +
+    grades.map(g=>`<option value="${g}" ${g===current?'selected':''}>${g}</option>`).join('');
+}
+
+function openNfgGrnModal(){
+  populateNfgGradeOptions();
+  document.getElementById('nfg-code-warn').style.display = 'none';
+  openModal('modal-nfg-grn');
+}
+
 function onNfgGradeChange(){
   const grade = document.getElementById('nfg-grade').value;
-  const code = NFG_GRADE_CODES[grade] || '';
+  const code = nfgCodeForRmGrade(grade);
   document.getElementById('nfg-code-out').value = code;
+  document.getElementById('nfg-code-warn').style.display = (grade && !code) ? '' : 'none';
   updateNfgGrnOut();
+}
+
+function quickAddRmGradeMapping(){
+  const grade = document.getElementById('nfg-grade').value;
+  if(!grade){ toast('Select a grade first'); return; }
+  const code = (prompt(`Real NFG material code for grade ${grade} (e.g. NFGB1):`)||'').trim();
+  if(!code) return;
+  const existing = DB.productGrades.find(g=>g.rmGrade===grade);
+  if(existing){ existing.code = code; existing.nfgCode = code; }
+  else DB.productGrades.push({code, label:'NFG '+grade, rmGrade:grade, nfgCode:code});
+  save('productGrades');
+  queueWrite(BACKEND.MASTERS_GAS_URL, {sheet:'ProductGrades', action:'upsert', keyField:'ProductCode', data:{
+    ProductCode:code, NFGCode:code, GradeLabel:'NFG '+grade, RMGrade:grade,
+  }});
+  audit('RM Grade Mapping Added', `${grade} → ${code}`);
+  toast('Mapping saved ✓');
+  onNfgGradeChange();
 }
 function updateNfgGrnOut(){
   const po = document.getElementById('nfg-po').value;
