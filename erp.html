@@ -9,6 +9,9 @@
 <title>Innotek ERP</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 <style>
 :root {
   --bg:       #0f1923;
@@ -1343,23 +1346,137 @@ tr:hover td{background:rgba(255,255,255,.03);}
     </div>
   </div>
   <div id="sales-refresh-status" style="font-size:.78rem;color:var(--muted);margin-bottom:12px"></div>
-  <div class="card">
-    <div class="card-title"><span>📄</span>Customer PO Register <button class="btn btn-primary btn-sm" style="float:right" onclick="openModal('modal-cpo')">+ New Customer PO</button></div>
-    <div class="tbl-wrap"><table>
-      <thead><tr><th>PO #</th><th>Customer</th><th>Grade</th><th>Ordered</th><th>Delivery</th><th>Progress</th><th>Linked Batches</th><th>Share</th></tr></thead>
-      <tbody id="cpo-tbody"></tbody>
-    </table></div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="salesTab(this,'cporeg')">📄 Customer PO Register</button>
+    <button class="tab" onclick="salesTab(this,'pomaster')">📊 PO Master &amp; Dashboard</button>
   </div>
-  <div class="kpi-grid">
-    <div class="kpi green"><div class="label">Orders This Month</div><div class="value">24</div></div>
-    <div class="kpi accent"><div class="label">Revenue</div><div class="value">₹18.4L</div></div>
-    <div class="kpi warn"><div class="label">Pending</div><div class="value">8</div></div>
+
+  <div id="sales-cporeg" class="sales-tab">
+    <div class="card">
+      <div class="card-title"><span>📄</span>Customer PO Register <button class="btn btn-primary btn-sm" style="float:right" onclick="openCpoNew()">+ New Customer PO</button></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>PO #</th><th>Customer</th><th>Grade</th><th>Ordered</th><th>Delivery</th><th>Progress</th><th>Linked Batches</th><th>Share</th></tr></thead>
+        <tbody id="cpo-tbody"></tbody>
+      </table></div>
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi green"><div class="label">Orders This Month</div><div class="value">24</div></div>
+      <div class="kpi accent"><div class="label">Revenue</div><div class="value">₹18.4L</div></div>
+      <div class="kpi warn"><div class="label">Pending</div><div class="value">8</div></div>
+    </div>
+    <div class="card">
+      <div class="tbl-wrap"><table id="so-tbl">
+        <thead><tr><th>SO#</th><th>Date</th><th>Customer</th><th>Product</th><th>Qty</th><th>Rate</th><th>Amount</th><th>Delivery</th><th>Status</th></tr></thead>
+        <tbody id="so-tbody"></tbody>
+      </table></div>
+    </div>
   </div>
-  <div class="card">
-    <div class="tbl-wrap"><table id="so-tbl">
-      <thead><tr><th>SO#</th><th>Date</th><th>Customer</th><th>Product</th><th>Qty</th><th>Rate</th><th>Amount</th><th>Delivery</th><th>Status</th></tr></thead>
-      <tbody id="so-tbody"></tbody>
-    </table></div>
+
+  <div id="sales-pomaster" class="sales-tab" style="display:none">
+    <p style="font-size:.78rem;color:var(--muted);margin:-4px 0 14px">
+      Standalone master for your own PO tracking &amp; board/senior reporting — data entry only, not linked to
+      Production, Inventory or Dispatch. Edit anytime; nothing here drives other modules.
+    </p>
+
+    <div class="btn-row" style="margin-bottom:4px">
+      <button class="btn btn-success btn-sm" onclick="refreshPomFromSheet()">🔄 Refresh from Sheet</button>
+      <button class="btn btn-primary btn-sm" onclick="openPomModal()">+ Add Order</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportTblCSV('pom-tbl','PO Master Register')">CSV (table)</button>
+    </div>
+    <div id="pom-refresh-status" style="font-size:.78rem;color:var(--muted);margin-bottom:12px"></div>
+
+    <div class="kpi-grid" id="pom-kpi-grid"></div>
+
+    <div class="card" id="pom-export-area">
+      <div class="card-title"><span>📈</span>Report Builder — build any chart on demand, then export</div>
+      <div class="form-grid" style="align-items:end">
+        <div class="field"><label>Group By</label>
+          <select id="pom-groupby">
+            <option value="destination">Destination</option>
+            <option value="productCode">Product Code</option>
+            <option value="stage">Status Stage</option>
+            <option value="rmStatus">RM Status</option>
+          </select>
+        </div>
+        <div class="field"><label>Metric</label>
+          <select id="pom-metric">
+            <option value="value">Total Value ($)</option>
+            <option value="mt">Quantity (MT)</option>
+            <option value="count">Order Count</option>
+          </select>
+        </div>
+        <div class="field"><label>Chart Type</label>
+          <select id="pom-charttype">
+            <option value="bar">Bar</option>
+            <option value="doughnut">Doughnut</option>
+          </select>
+        </div>
+        <div class="field"><button class="btn btn-primary btn-sm" onclick="buildPomChart()">Generate Chart</button></div>
+      </div>
+      <div class="chart-wrap" style="position:relative;height:320px;margin-top:14px"><canvas id="pom-chart"></canvas></div>
+    </div>
+
+    <div class="btn-row" style="margin:14px 0">
+      <span style="font-size:.78rem;color:var(--muted);align-self:center">Export current view (KPIs + chart):</span>
+      <button class="btn btn-ghost btn-sm" onclick="exportPomPNG()">🖼️ PNG</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportPomPDF()">📄 PDF</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportPomPPTX()">📊 PPTX</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>📋</span>PO Master Register</div>
+      <div class="search-bar"><span>🔍</span><input placeholder="Search PO / product code / destination..." oninput="filterPomTbl(this)"></div>
+      <div class="tbl-wrap"><table id="pom-tbl">
+        <thead><tr>
+          <th>PO Number</th><th>Product Code</th><th>Qty (MT)</th><th>Destination</th><th>Containers (#)</th><th>Container ID(s)</th>
+          <th>Total</th><th>Advance</th><th>Container Status</th><th>RM Status</th><th></th>
+        </tr></thead>
+        <tbody id="pom-tbody"></tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+
+<!-- New / Edit PO Master Order -->
+<div class="modal-bg" id="modal-pom">
+  <div class="modal">
+    <h3 id="pom-modal-title">📊 New PO Master Order</h3>
+    <div class="form-grid">
+      <div class="field"><label>PO Number</label><input id="pom-ponum" placeholder="e.g. PO 49"></div>
+      <div class="field"><label>Product Code</label><input id="pom-code" placeholder="e.g. NEGIN9980200NPH"></div>
+      <div class="field"><label>Quantity (MT)</label><input id="pom-qty" type="number" step="0.1"></div>
+      <div class="field"><label>Destination</label><input id="pom-dest" placeholder="e.g. USA, NL"></div>
+      <div class="field"><label>Number of Containers</label><input id="pom-containercount" type="number" step="1" min="0"></div>
+      <div class="field"><label>Total ($)</label><input id="pom-total" type="number" step="0.01"></div>
+      <div class="field"><label>Advance ($)</label><input id="pom-advance" type="number" step="0.01"></div>
+      <div class="field">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:8px">
+          <input type="checkbox" id="pom-advreceived" style="width:auto;margin:0"> Advance received
+        </label>
+      </div>
+      <div class="field"><label>Container Status</label><input id="pom-cstatus" placeholder="e.g. Approved, on ship"></div>
+      <div class="field"><label>RM Status</label><input id="pom-rmstatus" placeholder="e.g. In Stock / To buy"></div>
+      <div class="field"><label>Ready MT (partial completion only)</label><input id="pom-readymt" type="number" step="0.1"></div>
+      <div class="field"><label>Notes</label><input id="pom-notes"></div>
+    </div>
+
+    <div style="margin-top:6px">
+      <label style="display:block;font-size:.72rem;color:var(--muted);margin-bottom:6px">
+        Container ID Log — append new IDs as they're assigned; history is kept, not overwritten
+      </label>
+      <div id="pom-containerid-list" style="font-size:.8rem;margin-bottom:8px"></div>
+      <div style="display:flex;gap:8px">
+        <input id="pom-newcontainerid" placeholder="e.g. MSCU1234567" style="flex:1">
+        <button class="btn btn-ghost btn-sm" type="button" onclick="addPomContainerId()">+ Add</button>
+      </div>
+    </div>
+
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn btn-primary" onclick="savePom()">Save</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-pom')">Cancel</button>
+      <button class="btn btn-ghost" id="pom-delete-btn" style="color:var(--danger,#B5651D);display:none" onclick="deletePom()">Delete</button>
+    </div>
   </div>
 </div>
 
@@ -1508,6 +1625,9 @@ tr:hover td{background:rgba(255,255,255,.03);}
         </div>
         <div class="field" style="grid-column:1/-1"><label>🆕 Sales & Dispatch</label>
           <input id="s-url-salesdisp" placeholder="https://script.google.com/macros/s/.../exec">
+        </div>
+        <div class="field" style="grid-column:1/-1"><label>🆕 PO Master (standalone — Sales &gt; PO Master &amp; Dashboard tab)</label>
+          <input id="s-url-pomaster" placeholder="https://script.google.com/macros/s/.../exec">
         </div>
       </div>
       <div class="btn-row">
@@ -2434,6 +2554,7 @@ const BACKEND = {
   PLAN_GAS_URL:       localStorage.getItem('erp_url_plan')       || 'https://script.google.com/macros/s/AKfycby3WP1d9rH44tuFUF7-hZJ3q9Jf0TBGafactgrBZxPFjBvKxYlTRCombLPebK_ISRhvBQ/exec',
   FINANCE_GAS_URL:    localStorage.getItem('erp_url_finance')    || 'https://script.google.com/macros/s/AKfycbzuuGfUT0ASs0jsCxixLTxGs6fr2lQWzOrsG1j7wfKI39HlOAzUjgtiAJJaYi8Rvo7Aag/exec',
   SALESDISP_GAS_URL:  localStorage.getItem('erp_url_salesdisp')  || 'https://script.google.com/a/macros/unitycpl.com/s/AKfycbxIKM1BwmxpdoOqkVbFO2quvYzhtbD9ewcWeaEEGiyrNRVAnOsiAblPKi5JYRA9Lnr4LA/exec',
+  POMASTER_GAS_URL:   localStorage.getItem('erp_url_pomaster')   || 'https://script.google.com/macros/s/AKfycbzJRMEQWRxxGt490meI4YpHyB5pRCDMru3mEIsUwrBsNEuekuj4SLFbAaLA6hJVLId3/exec',
   GEMINI_PROXY_URL:   localStorage.getItem('erp_url_geminiproxy') || '',
 };
 const FACE_MODEL_CDN = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
@@ -2572,6 +2693,7 @@ const DB = {
   cbMaster:  JSON.parse(localStorage.getItem('erp_cbMaster')  || '[]'),
   fgBatches: JSON.parse(localStorage.getItem('erp_fgBatches') || '[]'),
   customerPOs: JSON.parse(localStorage.getItem('erp_customerPOs') || '[]'),
+  poMasterOrders: JSON.parse(localStorage.getItem('erp_poMasterOrders') || '[]'),
   audit:     JSON.parse(localStorage.getItem('erp_audit')     || '[]'),
   productGrades: JSON.parse(localStorage.getItem('erp_productGrades') || '[]'),
   gradeAliases:  JSON.parse(localStorage.getItem('erp_gradeAliases')  || '[]'),
@@ -2583,6 +2705,10 @@ let currentFaceTab = 'face';
 let currentInvTab  = 'raw';
 let currentFinTab  = 'ledger';
 let currentDocCat  = 'all';
+let currentSalesTab = 'cporeg';
+let pomEditId = null;
+let pomEditContainerIds = [];
+let pomChart = null;
 let currentMbFilter = '';
 
 // ── SEED DATA ──────────────────────────────────────
@@ -2723,7 +2849,7 @@ function showPage(id){
   if(id==='employees') renderEmployees();
   if(id==='finance') renderFinance();
   if(id==='purchase') renderPO();
-  if(id==='sales'){ renderSO(); renderCustomerPOs(); }
+  if(id==='sales'){ renderSO(); renderCustomerPOs(); renderPomMaster(); }
   if(id==='documents') renderDocs();
   if(id==='settings'){ loadSettingsPage(); renderAuditTrail(); renderGradesManager(); }
 }
@@ -4415,6 +4541,7 @@ function renderCustomerPOs(){
       <td><div class="progress-bar"><div class="progress-fill ${pct>=100?'green':''}" style="width:${pct}%"></div></div><small>${allocQty}/${p.qty} KG (${pct}%)</small></td>
       <td>${linked.map(f=>`<span class="badge badge-muted">${f.batchNum}</span>`).join(' ')||'—'}</td>
       <td>
+        <button class="btn btn-ghost btn-sm" onclick="openCpoEdit('${p.id}')">✏️ Edit</button>
         <button class="btn btn-ghost btn-sm" onclick="shareCustomerPOSummary('${p.id}','board')">📊 Board</button>
         <button class="btn btn-ghost btn-sm" onclick="shareCustomerPOSummary('${p.id}','customer')">📱 Customer</button>
       </td>
@@ -4422,9 +4549,33 @@ function renderCustomerPOs(){
   }).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--muted)">No customer POs — add one to start linking FG batches</td></tr>';
 }
 
+let cpoEditId = null;
+function openCpoNew(){
+  cpoEditId = null;
+  document.querySelector('#modal-cpo h3').textContent = '📄 New Customer PO';
+  ['cpo-num','cpo-customer','cpo-grade','cpo-qty','cpo-rate','cpo-delivery'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('cpo-currency').value = 'INR';
+  openModal('modal-cpo');
+}
+function openCpoEdit(id){
+  const p = DB.customerPOs.find(x=>x.id===id);
+  if(!p) return;
+  cpoEditId = id;
+  document.querySelector('#modal-cpo h3').textContent = '✏️ Edit Customer PO';
+  document.getElementById('cpo-num').value = p.poNumber||'';
+  document.getElementById('cpo-customer').value = p.customer||'';
+  document.getElementById('cpo-grade').value = p.grade||'';
+  document.getElementById('cpo-qty').value = p.qty ?? '';
+  document.getElementById('cpo-rate').value = p.rate ?? '';
+  document.getElementById('cpo-currency').value = p.currency||'INR';
+  document.getElementById('cpo-delivery').value = p.deliveryDate||'';
+  openModal('modal-cpo');
+}
+
 function saveCustomerPO(){
+  const existing = cpoEditId ? DB.customerPOs.find(x=>x.id===cpoEditId) : null;
   const p = {
-    id: nextNum('CPO-'),
+    id: existing ? existing.id : nextNum('CPO-'),
     poNumber: document.getElementById('cpo-num').value,
     customer: document.getElementById('cpo-customer').value,
     grade: document.getElementById('cpo-grade').value,
@@ -4432,16 +4583,20 @@ function saveCustomerPO(){
     rate: parseFloat(document.getElementById('cpo-rate').value)||0,
     currency: document.getElementById('cpo-currency').value,
     deliveryDate: document.getElementById('cpo-delivery').value,
-    date: today(), status:'Open',
+    date: existing ? existing.date : today(),
+    status: existing ? existing.status : 'Open',
   };
   if(!p.poNumber || !p.customer){ toast('PO number and customer required'); return; }
-  DB.customerPOs.unshift(p); save('customerPOs');
+  if(existing){ Object.assign(existing, p); }
+  else { DB.customerPOs.unshift(p); }
+  save('customerPOs');
   queueWrite(BACKEND.SALESDISP_GAS_URL, {sheet:'CustomerPOs', action:'upsert', keyField:'CPOId', data:{
     CPOId:p.id, PONumber:p.poNumber, Customer:p.customer, Grade:p.grade, Qty:p.qty, Rate:p.rate,
     Currency:p.currency, DeliveryDate:p.deliveryDate, Date:p.date, Status:p.status,
   }});
-  audit('Customer PO Added', `${p.poNumber} · ${p.customer} · ${p.qty}Kg`);
-  closeModal('modal-cpo'); toast('Customer PO added ✓'); renderCustomerPOs();
+  audit(existing?'Customer PO Updated':'Customer PO Added', `${p.poNumber} · ${p.customer} · ${p.qty}Kg`);
+  cpoEditId = null;
+  closeModal('modal-cpo'); toast(existing?'Customer PO updated ✓':'Customer PO added ✓'); renderCustomerPOs();
 }
 
 let activeLinkFG = null;
@@ -4492,6 +4647,313 @@ function shareCustomerPOSummary(poId, audience){
     text = `Dear ${p.customer} team,\n\nUpdate on your PO ${p.poNumber} (${p.grade}, ${p.qty} KG):\nProduction progress: ${pct}% allocated\nPlanned delivery: ${fmtDate(p.deliveryDate)}\n\nRegards,\nInnotek Products`;
   }
   window.open('https://wa.me/?text='+encodeURIComponent(text), '_blank');
+}
+
+// ── PO MASTER & DASHBOARD (standalone reporting master — data entry/edit only,
+//    deliberately NOT linked to Production/Inventory/Dispatch. See CLAUDE.md gap #12) ──
+function salesTab(el, tab){
+  document.querySelectorAll('#page-sales .tab').forEach(t=>t.classList.remove('active')); el.classList.add('active');
+  document.querySelectorAll('.sales-tab').forEach(t=>t.style.display='none');
+  document.getElementById('sales-'+tab).style.display='';
+  currentSalesTab = tab;
+  if(tab==='pomaster') renderPomMaster();
+}
+
+function pomClassify(o){
+  const s=(o.containerStatus||'').toLowerCase();
+  if(s.includes('reject')) return 'Rejected / Remake';
+  if(s.includes('approved')||s.includes('shipped')||s.includes('dispatch')) return 'Approved / Shipped';
+  if(s.includes('pre-ship')||s.includes('pre ship')||s.includes('sample')) return 'Ready to Dispatch';
+  if(s.includes('awaiting')) return 'Awaiting Approval';
+  if(s.includes('tbm')||s.includes('to be manufactured')) return 'To Be Manufactured';
+  if(!s.trim()||s.includes('not started')) return 'Not Started';
+  return 'In Production';
+}
+// "Innotek-done" = our manufacturing/approval work is finished but the order isn't
+// closed out yet — either shipment hasn't gone out, or final payment hasn't landed.
+function pomIsInnotekDone(o){
+  const s=(o.containerStatus||'').toLowerCase();
+  return s.includes('approved')||s.includes('awaiting')||s.includes('pre-ship')||s.includes('pre ship')||s.includes('on dock')||s.includes('on ship');
+}
+function pomFmtUSD(n){ return '$'+Math.round(n||0).toLocaleString('en-US'); }
+function pomFmtMT(n){ return (Math.round((n||0)*10)/10).toString().replace(/\.0$/,'')+' MT'; }
+
+function renderPomMaster(){
+  const orders = DB.poMasterOrders||[];
+
+  const totalInvoice = orders.reduce((s,o)=>s+(o.total||0),0);
+  const totalAdvance = orders.reduce((s,o)=>s+(o.advance||0),0);
+  const advReceived = orders.reduce((s,o)=>s+(o.advReceived?(o.advance||0):0),0);
+  const advPending = totalAdvance - advReceived;
+  const totalMT = orders.reduce((s,o)=>s+(o.qty||0),0);
+
+  // Completed-at-Innotek bucket: total invoice value of those orders, and the
+  // actual amount still outstanding on them (total minus advance actually received).
+  const doneBucket = orders.filter(pomIsInnotekDone);
+  const doneInvoiceValue = doneBucket.reduce((s,o)=>s+(o.total||0),0);
+  const donePendingAmount = doneBucket.reduce((s,o)=>s+((o.total||0) - (o.advReceived?(o.advance||0):0)),0);
+
+  const kpis = [
+    ['Total Invoice Value', pomFmtUSD(totalInvoice), 'accent'],
+    ['Advances Received', pomFmtUSD(advReceived), 'green'],
+    ['Advances Pending', pomFmtUSD(advPending), 'warn'],
+    ['Total Contracted Volume', pomFmtMT(totalMT), 'accent'],
+    ['Completed Orders — Invoice Value', pomFmtUSD(doneInvoiceValue), 'accent'],
+    ['Completed Orders — Amount Pending', pomFmtUSD(donePendingAmount), 'warn'],
+    ['Total Orders', String(orders.length), 'green'],
+  ];
+  document.getElementById('pom-kpi-grid').innerHTML = kpis.map(([label,val,cls])=>`
+    <div class="kpi ${cls}"><div class="label">${label}</div><div class="value">${val}</div></div>`).join('');
+
+  const tb = document.getElementById('pom-tbody');
+  if(tb){
+    tb.innerHTML = orders.map(o=>{
+      const stage = pomClassify(o);
+      const ids = o.containerIds||[];
+      const idSummary = ids.length ? `${ids[ids.length-1].id}${ids.length>1?` (+${ids.length-1} more)`:''}` : '—';
+      return `<tr class="editable-row" onclick="openPomModal('${o.id}')" style="cursor:pointer">
+        <td>${o.poNumber||'—'}</td><td>${o.productCode||'—'}</td><td>${pomFmtMT(o.qty)}</td>
+        <td>${o.destination||'—'}</td><td>${o.containerCount ?? '—'}</td><td>${idSummary}</td>
+        <td>${pomFmtUSD(o.total)}</td><td>${pomFmtUSD(o.advance)}${o.advReceived?' ✓':''}</td>
+        <td><span class="badge badge-muted">${o.containerStatus||stage}</span></td><td>${o.rmStatus||'—'}</td>
+        <td><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openPomModal('${o.id}')">✏️ Edit</button></td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="11" style="text-align:center;color:var(--muted)">No PO Master orders yet — click + Add Order</td></tr>';
+  }
+}
+
+function filterPomTbl(inp){ filterTbl(inp, 'pom-tbl'); }
+
+function openPomModal(id){
+  pomEditId = id || null;
+  const o = id ? DB.poMasterOrders.find(x=>x.id===id) : null;
+  document.getElementById('pom-modal-title').textContent = o ? '✏️ Edit PO Master Order' : '📊 New PO Master Order';
+  document.getElementById('pom-ponum').value = o ? (o.poNumber||'') : '';
+  document.getElementById('pom-code').value = o ? (o.productCode||'') : '';
+  document.getElementById('pom-qty').value = o ? (o.qty ?? '') : '';
+  document.getElementById('pom-dest').value = o ? (o.destination||'') : '';
+  document.getElementById('pom-containercount').value = o ? (o.containerCount ?? '') : '';
+  pomEditContainerIds = o && o.containerIds ? JSON.parse(JSON.stringify(o.containerIds)) : [];
+  document.getElementById('pom-newcontainerid').value = '';
+  renderPomContainerIdList();
+  document.getElementById('pom-total').value = o ? (o.total ?? '') : '';
+  document.getElementById('pom-advance').value = o ? (o.advance ?? '') : '';
+  document.getElementById('pom-advreceived').checked = !!(o && o.advReceived);
+  document.getElementById('pom-cstatus').value = o ? (o.containerStatus||'') : '';
+  document.getElementById('pom-rmstatus').value = o ? (o.rmStatus||'') : '';
+  document.getElementById('pom-readymt').value = o ? (o.readyMt ?? '') : '';
+  document.getElementById('pom-notes').value = o ? (o.notes||'') : '';
+  document.getElementById('pom-delete-btn').style.display = o ? '' : 'none';
+  openModal('modal-pom');
+}
+
+function renderPomContainerIdList(){
+  const el = document.getElementById('pom-containerid-list');
+  if(!pomEditContainerIds.length){ el.innerHTML = '<span style="color:var(--muted)">No container IDs logged yet</span>'; return; }
+  el.innerHTML = pomEditContainerIds.map((c,i)=>
+    `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border)">
+      <span>${c.id} <span style="color:var(--muted);font-size:.72rem">· ${fmtDate(c.date)}</span></span>
+      <button class="btn btn-ghost btn-sm" type="button" onclick="removePomContainerId(${i})" style="padding:2px 8px">✕</button>
+    </div>`).join('');
+}
+
+function addPomContainerId(){
+  const inp = document.getElementById('pom-newcontainerid');
+  const val = inp.value.trim();
+  if(!val){ toast('Enter a container ID first'); return; }
+  pomEditContainerIds.push({id: val, date: today()});
+  inp.value = '';
+  renderPomContainerIdList();
+}
+
+function removePomContainerId(i){
+  pomEditContainerIds.splice(i,1);
+  renderPomContainerIdList();
+}
+
+function savePom(){
+  const code = document.getElementById('pom-code').value.trim();
+  if(!code){ toast('Product code required'); return; }
+  const existing = pomEditId ? DB.poMasterOrders.find(x=>x.id===pomEditId) : null;
+  const data = {
+    id: pomEditId || nextNum('POM-'),
+    poNumber: document.getElementById('pom-ponum').value.trim(),
+    productCode: code,
+    qty: parseFloat(document.getElementById('pom-qty').value)||0,
+    destination: document.getElementById('pom-dest').value.trim(),
+    containerCount: document.getElementById('pom-containercount').value ? parseInt(document.getElementById('pom-containercount').value,10) : null,
+    containerIds: pomEditContainerIds.slice(),
+    total: parseFloat(document.getElementById('pom-total').value)||0,
+    advance: parseFloat(document.getElementById('pom-advance').value)||0,
+    advReceived: document.getElementById('pom-advreceived').checked,
+    containerStatus: document.getElementById('pom-cstatus').value.trim(),
+    rmStatus: document.getElementById('pom-rmstatus').value.trim(),
+    readyMt: document.getElementById('pom-readymt').value ? parseFloat(document.getElementById('pom-readymt').value) : null,
+    notes: document.getElementById('pom-notes').value.trim(),
+    date: existing ? existing.date : today(),
+  };
+  if(pomEditId){
+    const idx = DB.poMasterOrders.findIndex(x=>x.id===pomEditId);
+    if(idx>-1) DB.poMasterOrders[idx] = data;
+    audit('PO Master Order Updated', `${data.poNumber||data.id} · ${data.productCode}`);
+  } else {
+    DB.poMasterOrders.unshift(data);
+    audit('PO Master Order Added', `${data.poNumber||data.id} · ${data.productCode}`);
+  }
+  save('poMasterOrders');
+  queueWrite(BACKEND.POMASTER_GAS_URL, {sheet:'POMaster', action:'upsert', keyField:'RowId', data:{
+    RowId: data.id, PONumber: data.poNumber, ProductCode: data.productCode, Qty: data.qty,
+    Destination: data.destination, ContainerCount: data.containerCount,
+    ContainerIDs: JSON.stringify(data.containerIds||[]), Total: data.total, Advance: data.advance,
+    AdvanceReceived: data.advReceived?'TRUE':'FALSE', ContainerStatus: data.containerStatus,
+    RMStatus: data.rmStatus, ReadyMT: data.readyMt, Notes: data.notes, Deleted:'FALSE', Date: data.date,
+  }});
+  closeModal('modal-pom');
+  toast('Saved ✓');
+  renderPomMaster();
+}
+
+function deletePom(){
+  if(!pomEditId) return;
+  if(!confirm('Delete this PO Master order? This cannot be undone.')) return;
+  DB.poMasterOrders = DB.poMasterOrders.filter(x=>x.id!==pomEditId);
+  save('poMasterOrders');
+  // Soft-delete on the sheet (flag, not a physical row removal) — matches this
+  // codebase's append/update-only backend convention and keeps a paper trail.
+  queueWrite(BACKEND.POMASTER_GAS_URL, {sheet:'POMaster', action:'upsert', keyField:'RowId', data:{RowId: pomEditId, Deleted:'TRUE'}});
+  closeModal('modal-pom');
+  toast('Deleted');
+  renderPomMaster();
+}
+
+async function refreshPomFromSheet(){
+  const statusEl = document.getElementById('pom-refresh-status');
+  if(!BACKEND.POMASTER_GAS_URL){ statusEl.textContent='⚠️ PO Master backend URL not configured (Settings > Backend Connections)'; statusEl.style.color='var(--warn)'; return; }
+  statusEl.textContent = '⏳ Fetching from PO Master sheet...';
+  statusEl.style.color = 'var(--muted)';
+  try{
+    const rows = await genericSheetGet(BACKEND.POMASTER_GAS_URL, 'POMaster');
+    const live = rows.filter(row=>String(row.Deleted).toUpperCase()!=='TRUE' && row.RowId);
+    let added=0, updated=0;
+    live.forEach(row=>{
+      let containerIds = [];
+      try{ containerIds = JSON.parse(row.ContainerIDs||'[]'); }catch(e){ containerIds = []; }
+      const mapped = {
+        id: String(row.RowId), poNumber: row.PONumber||'', productCode: row.ProductCode||'',
+        qty: parseFloat(row.Qty)||0, destination: row.Destination||'',
+        containerCount: row.ContainerCount!=='' && row.ContainerCount!=null ? parseInt(row.ContainerCount,10) : null,
+        containerIds, total: parseFloat(row.Total)||0, advance: parseFloat(row.Advance)||0,
+        advReceived: String(row.AdvanceReceived).toUpperCase()==='TRUE',
+        containerStatus: row.ContainerStatus||'', rmStatus: row.RMStatus||'',
+        readyMt: row.ReadyMT!=='' && row.ReadyMT!=null ? parseFloat(row.ReadyMT) : null,
+        notes: row.Notes||'', date: row.Date||today(),
+      };
+      const existing = DB.poMasterOrders.find(o=>o.id===mapped.id);
+      if(existing){ Object.assign(existing, mapped); updated++; }
+      else { DB.poMasterOrders.unshift(mapped); added++; }
+    });
+    // rows the sheet now marks Deleted should disappear locally too
+    const deletedIds = new Set(rows.filter(row=>String(row.Deleted).toUpperCase()==='TRUE').map(row=>String(row.RowId)));
+    DB.poMasterOrders = DB.poMasterOrders.filter(o=>!deletedIds.has(o.id));
+    save('poMasterOrders');
+    statusEl.textContent = `✅ Synced from Sheet: ${added} new, ${updated} updated (Sheet is source of truth)`;
+    statusEl.style.color = 'var(--accent2)';
+    toast('PO Master refreshed from sheet ✓');
+    renderPomMaster();
+  }catch(err){
+    statusEl.textContent = '⚠️ Could not reach PO Master sheet: '+err.message;
+    statusEl.style.color = 'var(--warn)';
+  }
+}
+
+// ── Flexible report builder — pick grouping + metric + chart type, render on demand ──
+function buildPomChart(){
+  if(typeof Chart==='undefined'){ toast('Chart library failed to load — check connection'); return; }
+  const groupBy = document.getElementById('pom-groupby').value;
+  const metric = document.getElementById('pom-metric').value;
+  const chartType = document.getElementById('pom-charttype').value;
+  const orders = DB.poMasterOrders||[];
+
+  const groups = {};
+  orders.forEach(o=>{
+    let key;
+    if(groupBy==='destination') key = o.destination || 'Unspecified';
+    else if(groupBy==='productCode') key = o.productCode || 'Unspecified';
+    else if(groupBy==='rmStatus') key = o.rmStatus || 'Unspecified';
+    else key = pomClassify(o);
+    if(!groups[key]) groups[key] = {value:0, mt:0, count:0};
+    groups[key].value += (o.total||0);
+    groups[key].mt += (o.qty||0);
+    groups[key].count += 1;
+  });
+
+  const labels = Object.keys(groups);
+  const dataKey = metric==='value' ? 'value' : metric==='mt' ? 'mt' : 'count';
+  const dataVals = labels.map(l=>groups[l][dataKey]);
+  const palette = ['#1A1A1A','#C9A227','#3E8E82','#5C7DA6','#B5651D','#4E8C87','#8A8A8A','#7A6A55'];
+  const colors = labels.map((_,i)=>palette[i%palette.length]);
+
+  const ctx = document.getElementById('pom-chart').getContext('2d');
+  if(pomChart) pomChart.destroy();
+  pomChart = new Chart(ctx, {
+    type: chartType,
+    data: { labels, datasets: [{ data: dataVals, backgroundColor: colors }] },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{ display: chartType==='doughnut', position:'bottom' },
+        tooltip:{ callbacks:{ label:c=> metric==='value' ? pomFmtUSD(c.raw) : metric==='mt' ? pomFmtMT(c.raw) : c.raw+' orders' } }
+      },
+      scales: chartType==='bar' ? { y:{ beginAtZero:true } } : undefined
+    }
+  });
+}
+
+// ── Export current KPI+chart view as PNG / PDF / PPTX ──
+function pomStamp(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+async function exportPomPNG(){
+  if(typeof html2canvas==='undefined'){ toast('Export library failed to load — check connection'); return; }
+  toast('Rendering PNG…');
+  const canvas = await html2canvas(document.getElementById('pom-export-area'), {scale:2, backgroundColor:'#ffffff', useCORS:true, logging:false});
+  const link = document.createElement('a');
+  link.download = `Innotek_PO_Master_${pomStamp()}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+
+async function exportPomPDF(){
+  if(typeof html2canvas==='undefined' || !window.jspdf){ toast('Export library failed to load — check connection'); return; }
+  toast('Rendering PDF…');
+  const canvas = await html2canvas(document.getElementById('pom-export-area'), {scale:2, backgroundColor:'#ffffff', useCORS:true, logging:false});
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({orientation:'landscape', unit:'in', format:'a4'});
+  const pageW = pdf.internal.pageSize.getWidth(), pageH = pdf.internal.pageSize.getHeight(), margin = 0.4;
+  const availW = pageW-margin*2, availH = pageH-margin*2-0.3;
+  const scale = Math.min(availW/canvas.width, availH/canvas.height);
+  pdf.setFontSize(10); pdf.setTextColor(90,90,90);
+  pdf.text(`Innotek Products — PO Master Report · ${pomStamp()}`, margin, margin+0.15);
+  pdf.addImage(canvas.toDataURL('image/png'), 'PNG', margin, margin+0.3, canvas.width*scale, canvas.height*scale);
+  pdf.save(`Innotek_PO_Master_${pomStamp()}.pdf`);
+}
+
+async function exportPomPPTX(){
+  if(typeof html2canvas==='undefined' || typeof window.PptxGenJS==='undefined'){ toast('Export library failed to load — check connection'); return; }
+  toast('Rendering PPTX…');
+  const canvas = await html2canvas(document.getElementById('pom-export-area'), {scale:2, backgroundColor:'#ffffff', useCORS:true, logging:false});
+  const pptx = new window.PptxGenJS();
+  pptx.defineLayout({ name:'WIDE', width:13.33, height:7.5 });
+  pptx.layout = 'WIDE';
+  const slide = pptx.addSlide();
+  slide.addText('Innotek Products — PO Master Report', {x:0.4,y:0.2,fontSize:18,bold:true,color:'1A1A1A'});
+  slide.addText(pomStamp(), {x:0.4,y:0.65,fontSize:10,color:'5B5B5B'});
+  const ratio = canvas.height/canvas.width;
+  const imgW = 12.5, imgH = Math.min(imgW*ratio, 6.2);
+  slide.addImage({ data: canvas.toDataURL('image/png'), x:0.4, y:1.0, w:imgW, h:imgH });
+  pptx.writeFile({ fileName: `Innotek_PO_Master_${pomStamp()}.pptx` });
 }
 
 // ── AUDIT VIEWER ──
@@ -7207,7 +7669,7 @@ function loadSettingsPage(){
   const map = {
     's-url-masters':'erp_url_masters', 's-url-proddata':'erp_url_proddata', 's-url-geminiproxy':'erp_url_geminiproxy', 's-url-invpur':'erp_url_invpur',
     's-url-plan':'erp_url_plan', 's-url-finance':'erp_url_finance',
-    's-url-salesdisp':'erp_url_salesdisp',
+    's-url-salesdisp':'erp_url_salesdisp', 's-url-pomaster':'erp_url_pomaster',
   };
   Object.entries(map).forEach(([fieldId,lsKey])=>{
     const el = document.getElementById(fieldId);
@@ -7221,7 +7683,7 @@ function saveBackendUrls(){
   const map = {
     's-url-masters':'erp_url_masters', 's-url-proddata':'erp_url_proddata', 's-url-geminiproxy':'erp_url_geminiproxy', 's-url-invpur':'erp_url_invpur',
     's-url-plan':'erp_url_plan', 's-url-finance':'erp_url_finance',
-    's-url-salesdisp':'erp_url_salesdisp',
+    's-url-salesdisp':'erp_url_salesdisp', 's-url-pomaster':'erp_url_pomaster',
   };
   Object.entries(map).forEach(([fieldId,lsKey])=>{
     const val = document.getElementById(fieldId).value.trim();
@@ -7239,6 +7701,7 @@ function testAllBackends(){
     'Production Plan': document.getElementById('s-url-plan').value,
     'Finance Ledger': document.getElementById('s-url-finance').value,
     'Sales & Dispatch': document.getElementById('s-url-salesdisp').value,
+    'PO Master': document.getElementById('s-url-pomaster').value,
   };
   const entries = Object.entries(urls).filter(([,u])=>u);
   if(entries.length===0){ el.textContent='⚠️ No URLs entered yet'; return; }
