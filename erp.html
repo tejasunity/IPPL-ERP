@@ -5120,14 +5120,16 @@ function syncPomToCustomerPOs(){
     const active = !o.fullPaid && !pomIsInnotekDone(o);
     const grade = (o.productCode||'').replace(/\D/g,'');
     const qtyKG = (o.qty||0)*1000;
+    // Sheet cells that look numeric come back as numbers — coerce before string ops
+    const poNum = o.poNumber!=null ? String(o.poNumber).trim() : '';
     let cpo = DB.customerPOs.find(c=>c.pomId===o.id);
-    if(!cpo && o.poNumber){
+    if(!cpo && poNum){
       // adopt a manually-entered register PO with the same PO number instead of duplicating
-      cpo = DB.customerPOs.find(c=>!c.pomId && c.poNumber && c.poNumber.trim().toLowerCase()===o.poNumber.trim().toLowerCase());
+      cpo = DB.customerPOs.find(c=>!c.pomId && c.poNumber!=null && String(c.poNumber).trim().toLowerCase()===poNum.toLowerCase());
     }
     if(!cpo){
       if(!active) return; // completed orders don't need a register entry
-      cpo = { id: nextNum('CPO-'), pomId: o.id, poNumber: o.poNumber||o.id,
+      cpo = { id: nextNum('CPO-'), pomId: o.id, poNumber: poNum||o.id,
         customer: o.customer||o.destination||'', grade, qty: qtyKG,
         rate: qtyKG>0 ? Math.round(((o.total||0)/qtyKG)*100)/100 : 0, currency:'USD',
         deliveryDate:'', date: o.date||today(), status:'Open' };
@@ -5136,7 +5138,7 @@ function syncPomToCustomerPOs(){
     } else {
       const before = JSON.stringify([cpo.pomId, cpo.poNumber, cpo.customer, cpo.grade, cpo.qty, cpo.status]);
       cpo.pomId = o.id;
-      cpo.poNumber = o.poNumber || cpo.poNumber;
+      cpo.poNumber = poNum || cpo.poNumber;
       cpo.customer = o.customer || cpo.customer || o.destination || '';
       cpo.grade = grade || cpo.grade;
       cpo.qty = qtyKG || cpo.qty;
@@ -5164,17 +5166,20 @@ async function refreshPomFromSheet(){
     live.forEach(row=>{
       let containerIds = [];
       try{ containerIds = JSON.parse(row.ContainerIDs||'[]'); }catch(e){ containerIds = []; }
+      // Sheets returns numeric-looking cells (e.g. PO number "49") as numbers,
+      // not strings — coerce every text field so string ops downstream are safe.
+      const st = v => (v==null || v==='') ? '' : String(v).trim();
       const mapped = {
-        id: String(row.RowId), poNumber: row.PONumber||'', customer: row.Customer||'', productCode: row.ProductCode||'',
-        qty: parseFloat(row.Qty)||0, destination: row.Destination||'',
+        id: String(row.RowId), poNumber: st(row.PONumber), customer: st(row.Customer), productCode: st(row.ProductCode),
+        qty: parseFloat(row.Qty)||0, destination: st(row.Destination),
         containerCount: row.ContainerCount!=='' && row.ContainerCount!=null ? parseInt(row.ContainerCount,10) : null,
         containerIds, total: parseFloat(row.Total)||0, advance: parseFloat(row.Advance)||0,
         surcharge: parseFloat(row.Surcharge)||0,
         advReceived: String(row.AdvanceReceived).toUpperCase()==='TRUE' || String(row.FullPaid).toUpperCase()==='TRUE',
         fullPaid: String(row.FullPaid).toUpperCase()==='TRUE',
-        containerStatus: row.ContainerStatus||'', rmStatus: row.RMStatus||'',
+        containerStatus: st(row.ContainerStatus), rmStatus: st(row.RMStatus),
         readyMt: row.ReadyMT!=='' && row.ReadyMT!=null ? parseFloat(row.ReadyMT) : null,
-        notes: row.Notes||'', date: row.Date||today(),
+        notes: st(row.Notes), date: st(row.Date)||today(),
       };
       const existing = DB.poMasterOrders.find(o=>o.id===mapped.id);
       if(existing){ Object.assign(existing, mapped); updated++; }
