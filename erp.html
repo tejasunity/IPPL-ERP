@@ -1427,7 +1427,9 @@ tr:hover td{background:rgba(255,255,255,.03);}
 
     <div class="card">
       <div class="card-title"><span>📋</span>PO Master Register</div>
-      <div class="search-bar"><span>🔍</span><input placeholder="Search PO / product code / destination..." oninput="filterPomTbl(this)"></div>
+      <div class="search-bar"><span>🔍</span><input id="pom-search" placeholder="Search anything..." oninput="renderPomTable()"></div>
+      <div class="form-grid" id="pom-filter-row" style="margin-bottom:6px"></div>
+      <div id="pom-count" style="font-size:.75rem;color:var(--muted);margin-bottom:8px"></div>
       <div class="tbl-wrap"><table id="pom-tbl">
         <thead><tr>
           <th>PO Number</th><th>Customer</th><th>Product Code</th><th>Qty (MT)</th><th>Destination</th><th>Containers (#)</th><th>Container ID(s)</th>
@@ -2213,6 +2215,15 @@ tr:hover td{background:rgba(255,255,255,.03);}
     <input type="hidden" id="planline-edit-key" value="">
     <input type="hidden" id="planline-plan-id" value="">
     <div class="form-grid">
+      <div class="field"><label>Line Type</label>
+        <select id="planline-mode" onchange="planlineModeChange()">
+          <option value="new">New Batch</option>
+          <option value="reprocess">Re-process Existing Batch</option>
+        </select>
+      </div>
+      <div class="field" id="planline-batchsel-wrap" style="display:none"><label>Existing Batch to Re-process</label>
+        <select id="planline-batchsel" onchange="planlineBatchChange()"></select>
+      </div>
       <div class="field"><label>Grade / Product Code</label>
         <select id="planline-grade">
           <option value="">Select product code</option>
@@ -2227,6 +2238,10 @@ tr:hover td{background:rgba(255,255,255,.03);}
       <div class="field"><label>CB Assigned</label><select id="planline-cb"></select></div>
       <div class="field"><label>Batch Number (optional — assign now or later)</label><input id="planline-batch" placeholder="e.g. BTH-2607-001"></div>
       <div class="field"><label>Customer PO (optional — links batch to this order)</label><select id="planline-cpo"></select></div>
+      <div class="field" style="grid-column:1/-1;display:none" id="planline-processes-wrap">
+        <label>Processes to run on this batch (tick all that apply)</label>
+        <div id="planline-processes" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px"></div>
+      </div>
     </div>
     <div class="btn-row">
       <button class="btn btn-primary" onclick="savePlanLine()">Save Line</button>
@@ -2723,6 +2738,7 @@ let currentDocCat  = 'all';
 let currentSalesTab = 'cporeg';
 let pomEditId = null;
 let pomEditContainerIds = [];
+let pomFilters = {customer:'', productCode:'', destination:'', stage:'', payment:'', rmStatus:''};
 let pomChart = null;
 let currentMbFilter = '';
 
@@ -3342,9 +3358,19 @@ function renderPlan(){
       const devBadge = l.hasDeviation ? '<span class="badge badge-warn">⚠️ Deviated</span>' : '';
       const apprBadge = l.approvalStatus==='Pending' ? '<span class="badge badge-warn">Pending Approval</span>' :
                          l.approvalStatus==='Approved' ? '<span class="badge badge-green">Approved</span>' : '';
+      // Frozen baseline: what the plan said when first entered. Any drift shows inline.
+      const f = l.frozen || {};
+      const wasHint = (cur, orig, fmt) => (orig!==undefined && orig!==null && String(orig)!==String(cur))
+        ? `<br><small style="color:var(--warn)">🔒 frozen: ${fmt?fmt(orig):orig}</small>` : '';
+      const typeCell = l.mode==='reprocess'
+        ? `<span class="badge badge-blue">♻️ Re-process</span><br><small style="color:var(--muted)">${(l.processes||[]).join(', ')||'—'}</small>`
+        : '<span class="badge badge-muted">🆕 New</span>';
       return `<tr>
-        <td>${l.grade}</td><td>${l.qty} Kg</td><td>${fmtDate(l.date)}</td>
-        <td><span class="badge badge-muted">${l.cb}</span></td>
+        <td>${typeCell}</td>
+        <td>${l.grade}${wasHint(l.grade, f.grade)}</td>
+        <td>${l.qty} Kg${wasHint(l.qty, f.qty)}</td>
+        <td>${fmtDate(l.date)}${wasHint(l.date, f.date, fmtDate)}</td>
+        <td><span class="badge badge-muted">${l.cb}</span>${wasHint(l.cb, f.cb)}</td>
         <td>${l.batchNumber||'—'}</td>
         <td>${devBadge} ${apprBadge}</td>
         <td>
@@ -3355,9 +3381,10 @@ function renderPlan(){
     }).join('');
     return `<div class="card" style="margin-bottom:12px">
       <div class="card-title"><span>📅</span>${plan.type} Plan — ${fmtDate(plan.start)} to ${fmtDate(plan.end)} · <span class="badge badge-muted">${plan.status}</span></div>
+      <p style="font-size:.72rem;color:var(--muted);margin:0 0 8px">Baseline is frozen at line creation — any later change shows a 🔒 frozen value inline and is logged under ⚠️ Deviations, pending approval.</p>
       <div class="tbl-wrap"><table>
-        <thead><tr><th>Grade</th><th>Qty</th><th>Date</th><th>CB</th><th>Batch#</th><th>Status</th><th></th></tr></thead>
-        <tbody>${lineRows || '<tr><td colspan="7" style="text-align:center;color:var(--muted)">No lines yet</td></tr>'}</tbody>
+        <thead><tr><th>Type</th><th>Grade</th><th>Qty</th><th>Date</th><th>CB</th><th>Batch#</th><th>Status</th><th></th></tr></thead>
+        <tbody>${lineRows || '<tr><td colspan="8" style="text-align:center;color:var(--muted)">No lines yet</td></tr>'}</tbody>
       </table></div>
       <div class="btn-row"><button class="btn btn-ghost btn-sm" onclick="openNewPlanLine('${plan.id}')">+ Add Batch Line</button></div>
     </div>`;
@@ -3407,14 +3434,54 @@ function populatePlanCpoSelect(sel_id, val){
     (DB.customerPOs||[]).filter(p=>p.status==='Open').map(p=>`<option value="${p.id}" ${p.id===val?'selected':''}>${p.poNumber} — ${p.customer}</option>`).join('');
 }
 
+// ── Re-process support: a plan line is either a NEW batch or a re-process of an
+//    existing batch with an explicit set of processes (stages) to run again ──
+function planlineModeChange(){
+  const mode = document.getElementById('planline-mode').value;
+  const re = mode==='reprocess';
+  document.getElementById('planline-batchsel-wrap').style.display = re ? '' : 'none';
+  document.getElementById('planline-processes-wrap').style.display = re ? '' : 'none';
+  if(re){
+    populatePlanlineBatchSelect(document.getElementById('planline-batch').value);
+    if(!document.querySelector('.planline-proc')) renderPlanlineProcesses([]);
+  }
+}
+
+function populatePlanlineBatchSelect(selected){
+  const el = document.getElementById('planline-batchsel');
+  const nums = [...new Set([...(DB.batches||[]).map(b=>b.num), ...(DB.fgBatches||[]).map(f=>f.batchNum)])].filter(Boolean);
+  el.innerHTML = '<option value="">Select existing batch…</option>' +
+    nums.map(n=>`<option value="${n}" ${n===selected?'selected':''}>${n}</option>`).join('');
+}
+
+function planlineBatchChange(){
+  const num = document.getElementById('planline-batchsel').value;
+  document.getElementById('planline-batch').value = num;
+  const b = (DB.batches||[]).find(x=>x.num===num);
+  if(b){
+    if(b.product) document.getElementById('planline-grade').innerHTML = gradeOptionsHTML(b.product);
+    if(b.qty && !document.getElementById('planline-qty').value) document.getElementById('planline-qty').value = b.qty;
+  }
+}
+
+function renderPlanlineProcesses(selected){
+  const stages = STAGE_FLOW.filter(s=>s!=='NFG');
+  document.getElementById('planline-processes').innerHTML = stages.map(s=>
+    `<label style="display:flex;align-items:center;gap:5px;font-size:.8rem;background:var(--surface);border:1px solid var(--border);padding:5px 10px;border-radius:6px;cursor:pointer">
+      <input type="checkbox" class="planline-proc" value="${s}" ${selected.includes(s)?'checked':''} style="width:auto;margin:0">${s}</label>`).join('');
+}
+
 function openNewPlanLine(planId){
   document.getElementById('planline-modal-title').textContent = '+ Add Batch Line';
   document.getElementById('planline-edit-key').value = '';
   document.getElementById('planline-plan-id').value = planId;
+  document.getElementById('planline-mode').value = 'new';
   document.getElementById('planline-grade').innerHTML = gradeOptionsHTML('');
   document.getElementById('planline-qty').value = '';
   document.getElementById('planline-date').value = today();
   document.getElementById('planline-batch').value = '';
+  renderPlanlineProcesses([]);
+  planlineModeChange();
   populatePlanCpoSelect('planline-cpo','');
   populatePlanCBSelect();
   openModal('modal-planline');
@@ -3426,10 +3493,14 @@ function openEditPlanLine(planId, lineNum){
   document.getElementById('planline-modal-title').textContent = `✏️ Edit Line ${lineNum}`;
   document.getElementById('planline-edit-key').value = lineNum;
   document.getElementById('planline-plan-id').value = planId;
+  document.getElementById('planline-mode').value = line.mode==='reprocess' ? 'reprocess' : 'new';
   document.getElementById('planline-grade').innerHTML = gradeOptionsHTML(line.grade);
   document.getElementById('planline-qty').value = line.qty;
   document.getElementById('planline-date').value = line.date;
   document.getElementById('planline-batch').value = line.batchNumber||'';
+  renderPlanlineProcesses(line.processes||[]);
+  planlineModeChange();
+  if(line.mode==='reprocess') populatePlanlineBatchSelect(line.batchNumber||'');
   populatePlanCpoSelect('planline-cpo', line.customerPoId||'');
   populatePlanCBSelect();
   document.getElementById('planline-cb').value = line.cb;
@@ -3459,35 +3530,52 @@ function savePlanLine(){
   const date = document.getElementById('planline-date').value;
   const cb = document.getElementById('planline-cb').value;
   const batchNumber = document.getElementById('planline-batch').value;
+  const mode = document.getElementById('planline-mode').value;
+  const processes = mode==='reprocess' ? [...document.querySelectorAll('.planline-proc:checked')].map(c=>c.value) : [];
   if(!grade){ toast('Select a grade/product code'); return; }
+  if(mode==='reprocess' && !batchNumber){ toast('Select the existing batch to re-process'); return; }
+  if(mode==='reprocess' && processes.length===0){ toast('Tick at least one process to run'); return; }
   if(!DB.planLines) DB.planLines=[];
 
   if(editKey){
     const line = DB.planLines.find(l=>l.planId===planId && String(l.lineNum)===String(editKey));
     if(!line){ toast('Line not found'); return; }
+    // The frozen baseline is the plan as first entered — never overwritten by edits.
+    // Backfill for legacy lines that predate freezing (captured BEFORE this change applies).
+    if(!line.frozen) line.frozen = { grade:line.grade, qty:line.qty, date:line.date, cb:line.cb };
     // Track deviations for any changed field — every edit requires approval
     if(line.grade !== grade) recordDeviation(planId, editKey, 'Grade', line.grade, grade);
     if(line.qty !== qty) recordDeviation(planId, editKey, 'Qty', line.qty, qty);
     if(line.date !== date) recordDeviation(planId, editKey, 'Date', line.date, date);
     if(line.cb !== cb) recordDeviation(planId, editKey, 'CB', line.cb, cb);
+    const oldProcs = (line.processes||[]).join(' + ') || '—';
+    const newProcs = processes.join(' + ') || '—';
+    if(oldProcs !== newProcs) recordDeviation(planId, editKey, 'Processes', oldProcs, newProcs);
     line.grade=grade; line.qty=qty; line.date=date; line.cb=cb; line.batchNumber=batchNumber;
+    line.mode=mode; line.processes=processes;
     line.customerPoId = document.getElementById('planline-cpo').value;
     line.hasDeviation = true; line.approvalStatus = 'Pending';
     save('planLines');
     queueWrite(BACKEND.PLAN_GAS_URL, {sheet:'PlanLines', action:'upsert', keyField:'LineNum', data:{
       PlanID:planId, LineNum:editKey, GradeProductCode:grade, PlannedQty:qty, PlannedDate:date,
       CBAssigned:cb, BatchNumber:batchNumber, Status:'Pending Approval',
+      Mode:mode, Processes:processes.join(', '),
+      FrozenGrade:line.frozen.grade, FrozenQty:line.frozen.qty, FrozenDate:line.frozen.date, FrozenCB:line.frozen.cb,
     }});
     toast('Line updated — change recorded as deviation, pending your approval ✓');
   } else {
     const lineNum = ((DB.planLines||[]).filter(l=>l.planId===planId).length)+1;
-    const line = { planId, lineNum, grade, qty, date, cb, batchNumber, customerPoId:document.getElementById('planline-cpo').value, approvalStatus:'Approved', hasDeviation:false };
+    const line = { planId, lineNum, grade, qty, date, cb, batchNumber, mode, processes,
+      customerPoId:document.getElementById('planline-cpo').value, approvalStatus:'Approved', hasDeviation:false,
+      frozen: { grade, qty, date, cb } };
     DB.planLines.push(line); save('planLines');
     queueWrite(BACKEND.PLAN_GAS_URL, {sheet:'PlanLines', action:'append', data:{
       PlanID:planId, LineNum:lineNum, GradeProductCode:grade, PlannedQty:qty, PlannedDate:date,
       CBAssigned:cb, BatchNumber:batchNumber, Status:'Planned',
+      Mode:mode, Processes:processes.join(', '),
+      FrozenGrade:grade, FrozenQty:qty, FrozenDate:date, FrozenCB:cb,
     }});
-    toast('Plan line added ✓');
+    toast('Plan line added ✓ (baseline frozen)');
   }
   closeModal('modal-planline'); renderPlan();
 }
@@ -3598,7 +3686,14 @@ async function refreshPlanFromSheet(){
       genericSheetGet(BACKEND.PLAN_GAS_URL, 'CBMaster'),
     ]);
     DB.planHeaders = headers.map(h=>({id:h.PlanID, type:h.PlanType, start:h.PeriodStart, end:h.PeriodEnd, createdBy:h.CreatedBy, status:h.Status}));
-    DB.planLines = lines.map(l=>({planId:l.PlanID, lineNum:l.LineNum, grade:l.GradeProductCode, qty:parseFloat(l.PlannedQty)||0, date:l.PlannedDate, cb:l.CBAssigned, batchNumber:l.BatchNumber, approvalStatus: l.Status==='Approved'?'Approved':(l.Status==='Pending Approval'?'Pending':'Approved'), hasDeviation:false}));
+    DB.planLines = lines.map(l=>({planId:l.PlanID, lineNum:l.LineNum, grade:l.GradeProductCode, qty:parseFloat(l.PlannedQty)||0, date:l.PlannedDate, cb:l.CBAssigned, batchNumber:l.BatchNumber, approvalStatus: l.Status==='Approved'?'Approved':(l.Status==='Pending Approval'?'Pending':'Approved'), hasDeviation:false,
+      mode: l.Mode==='reprocess' ? 'reprocess' : 'new',
+      processes: l.Processes ? String(l.Processes).split(',').map(s=>s.trim()).filter(Boolean) : [],
+      // frozen baseline round-trips via the sheet; legacy rows without it freeze at current values
+      frozen: (l.FrozenGrade!==undefined && l.FrozenGrade!=='')
+        ? { grade:l.FrozenGrade, qty:parseFloat(l.FrozenQty)||0, date:l.FrozenDate, cb:l.FrozenCB }
+        : { grade:l.GradeProductCode, qty:parseFloat(l.PlannedQty)||0, date:l.PlannedDate, cb:l.CBAssigned },
+    }));
     DB.deviations = devs.map(d=>({id:d.DeviationID, planId:d.PlanID, lineNum:d.LineNum, type:d.DeviationType, originalValue:d.OriginalValue, newValue:d.NewValue, date:d.Date, recordedBy:d.RecordedBy, approvalStatus:d.ApprovalStatus}));
     if(cbs.length) DB.cbMaster = cbs.map(c=>({code:c.CBCode, name:c.CBName, active:c.Active, maxPerDay:c.MaxBatchesPerDay}));
     save('planHeaders'); save('planLines'); save('deviations'); save('cbMaster');
@@ -4741,6 +4836,7 @@ function pomFmtUSD(n){ return '$'+Math.round(n||0).toLocaleString('en-US'); }
 function pomFmtMT(n){ return (Math.round((n||0)*10)/10).toString().replace(/\.0$/,'')+' MT'; }
 
 function renderPomMaster(){
+  syncPomToCustomerPOs();
   const orders = DB.poMasterOrders||[];
   syncPomToCustomerPOs();
 
@@ -4781,25 +4877,73 @@ function renderPomMaster(){
   document.getElementById('pom-kpi-grid').innerHTML = kpis.map(([label,val,cls])=>`
     <div class="kpi ${cls}"><div class="label">${label}</div><div class="value">${val}</div></div>`).join('');
 
-  const tb = document.getElementById('pom-tbody');
-  if(tb){
-    tb.innerHTML = orders.map(o=>{
-      const stage = pomClassify(o);
-      const ids = o.containerIds||[];
-      const idSummary = ids.length ? `${ids[ids.length-1].id}${ids.length>1?` (+${ids.length-1} more)`:''}` : '—';
-      return `<tr class="editable-row" onclick="openPomModal('${o.id}')" style="cursor:pointer">
-        <td>${o.poNumber||'—'}</td><td>${o.customer||'—'}</td><td>${o.productCode||'—'}</td><td>${pomFmtMT(o.qty)}</td>
-        <td>${o.destination||'—'}</td><td>${o.containerCount ?? '—'}</td><td>${idSummary}</td>
-        <td>${pomFmtUSD(o.total)}</td><td>${o.surcharge?pomFmtUSD(o.surcharge):'—'}</td><td>${pomFmtUSD(o.advance)}${o.advReceived?' ✓':''}</td>
-        <td>${o.fullPaid?'<span class="badge badge-green">✓✓ Full</span>':(o.advReceived?'<span class="badge badge-blue">✓ Advance</span>':'<span class="badge badge-warn">Pending</span>')}</td>
-        <td><span class="badge badge-muted">${o.containerStatus||stage}</span></td><td>${o.rmStatus||'—'}</td>
-        <td><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openPomModal('${o.id}')">✏️ Edit</button></td>
-      </tr>`;
-    }).join('') || '<tr><td colspan="14" style="text-align:center;color:var(--muted)">No PO Master orders yet — click + Add Order</td></tr>';
-  }
+  buildPomFilters();
+  renderPomTable();
 }
 
-function filterPomTbl(inp){ filterTbl(inp, 'pom-tbl'); }
+// ── Multi-filter: every register column is a filter, all combined with AND ──
+function pomPayStatusOf(o){ return o.fullPaid ? 'Fully Paid' : (o.advReceived ? 'Advance Received' : 'Nothing Received'); }
+
+function buildPomFilters(){
+  const row = document.getElementById('pom-filter-row');
+  if(!row) return;
+  const orders = DB.poMasterOrders||[];
+  const uniq = get => [...new Set(orders.map(get).filter(Boolean))].sort();
+  const mk = (key, label, vals) => `<div class="field"><label>${label}</label>
+    <select onchange="pomFilters['${key}']=this.value;renderPomTable()">
+      <option value="">All</option>
+      ${vals.map(v=>`<option value="${String(v).replace(/"/g,'&quot;')}" ${pomFilters[key]===v?'selected':''}>${v}</option>`).join('')}
+    </select></div>`;
+  row.innerHTML =
+    mk('customer','Customer', uniq(o=>o.customer)) +
+    mk('productCode','Product Code', uniq(o=>o.productCode)) +
+    mk('destination','Destination', uniq(o=>o.destination)) +
+    mk('stage','Status Stage', [...new Set(orders.map(pomClassify))].sort()) +
+    mk('payment','Payment', ['Nothing Received','Advance Received','Fully Paid']) +
+    mk('rmStatus','RM Status', uniq(o=>o.rmStatus)) +
+    `<div class="field"><label>&nbsp;</label><button class="btn btn-ghost btn-sm" onclick="clearPomFilters()">✕ Clear Filters</button></div>`;
+}
+
+function clearPomFilters(){
+  Object.keys(pomFilters).forEach(k=>pomFilters[k]='');
+  const s = document.getElementById('pom-search'); if(s) s.value='';
+  buildPomFilters(); renderPomTable();
+}
+
+function pomFilteredOrders(){
+  const q = (document.getElementById('pom-search')?.value||'').trim().toLowerCase();
+  return (DB.poMasterOrders||[]).filter(o=>
+    (!pomFilters.customer    || o.customer===pomFilters.customer) &&
+    (!pomFilters.productCode || o.productCode===pomFilters.productCode) &&
+    (!pomFilters.destination || o.destination===pomFilters.destination) &&
+    (!pomFilters.stage       || pomClassify(o)===pomFilters.stage) &&
+    (!pomFilters.payment     || pomPayStatusOf(o)===pomFilters.payment) &&
+    (!pomFilters.rmStatus    || o.rmStatus===pomFilters.rmStatus) &&
+    (!q || Object.values(o).join(' ').toLowerCase().includes(q))
+  );
+}
+
+function renderPomTable(){
+  const tb = document.getElementById('pom-tbody');
+  if(!tb) return;
+  const all = DB.poMasterOrders||[];
+  const shown = pomFilteredOrders();
+  const countEl = document.getElementById('pom-count');
+  if(countEl) countEl.textContent = shown.length===all.length ? `${all.length} order(s)` : `Showing ${shown.length} of ${all.length} orders (filtered)`;
+  tb.innerHTML = shown.map(o=>{
+    const stage = pomClassify(o);
+    const ids = o.containerIds||[];
+    const idSummary = ids.length ? `${ids[ids.length-1].id}${ids.length>1?` (+${ids.length-1} more)`:''}` : '—';
+    return `<tr class="editable-row" onclick="openPomModal('${o.id}')" style="cursor:pointer">
+      <td>${o.poNumber||'—'}</td><td>${o.customer||'—'}</td><td>${o.productCode||'—'}</td><td>${pomFmtMT(o.qty)}</td>
+      <td>${o.destination||'—'}</td><td>${o.containerCount ?? '—'}</td><td>${idSummary}</td>
+      <td>${pomFmtUSD(o.total)}</td><td>${o.surcharge?pomFmtUSD(o.surcharge):'—'}</td><td>${pomFmtUSD(o.advance)}${o.advReceived?' ✓':''}</td>
+      <td>${o.fullPaid?'<span class="badge badge-green">✓✓ Full</span>':(o.advReceived?'<span class="badge badge-blue">✓ Advance</span>':'<span class="badge badge-warn">Pending</span>')}</td>
+      <td><span class="badge badge-muted">${o.containerStatus||stage}</span></td><td>${o.rmStatus||'—'}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openPomModal('${o.id}')">✏️ Edit</button></td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="14" style="text-align:center;color:var(--muted)">${all.length? 'No orders match the current filters — ✕ Clear Filters to reset' : 'No PO Master orders yet — click + Add Order'}</td></tr>`;
+}
 
 function openPomModal(id){
   pomEditId = id || null;
@@ -4955,6 +5099,49 @@ function syncPomToCustomerPOs(){
       if(qtyKG) cpo.qty = qtyKG;
       cpo.status = newStatus;
       if(JSON.stringify([cpo.pomId, cpo.poNumber, cpo.customer, cpo.grade, cpo.qty, cpo.status]) === before) return; // nothing changed — no write
+      changed = true;
+    }
+    queueWrite(BACKEND.SALESDISP_GAS_URL, {sheet:'CustomerPOs', action:'upsert', keyField:'CPOId', data:{
+      CPOId:cpo.id, PONumber:cpo.poNumber, Customer:cpo.customer, Grade:cpo.grade, Qty:cpo.qty, Rate:cpo.rate,
+      Currency:cpo.currency, DeliveryDate:cpo.deliveryDate||'', Date:cpo.date, Status:cpo.status,
+    }});
+  });
+  if(changed){ save('customerPOs'); renderCustomerPOs(); }
+}
+
+// ── PO Master → Customer PO Register bridge ──
+// Active orders (not Innotek-complete, not fully paid) are mirrored into the
+// Customer PO register so Production Planning and FG batches can link to them.
+// When an order completes (or is fully paid), its mirror flips to 'Completed'
+// and drops out of the batch-link dropdowns (which only offer status==='Open').
+function syncPomToCustomerPOs(){
+  let changed = false;
+  (DB.poMasterOrders||[]).forEach(o=>{
+    const active = !o.fullPaid && !pomIsInnotekDone(o);
+    const grade = (o.productCode||'').replace(/\D/g,'');
+    const qtyKG = (o.qty||0)*1000;
+    let cpo = DB.customerPOs.find(c=>c.pomId===o.id);
+    if(!cpo && o.poNumber){
+      // adopt a manually-entered register PO with the same PO number instead of duplicating
+      cpo = DB.customerPOs.find(c=>!c.pomId && c.poNumber && c.poNumber.trim().toLowerCase()===o.poNumber.trim().toLowerCase());
+    }
+    if(!cpo){
+      if(!active) return; // completed orders don't need a register entry
+      cpo = { id: nextNum('CPO-'), pomId: o.id, poNumber: o.poNumber||o.id,
+        customer: o.customer||o.destination||'', grade, qty: qtyKG,
+        rate: qtyKG>0 ? Math.round(((o.total||0)/qtyKG)*100)/100 : 0, currency:'USD',
+        deliveryDate:'', date: o.date||today(), status:'Open' };
+      DB.customerPOs.unshift(cpo);
+      changed = true;
+    } else {
+      const before = JSON.stringify([cpo.pomId, cpo.poNumber, cpo.customer, cpo.grade, cpo.qty, cpo.status]);
+      cpo.pomId = o.id;
+      cpo.poNumber = o.poNumber || cpo.poNumber;
+      cpo.customer = o.customer || cpo.customer || o.destination || '';
+      cpo.grade = grade || cpo.grade;
+      cpo.qty = qtyKG || cpo.qty;
+      if(cpo.status!=='Cancelled') cpo.status = active ? 'Open' : 'Completed';
+      if(JSON.stringify([cpo.pomId, cpo.poNumber, cpo.customer, cpo.grade, cpo.qty, cpo.status])===before) return;
       changed = true;
     }
     queueWrite(BACKEND.SALESDISP_GAS_URL, {sheet:'CustomerPOs', action:'upsert', keyField:'CPOId', data:{
