@@ -1431,7 +1431,7 @@ tr:hover td{background:rgba(255,255,255,.03);}
       <div class="tbl-wrap"><table id="pom-tbl">
         <thead><tr>
           <th>PO Number</th><th>Product Code</th><th>Qty (MT)</th><th>Destination</th><th>Containers (#)</th><th>Container ID(s)</th>
-          <th>Total</th><th>Advance</th><th>Payment</th><th>Container Status</th><th>RM Status</th><th></th>
+          <th>Total</th><th>Surcharge</th><th>Advance</th><th>Payment</th><th>Container Status</th><th>RM Status</th><th></th>
         </tr></thead>
         <tbody id="pom-tbody"></tbody>
       </table></div>
@@ -1451,6 +1451,7 @@ tr:hover td{background:rgba(255,255,255,.03);}
       <div class="field"><label>Number of Containers</label><input id="pom-containercount" type="number" step="1" min="0"></div>
       <div class="field"><label>Total ($)</label><input id="pom-total" type="number" step="0.01"></div>
       <div class="field"><label>Advance ($)</label><input id="pom-advance" type="number" step="0.01"></div>
+      <div class="field"><label>Surcharge ($, if any)</label><input id="pom-surcharge" type="number" step="0.01" placeholder="0"></div>
       <div class="field">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:8px">
           <input type="checkbox" id="pom-advreceived" style="width:auto;margin:0"> Advance received
@@ -4741,12 +4742,15 @@ function pomFmtMT(n){ return (Math.round((n||0)*10)/10).toString().replace(/\.0$
 function renderPomMaster(){
   const orders = DB.poMasterOrders||[];
 
-  // Money received per order: full total once fullPaid, else just the advance if received.
-  const receivedOf = o => o.fullPaid ? (o.total||0) : (o.advReceived ? (o.advance||0) : 0);
+  // What an order is worth including any surcharge, and what money has come in:
+  // full settlement covers total + surcharge; otherwise just the advance if received.
+  const owedOf = o => (o.total||0) + (o.surcharge||0);
+  const receivedOf = o => o.fullPaid ? owedOf(o) : (o.advReceived ? (o.advance||0) : 0);
 
   const totalInvoice = orders.reduce((s,o)=>s+(o.total||0),0);
+  const totalSurcharge = orders.reduce((s,o)=>s+(o.surcharge||0),0);
   const totalReceived = orders.reduce((s,o)=>s+receivedOf(o),0);
-  const totalOutstanding = totalInvoice - totalReceived;
+  const totalOutstanding = totalInvoice + totalSurcharge - totalReceived;
   // Advances pending only on orders still open — a fully-paid order owes nothing.
   const advPending = orders.reduce((s,o)=>s+((!o.fullPaid && !o.advReceived)?(o.advance||0):0),0);
   const totalMT = orders.reduce((s,o)=>s+(o.qty||0),0);
@@ -4758,16 +4762,17 @@ function renderPomMaster(){
   // is unpaid — each tile is true standalone; they don't sum. User chose this.
   const doneBucket = orders.filter(pomIsInnotekDone);
   const doneInvoiceValue = doneBucket.reduce((s,o)=>s+(o.total||0),0);
-  const doneDueAmount = doneBucket.reduce((s,o)=>s+((o.total||0)-receivedOf(o)),0);
-  const settledValue = orders.reduce((s,o)=>s+(o.fullPaid?(o.total||0):0),0);
+  const doneDueAmount = doneBucket.reduce((s,o)=>s+(owedOf(o)-receivedOf(o)),0);
+  const settledValue = orders.reduce((s,o)=>s+(o.fullPaid?owedOf(o):0),0);
 
   const kpis = [
     ['Total Invoice Value', pomFmtUSD(totalInvoice), 'accent'],
+    ['Total Surcharges', pomFmtUSD(totalSurcharge), 'warn'],
     ['Total Received', pomFmtUSD(totalReceived), 'green'],
-    ['Total Outstanding', pomFmtUSD(totalOutstanding), 'warn'],
+    ['Total Outstanding (incl. surcharges)', pomFmtUSD(totalOutstanding), 'warn'],
     ['Advances Pending', pomFmtUSD(advPending), 'warn'],
     ['Completed Orders — Invoice Value', pomFmtUSD(doneInvoiceValue), 'accent'],
-    ['Completed Orders — Amount Due', pomFmtUSD(doneDueAmount), 'warn'],
+    ['Completed Orders — Amount Due (incl. surcharges)', pomFmtUSD(doneDueAmount), 'warn'],
     ['Settled (Fully Paid)', pomFmtUSD(settledValue), 'green'],
     ['Total Contracted Volume', pomFmtMT(totalMT), 'accent'],
   ];
@@ -4783,12 +4788,12 @@ function renderPomMaster(){
       return `<tr class="editable-row" onclick="openPomModal('${o.id}')" style="cursor:pointer">
         <td>${o.poNumber||'—'}</td><td>${o.productCode||'—'}</td><td>${pomFmtMT(o.qty)}</td>
         <td>${o.destination||'—'}</td><td>${o.containerCount ?? '—'}</td><td>${idSummary}</td>
-        <td>${pomFmtUSD(o.total)}</td><td>${pomFmtUSD(o.advance)}${o.advReceived?' ✓':''}</td>
+        <td>${pomFmtUSD(o.total)}</td><td>${o.surcharge?pomFmtUSD(o.surcharge):'—'}</td><td>${pomFmtUSD(o.advance)}${o.advReceived?' ✓':''}</td>
         <td>${o.fullPaid?'<span class="badge badge-green">✓✓ Full</span>':(o.advReceived?'<span class="badge badge-blue">✓ Advance</span>':'<span class="badge badge-warn">Pending</span>')}</td>
         <td><span class="badge badge-muted">${o.containerStatus||stage}</span></td><td>${o.rmStatus||'—'}</td>
         <td><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openPomModal('${o.id}')">✏️ Edit</button></td>
       </tr>`;
-    }).join('') || '<tr><td colspan="12" style="text-align:center;color:var(--muted)">No PO Master orders yet — click + Add Order</td></tr>';
+    }).join('') || '<tr><td colspan="13" style="text-align:center;color:var(--muted)">No PO Master orders yet — click + Add Order</td></tr>';
   }
 }
 
@@ -4808,6 +4813,7 @@ function openPomModal(id){
   renderPomContainerIdList();
   document.getElementById('pom-total').value = o ? (o.total ?? '') : '';
   document.getElementById('pom-advance').value = o ? (o.advance ?? '') : '';
+  document.getElementById('pom-surcharge').value = o ? (o.surcharge || '') : '';
   document.getElementById('pom-advreceived').checked = !!(o && o.advReceived);
   document.getElementById('pom-fullpaid').checked = !!(o && o.fullPaid);
   document.getElementById('pom-cstatus').value = o ? (o.containerStatus||'') : '';
@@ -4856,6 +4862,7 @@ function savePom(){
     containerIds: pomEditContainerIds.slice(),
     total: parseFloat(document.getElementById('pom-total').value)||0,
     advance: parseFloat(document.getElementById('pom-advance').value)||0,
+    surcharge: parseFloat(document.getElementById('pom-surcharge').value)||0,
     advReceived: document.getElementById('pom-advreceived').checked || document.getElementById('pom-fullpaid').checked,
     fullPaid: document.getElementById('pom-fullpaid').checked,
     containerStatus: document.getElementById('pom-cstatus').value.trim(),
@@ -4877,7 +4884,7 @@ function savePom(){
     RowId: data.id, PONumber: data.poNumber, ProductCode: data.productCode, Qty: data.qty,
     Destination: data.destination, ContainerCount: data.containerCount,
     ContainerIDs: JSON.stringify(data.containerIds||[]), Total: data.total, Advance: data.advance,
-    AdvanceReceived: data.advReceived?'TRUE':'FALSE', FullPaid: data.fullPaid?'TRUE':'FALSE',
+    Surcharge: data.surcharge, AdvanceReceived: data.advReceived?'TRUE':'FALSE', FullPaid: data.fullPaid?'TRUE':'FALSE',
     ContainerStatus: data.containerStatus,
     RMStatus: data.rmStatus, ReadyMT: data.readyMt, Notes: data.notes, Deleted:'FALSE', Date: data.date,
   }});
@@ -4916,6 +4923,7 @@ async function refreshPomFromSheet(){
         qty: parseFloat(row.Qty)||0, destination: row.Destination||'',
         containerCount: row.ContainerCount!=='' && row.ContainerCount!=null ? parseInt(row.ContainerCount,10) : null,
         containerIds, total: parseFloat(row.Total)||0, advance: parseFloat(row.Advance)||0,
+        surcharge: parseFloat(row.Surcharge)||0,
         advReceived: String(row.AdvanceReceived).toUpperCase()==='TRUE' || String(row.FullPaid).toUpperCase()==='TRUE',
         fullPaid: String(row.FullPaid).toUpperCase()==='TRUE',
         containerStatus: row.ContainerStatus||'', rmStatus: row.RMStatus||'',
