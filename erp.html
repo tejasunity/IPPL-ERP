@@ -1430,7 +1430,7 @@ tr:hover td{background:rgba(255,255,255,.03);}
       <div class="search-bar"><span>🔍</span><input placeholder="Search PO / product code / destination..." oninput="filterPomTbl(this)"></div>
       <div class="tbl-wrap"><table id="pom-tbl">
         <thead><tr>
-          <th>PO Number</th><th>Product Code</th><th>Qty (MT)</th><th>Destination</th><th>Containers (#)</th><th>Container ID(s)</th>
+          <th>PO Number</th><th>Customer</th><th>Product Code</th><th>Qty (MT)</th><th>Destination</th><th>Containers (#)</th><th>Container ID(s)</th>
           <th>Total</th><th>Surcharge</th><th>Advance</th><th>Payment</th><th>Container Status</th><th>RM Status</th><th></th>
         </tr></thead>
         <tbody id="pom-tbody"></tbody>
@@ -1445,6 +1445,7 @@ tr:hover td{background:rgba(255,255,255,.03);}
     <h3 id="pom-modal-title">📊 New PO Master Order</h3>
     <div class="form-grid">
       <div class="field"><label>PO Number</label><input id="pom-ponum" placeholder="e.g. PO 49"></div>
+      <div class="field"><label>Customer</label><input id="pom-customer" placeholder="e.g. GraphTech GmbH"></div>
       <div class="field"><label>Product Code</label><input id="pom-code" placeholder="e.g. NEGIN9980200NPH"></div>
       <div class="field"><label>Quantity (MT)</label><input id="pom-qty" type="number" step="0.1"></div>
       <div class="field"><label>Destination</label><input id="pom-dest" placeholder="e.g. USA, NL"></div>
@@ -4741,6 +4742,7 @@ function pomFmtMT(n){ return (Math.round((n||0)*10)/10).toString().replace(/\.0$
 
 function renderPomMaster(){
   const orders = DB.poMasterOrders||[];
+  syncPomToCustomerPOs();
 
   // What an order is worth including any surcharge, and what money has come in:
   // full settlement covers total + surcharge; otherwise just the advance if received.
@@ -4786,14 +4788,14 @@ function renderPomMaster(){
       const ids = o.containerIds||[];
       const idSummary = ids.length ? `${ids[ids.length-1].id}${ids.length>1?` (+${ids.length-1} more)`:''}` : '—';
       return `<tr class="editable-row" onclick="openPomModal('${o.id}')" style="cursor:pointer">
-        <td>${o.poNumber||'—'}</td><td>${o.productCode||'—'}</td><td>${pomFmtMT(o.qty)}</td>
+        <td>${o.poNumber||'—'}</td><td>${o.customer||'—'}</td><td>${o.productCode||'—'}</td><td>${pomFmtMT(o.qty)}</td>
         <td>${o.destination||'—'}</td><td>${o.containerCount ?? '—'}</td><td>${idSummary}</td>
         <td>${pomFmtUSD(o.total)}</td><td>${o.surcharge?pomFmtUSD(o.surcharge):'—'}</td><td>${pomFmtUSD(o.advance)}${o.advReceived?' ✓':''}</td>
         <td>${o.fullPaid?'<span class="badge badge-green">✓✓ Full</span>':(o.advReceived?'<span class="badge badge-blue">✓ Advance</span>':'<span class="badge badge-warn">Pending</span>')}</td>
         <td><span class="badge badge-muted">${o.containerStatus||stage}</span></td><td>${o.rmStatus||'—'}</td>
         <td><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openPomModal('${o.id}')">✏️ Edit</button></td>
       </tr>`;
-    }).join('') || '<tr><td colspan="13" style="text-align:center;color:var(--muted)">No PO Master orders yet — click + Add Order</td></tr>';
+    }).join('') || '<tr><td colspan="14" style="text-align:center;color:var(--muted)">No PO Master orders yet — click + Add Order</td></tr>';
   }
 }
 
@@ -4804,6 +4806,7 @@ function openPomModal(id){
   const o = id ? DB.poMasterOrders.find(x=>x.id===id) : null;
   document.getElementById('pom-modal-title').textContent = o ? '✏️ Edit PO Master Order' : '📊 New PO Master Order';
   document.getElementById('pom-ponum').value = o ? (o.poNumber||'') : '';
+  document.getElementById('pom-customer').value = o ? (o.customer||'') : '';
   document.getElementById('pom-code').value = o ? (o.productCode||'') : '';
   document.getElementById('pom-qty').value = o ? (o.qty ?? '') : '';
   document.getElementById('pom-dest').value = o ? (o.destination||'') : '';
@@ -4855,6 +4858,7 @@ function savePom(){
   const data = {
     id: pomEditId || nextNum('POM-'),
     poNumber: document.getElementById('pom-ponum').value.trim(),
+    customer: document.getElementById('pom-customer').value.trim(),
     productCode: code,
     qty: parseFloat(document.getElementById('pom-qty').value)||0,
     destination: document.getElementById('pom-dest').value.trim(),
@@ -4881,7 +4885,7 @@ function savePom(){
   }
   save('poMasterOrders');
   queueWrite(BACKEND.POMASTER_GAS_URL, {sheet:'POMaster', action:'upsert', keyField:'RowId', data:{
-    RowId: data.id, PONumber: data.poNumber, ProductCode: data.productCode, Qty: data.qty,
+    RowId: data.id, PONumber: data.poNumber, Customer: data.customer, ProductCode: data.productCode, Qty: data.qty,
     Destination: data.destination, ContainerCount: data.containerCount,
     ContainerIDs: JSON.stringify(data.containerIds||[]), Total: data.total, Advance: data.advance,
     Surcharge: data.surcharge, AdvanceReceived: data.advReceived?'TRUE':'FALSE', FullPaid: data.fullPaid?'TRUE':'FALSE',
@@ -4896,6 +4900,13 @@ function savePom(){
 function deletePom(){
   if(!pomEditId) return;
   if(!confirm('Delete this PO Master order? This cannot be undone.')) return;
+  // Cancel the mirrored Customer PO (if any) so batch-link dropdowns drop it too
+  const mirror = DB.customerPOs.find(c=>c.pomId===pomEditId);
+  if(mirror && mirror.status==='Open'){
+    mirror.status = 'Cancelled'; save('customerPOs');
+    queueWrite(BACKEND.SALESDISP_GAS_URL, {sheet:'CustomerPOs', action:'upsert', keyField:'CPOId', data:{CPOId:mirror.id, Status:'Cancelled'}});
+    renderCustomerPOs();
+  }
   DB.poMasterOrders = DB.poMasterOrders.filter(x=>x.id!==pomEditId);
   save('poMasterOrders');
   // Soft-delete on the sheet (flag, not a physical row removal) — matches this
@@ -4904,6 +4915,54 @@ function deletePom(){
   closeModal('modal-pom');
   toast('Deleted');
   renderPomMaster();
+}
+
+// ── PO Master → Customer PO Register bridge ──
+// Production planning and FG batches link to Customer POs, so every ACTIVE PO
+// Master order (not started / in production / TBM / rejected-remake) mirrors
+// into the register as an Open Customer PO. Once the order is Innotek-complete
+// or fully paid, its mirror flips to Completed and leaves the batch-link
+// dropdowns (which only offer status==='Open'). Mirrors carry pomId; a manual
+// register entry with the same PO number gets adopted instead of duplicated.
+function syncPomToCustomerPOs(){
+  let changed = false;
+  (DB.poMasterOrders||[]).forEach(o=>{
+    const active = !o.fullPaid && !pomIsInnotekDone(o);
+    const grade = (o.productCode||'').replace(/\D/g,'');
+    const qtyKG = (o.qty||0)*1000;
+    let cpo = DB.customerPOs.find(c=>c.pomId===o.id);
+    if(!cpo && o.poNumber){
+      cpo = DB.customerPOs.find(c=>!c.pomId && c.poNumber && String(c.poNumber).trim().toLowerCase()===o.poNumber.trim().toLowerCase());
+    }
+    if(!cpo){
+      if(!active) return; // completed/settled orders don't need a register entry
+      cpo = {
+        id: nextNum('CPO-'), pomId: o.id, poNumber: o.poNumber||o.id,
+        customer: o.customer || o.destination || '', grade, qty: qtyKG,
+        rate: qtyKG>0 ? Math.round(((o.total||0)/qtyKG)*100)/100 : 0, currency: 'USD',
+        deliveryDate: '', date: o.date||today(), status: 'Open',
+      };
+      DB.customerPOs.unshift(cpo);
+      audit('Customer PO Mirrored', `${cpo.poNumber} from PO Master`);
+      changed = true;
+    } else {
+      const newStatus = active ? 'Open' : 'Completed';
+      const before = JSON.stringify([cpo.pomId, cpo.poNumber, cpo.customer, cpo.grade, cpo.qty, cpo.status]);
+      cpo.pomId = o.id;
+      if(o.poNumber) cpo.poNumber = o.poNumber;
+      if(o.customer) cpo.customer = o.customer; else if(!cpo.customer) cpo.customer = o.destination||'';
+      if(grade) cpo.grade = grade;
+      if(qtyKG) cpo.qty = qtyKG;
+      cpo.status = newStatus;
+      if(JSON.stringify([cpo.pomId, cpo.poNumber, cpo.customer, cpo.grade, cpo.qty, cpo.status]) === before) return; // nothing changed — no write
+      changed = true;
+    }
+    queueWrite(BACKEND.SALESDISP_GAS_URL, {sheet:'CustomerPOs', action:'upsert', keyField:'CPOId', data:{
+      CPOId:cpo.id, PONumber:cpo.poNumber, Customer:cpo.customer, Grade:cpo.grade, Qty:cpo.qty, Rate:cpo.rate,
+      Currency:cpo.currency, DeliveryDate:cpo.deliveryDate||'', Date:cpo.date, Status:cpo.status,
+    }});
+  });
+  if(changed){ save('customerPOs'); renderCustomerPOs(); }
 }
 
 async function refreshPomFromSheet(){
@@ -4919,7 +4978,7 @@ async function refreshPomFromSheet(){
       let containerIds = [];
       try{ containerIds = JSON.parse(row.ContainerIDs||'[]'); }catch(e){ containerIds = []; }
       const mapped = {
-        id: String(row.RowId), poNumber: row.PONumber||'', productCode: row.ProductCode||'',
+        id: String(row.RowId), poNumber: row.PONumber||'', customer: row.Customer||'', productCode: row.ProductCode||'',
         qty: parseFloat(row.Qty)||0, destination: row.Destination||'',
         containerCount: row.ContainerCount!=='' && row.ContainerCount!=null ? parseInt(row.ContainerCount,10) : null,
         containerIds, total: parseFloat(row.Total)||0, advance: parseFloat(row.Advance)||0,

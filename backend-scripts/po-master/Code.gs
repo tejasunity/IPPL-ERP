@@ -41,13 +41,13 @@
  */
 
 var SHEET_NAME = 'POMaster';
-var HEADERS = ['RowId','PONumber','ProductCode','Qty','Destination','ContainerCount',
+var HEADERS = ['RowId','PONumber','Customer','ProductCode','Qty','Destination','ContainerCount',
   'ContainerIDs','Total','Advance','Surcharge','AdvanceReceived','FullPaid','ContainerStatus','RMStatus',
   'ReadyMT','Notes','Deleted','Date','LastUpdated'];
-// NOTE: if your POMaster sheet was auto-created before FullPaid/Surcharge existed,
-// add "FullPaid" and "Surcharge" header cells to row 1 of the sheet by hand — no
-// redeploy needed; upsertRow/getAll read the header row at runtime, so the new
-// columns start working the moment the headers exist.
+// NOTE: if your POMaster sheet was auto-created before FullPaid/Surcharge/Customer
+// existed, add "FullPaid", "Surcharge" and "Customer" header cells to row 1 of the
+// sheet by hand — no redeploy needed; upsertRow/getAll read the header row at
+// runtime, so the new columns start working the moment the headers exist.
 
 function doGet(e) {
   var action = e.parameter.action;
