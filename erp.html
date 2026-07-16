@@ -1397,6 +1397,7 @@ tr:hover td{background:rgba(255,255,255,.03);}
             <option value="productCode">Product Code</option>
             <option value="stage">Status Stage</option>
             <option value="rmStatus">RM Status</option>
+            <option value="paymentStatus">Payment Status</option>
           </select>
         </div>
         <div class="field"><label>Metric</label>
@@ -1430,7 +1431,7 @@ tr:hover td{background:rgba(255,255,255,.03);}
       <div class="tbl-wrap"><table id="pom-tbl">
         <thead><tr>
           <th>PO Number</th><th>Product Code</th><th>Qty (MT)</th><th>Destination</th><th>Containers (#)</th><th>Container ID(s)</th>
-          <th>Total</th><th>Advance</th><th>Container Status</th><th>RM Status</th><th></th>
+          <th>Total</th><th>Advance</th><th>Payment</th><th>Container Status</th><th>RM Status</th><th></th>
         </tr></thead>
         <tbody id="pom-tbody"></tbody>
       </table></div>
@@ -1453,6 +1454,9 @@ tr:hover td{background:rgba(255,255,255,.03);}
       <div class="field">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:8px">
           <input type="checkbox" id="pom-advreceived" style="width:auto;margin:0"> Advance received
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:8px">
+          <input type="checkbox" id="pom-fullpaid" style="width:auto;margin:0"> Full payment received (transaction complete)
         </label>
       </div>
       <div class="field"><label>Container Status</label><input id="pom-cstatus" placeholder="e.g. Approved, on ship"></div>
@@ -4737,26 +4741,35 @@ function pomFmtMT(n){ return (Math.round((n||0)*10)/10).toString().replace(/\.0$
 function renderPomMaster(){
   const orders = DB.poMasterOrders||[];
 
+  // Money received per order: full total once fullPaid, else just the advance if received.
+  const receivedOf = o => o.fullPaid ? (o.total||0) : (o.advReceived ? (o.advance||0) : 0);
+
   const totalInvoice = orders.reduce((s,o)=>s+(o.total||0),0);
-  const totalAdvance = orders.reduce((s,o)=>s+(o.advance||0),0);
-  const advReceived = orders.reduce((s,o)=>s+(o.advReceived?(o.advance||0):0),0);
-  const advPending = totalAdvance - advReceived;
+  const totalReceived = orders.reduce((s,o)=>s+receivedOf(o),0);
+  const totalOutstanding = totalInvoice - totalReceived;
+  // Advances pending only on orders still open — a fully-paid order owes nothing.
+  const advPending = orders.reduce((s,o)=>s+((!o.fullPaid && !o.advReceived)?(o.advance||0):0),0);
   const totalMT = orders.reduce((s,o)=>s+(o.qty||0),0);
 
-  // Completed-at-Innotek bucket: total invoice value of those orders, and the
-  // actual amount still outstanding on them (total minus advance actually received).
+  // Innotek-complete bucket (approved / on ship / on docks / awaiting approval /
+  // pre-ship — user's call, 16 July: anything Innotek has finished counts). Amount
+  // Due = everything still owed on those orders (total − received). Note this
+  // deliberately overlaps with Advances Pending when a completed order's advance
+  // is unpaid — each tile is true standalone; they don't sum. User chose this.
   const doneBucket = orders.filter(pomIsInnotekDone);
   const doneInvoiceValue = doneBucket.reduce((s,o)=>s+(o.total||0),0);
-  const donePendingAmount = doneBucket.reduce((s,o)=>s+((o.total||0) - (o.advReceived?(o.advance||0):0)),0);
+  const doneDueAmount = doneBucket.reduce((s,o)=>s+((o.total||0)-receivedOf(o)),0);
+  const settledValue = orders.reduce((s,o)=>s+(o.fullPaid?(o.total||0):0),0);
 
   const kpis = [
     ['Total Invoice Value', pomFmtUSD(totalInvoice), 'accent'],
-    ['Advances Received', pomFmtUSD(advReceived), 'green'],
+    ['Total Received', pomFmtUSD(totalReceived), 'green'],
+    ['Total Outstanding', pomFmtUSD(totalOutstanding), 'warn'],
     ['Advances Pending', pomFmtUSD(advPending), 'warn'],
-    ['Total Contracted Volume', pomFmtMT(totalMT), 'accent'],
     ['Completed Orders — Invoice Value', pomFmtUSD(doneInvoiceValue), 'accent'],
-    ['Completed Orders — Amount Pending', pomFmtUSD(donePendingAmount), 'warn'],
-    ['Total Orders', String(orders.length), 'green'],
+    ['Completed Orders — Amount Due', pomFmtUSD(doneDueAmount), 'warn'],
+    ['Settled (Fully Paid)', pomFmtUSD(settledValue), 'green'],
+    ['Total Contracted Volume', pomFmtMT(totalMT), 'accent'],
   ];
   document.getElementById('pom-kpi-grid').innerHTML = kpis.map(([label,val,cls])=>`
     <div class="kpi ${cls}"><div class="label">${label}</div><div class="value">${val}</div></div>`).join('');
@@ -4771,10 +4784,11 @@ function renderPomMaster(){
         <td>${o.poNumber||'—'}</td><td>${o.productCode||'—'}</td><td>${pomFmtMT(o.qty)}</td>
         <td>${o.destination||'—'}</td><td>${o.containerCount ?? '—'}</td><td>${idSummary}</td>
         <td>${pomFmtUSD(o.total)}</td><td>${pomFmtUSD(o.advance)}${o.advReceived?' ✓':''}</td>
+        <td>${o.fullPaid?'<span class="badge badge-green">✓✓ Full</span>':(o.advReceived?'<span class="badge badge-blue">✓ Advance</span>':'<span class="badge badge-warn">Pending</span>')}</td>
         <td><span class="badge badge-muted">${o.containerStatus||stage}</span></td><td>${o.rmStatus||'—'}</td>
         <td><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openPomModal('${o.id}')">✏️ Edit</button></td>
       </tr>`;
-    }).join('') || '<tr><td colspan="11" style="text-align:center;color:var(--muted)">No PO Master orders yet — click + Add Order</td></tr>';
+    }).join('') || '<tr><td colspan="12" style="text-align:center;color:var(--muted)">No PO Master orders yet — click + Add Order</td></tr>';
   }
 }
 
@@ -4795,6 +4809,7 @@ function openPomModal(id){
   document.getElementById('pom-total').value = o ? (o.total ?? '') : '';
   document.getElementById('pom-advance').value = o ? (o.advance ?? '') : '';
   document.getElementById('pom-advreceived').checked = !!(o && o.advReceived);
+  document.getElementById('pom-fullpaid').checked = !!(o && o.fullPaid);
   document.getElementById('pom-cstatus').value = o ? (o.containerStatus||'') : '';
   document.getElementById('pom-rmstatus').value = o ? (o.rmStatus||'') : '';
   document.getElementById('pom-readymt').value = o ? (o.readyMt ?? '') : '';
@@ -4841,7 +4856,8 @@ function savePom(){
     containerIds: pomEditContainerIds.slice(),
     total: parseFloat(document.getElementById('pom-total').value)||0,
     advance: parseFloat(document.getElementById('pom-advance').value)||0,
-    advReceived: document.getElementById('pom-advreceived').checked,
+    advReceived: document.getElementById('pom-advreceived').checked || document.getElementById('pom-fullpaid').checked,
+    fullPaid: document.getElementById('pom-fullpaid').checked,
     containerStatus: document.getElementById('pom-cstatus').value.trim(),
     rmStatus: document.getElementById('pom-rmstatus').value.trim(),
     readyMt: document.getElementById('pom-readymt').value ? parseFloat(document.getElementById('pom-readymt').value) : null,
@@ -4861,7 +4877,8 @@ function savePom(){
     RowId: data.id, PONumber: data.poNumber, ProductCode: data.productCode, Qty: data.qty,
     Destination: data.destination, ContainerCount: data.containerCount,
     ContainerIDs: JSON.stringify(data.containerIds||[]), Total: data.total, Advance: data.advance,
-    AdvanceReceived: data.advReceived?'TRUE':'FALSE', ContainerStatus: data.containerStatus,
+    AdvanceReceived: data.advReceived?'TRUE':'FALSE', FullPaid: data.fullPaid?'TRUE':'FALSE',
+    ContainerStatus: data.containerStatus,
     RMStatus: data.rmStatus, ReadyMT: data.readyMt, Notes: data.notes, Deleted:'FALSE', Date: data.date,
   }});
   closeModal('modal-pom');
@@ -4899,7 +4916,8 @@ async function refreshPomFromSheet(){
         qty: parseFloat(row.Qty)||0, destination: row.Destination||'',
         containerCount: row.ContainerCount!=='' && row.ContainerCount!=null ? parseInt(row.ContainerCount,10) : null,
         containerIds, total: parseFloat(row.Total)||0, advance: parseFloat(row.Advance)||0,
-        advReceived: String(row.AdvanceReceived).toUpperCase()==='TRUE',
+        advReceived: String(row.AdvanceReceived).toUpperCase()==='TRUE' || String(row.FullPaid).toUpperCase()==='TRUE',
+        fullPaid: String(row.FullPaid).toUpperCase()==='TRUE',
         containerStatus: row.ContainerStatus||'', rmStatus: row.RMStatus||'',
         readyMt: row.ReadyMT!=='' && row.ReadyMT!=null ? parseFloat(row.ReadyMT) : null,
         notes: row.Notes||'', date: row.Date||today(),
@@ -4936,6 +4954,7 @@ function buildPomChart(){
     if(groupBy==='destination') key = o.destination || 'Unspecified';
     else if(groupBy==='productCode') key = o.productCode || 'Unspecified';
     else if(groupBy==='rmStatus') key = o.rmStatus || 'Unspecified';
+    else if(groupBy==='paymentStatus') key = o.fullPaid ? 'Fully Paid' : (o.advReceived ? 'Advance Received' : 'Nothing Received');
     else key = pomClassify(o);
     if(!groups[key]) groups[key] = {value:0, mt:0, count:0};
     groups[key].value += (o.total||0);
