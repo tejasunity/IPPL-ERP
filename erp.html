@@ -5062,54 +5062,6 @@ function deletePom(){
 }
 
 // ── PO Master → Customer PO Register bridge ──
-// Production planning and FG batches link to Customer POs, so every ACTIVE PO
-// Master order (not started / in production / TBM / rejected-remake) mirrors
-// into the register as an Open Customer PO. Once the order is Innotek-complete
-// or fully paid, its mirror flips to Completed and leaves the batch-link
-// dropdowns (which only offer status==='Open'). Mirrors carry pomId; a manual
-// register entry with the same PO number gets adopted instead of duplicated.
-function syncPomToCustomerPOs(){
-  let changed = false;
-  (DB.poMasterOrders||[]).forEach(o=>{
-    const active = !o.fullPaid && !pomIsInnotekDone(o);
-    const grade = (o.productCode||'').replace(/\D/g,'');
-    const qtyKG = (o.qty||0)*1000;
-    let cpo = DB.customerPOs.find(c=>c.pomId===o.id);
-    if(!cpo && o.poNumber){
-      cpo = DB.customerPOs.find(c=>!c.pomId && c.poNumber && String(c.poNumber).trim().toLowerCase()===o.poNumber.trim().toLowerCase());
-    }
-    if(!cpo){
-      if(!active) return; // completed/settled orders don't need a register entry
-      cpo = {
-        id: nextNum('CPO-'), pomId: o.id, poNumber: o.poNumber||o.id,
-        customer: o.customer || o.destination || '', grade, qty: qtyKG,
-        rate: qtyKG>0 ? Math.round(((o.total||0)/qtyKG)*100)/100 : 0, currency: 'USD',
-        deliveryDate: '', date: o.date||today(), status: 'Open',
-      };
-      DB.customerPOs.unshift(cpo);
-      audit('Customer PO Mirrored', `${cpo.poNumber} from PO Master`);
-      changed = true;
-    } else {
-      const newStatus = active ? 'Open' : 'Completed';
-      const before = JSON.stringify([cpo.pomId, cpo.poNumber, cpo.customer, cpo.grade, cpo.qty, cpo.status]);
-      cpo.pomId = o.id;
-      if(o.poNumber) cpo.poNumber = o.poNumber;
-      if(o.customer) cpo.customer = o.customer; else if(!cpo.customer) cpo.customer = o.destination||'';
-      if(grade) cpo.grade = grade;
-      if(qtyKG) cpo.qty = qtyKG;
-      cpo.status = newStatus;
-      if(JSON.stringify([cpo.pomId, cpo.poNumber, cpo.customer, cpo.grade, cpo.qty, cpo.status]) === before) return; // nothing changed — no write
-      changed = true;
-    }
-    queueWrite(BACKEND.SALESDISP_GAS_URL, {sheet:'CustomerPOs', action:'upsert', keyField:'CPOId', data:{
-      CPOId:cpo.id, PONumber:cpo.poNumber, Customer:cpo.customer, Grade:cpo.grade, Qty:cpo.qty, Rate:cpo.rate,
-      Currency:cpo.currency, DeliveryDate:cpo.deliveryDate||'', Date:cpo.date, Status:cpo.status,
-    }});
-  });
-  if(changed){ save('customerPOs'); renderCustomerPOs(); }
-}
-
-// ── PO Master → Customer PO Register bridge ──
 // Active orders (not Innotek-complete, not fully paid) are mirrored into the
 // Customer PO register so Production Planning and FG batches can link to them.
 // When an order completes (or is fully paid), its mirror flips to 'Completed'
@@ -5134,6 +5086,7 @@ function syncPomToCustomerPOs(){
         rate: qtyKG>0 ? Math.round(((o.total||0)/qtyKG)*100)/100 : 0, currency:'USD',
         deliveryDate:'', date: o.date||today(), status:'Open' };
       DB.customerPOs.unshift(cpo);
+      audit('Customer PO Mirrored', `${cpo.poNumber} from PO Master`);
       changed = true;
     } else {
       const before = JSON.stringify([cpo.pomId, cpo.poNumber, cpo.customer, cpo.grade, cpo.qty, cpo.status]);
