@@ -75,6 +75,7 @@ HTML/JS PWAs hosted on GitHub Pages, no build step, no framework. Used by the fo
 | Attendance PWA | `attendance/` | Legacy standalone, still linked from Hub |
 | Stations/Roster data-collection workbook | `templates/Stations-Roster-Setup-v2.xlsx` | Awaiting user's filled copy; blocks the roster build |
 | PO Master GAS backend | `backend-scripts/po-master/Code.gs` | Deployed by user, URL wired into erp.html |
+| **Next-gen platform (Phase 1, laptop-as-server)** | sibling folder `../innotek-platform/` (own git repo, deliberately NOT in this public Pages repo) | Scaffolded 17 July 2026: Docker Compose with Postgres 16 + FastAPI + ElectricSQL, Inventory movement-ledger schema, branded dark PDF report service. Blocked on user installing Docker Desktop; Flutter SDK comes after. User has chosen Track B (infrastructure leapfrog) as the active priority — current erp.html is feature-frozen except bug fixes until further notice. |
 
 **Phone-side note resolved (laptop verification, 16–17 July):** `gatepass.html` and
 `po-dashboard.html` do **not** exist and never existed in this repo — no file, no git
