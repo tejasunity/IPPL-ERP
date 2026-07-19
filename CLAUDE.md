@@ -135,6 +135,20 @@ The list below is verified current reality, not phone-side memory:
 - **"Eliminate" process status** — revisit within ~6 months of July 2026.
 - **Computer-vision defect inspection** — roadmap item, not now.
 
+## Session continuity — standing rule (read first)
+
+**`../innotek-platform/SESSION-HANDOVER.md` is the resume-from-anywhere file.**
+It holds paths, run commands, all backend URLs, loaded data counts, verified business
+rules, what's built, and the real backlog.
+
+- **Update it after every significant step** — not at the end of a session. Claude cannot
+  detect remaining session capacity (there is no signal to read), so "warn before the
+  limit" is not reliably possible. Keeping the file always-current is what makes an
+  abrupt cut-off harmless.
+- Regenerate the PDF with `py -3 tools\make_brief.py SESSION-HANDOVER.md`; a copy goes to
+  the user's Desktop as `Innotek-Session-Handover.pdf`.
+- To resume: "Read innotek-platform\SESSION-HANDOVER.md and continue."
+
 ## Working conventions (from the person running this project)
 
 - **Always deliver complete, ready-to-use files** — not snippets, not "add this line here."
